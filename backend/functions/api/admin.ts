@@ -1,6 +1,7 @@
 import { getDb } from '../_lib/db';
 import { getCorsHeaders, handleOptions, jsonResponse } from '../_lib/cors';
-import { isAuthorized } from '../_lib/auth';
+import { isAuthorized, getAdminIdentity } from '../_lib/auth';
+import { ensureAuditTable, logAudit, getRequestMeta } from '../_lib/audit';
 import type { Env } from '../_lib/types';
 
 // ─── Helper: Image URL extraction ───
@@ -111,6 +112,17 @@ async function handleLogin(request: Request, env: Env): Promise<Response> {
     if (!isValid) return jsonResponse({ error: 'Invalid access code' }, request, 401);
 
     const token = await signToken({ id: 'admin', email: adminEmail }, env.JWT_SECRET);
+
+    // Log login to audit trail
+    const meta = getRequestMeta(request);
+    await logAudit(env, {
+        admin_email: adminEmail,
+        action: 'login',
+        entity_type: 'auth',
+        entity_label: 'Admin login',
+        ...meta,
+    });
+
     return jsonResponse({ success: true, token }, request);
 }
 
@@ -242,6 +254,17 @@ async function handleCache(request: Request, env: Env): Promise<Response> {
                 } catch { /* best effort */ }
                 await sendProgress(98, 'CDN cache warmed');
 
+                // Log cache publish to audit trail
+                const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
+                const meta = getRequestMeta(request);
+                await logAudit(env, {
+                    admin_email: adminEmail || 'unknown',
+                    action: 'cache_publish',
+                    entity_type: 'cache',
+                    entity_label: `Published cache (${imageUrls.length} images warmed)`,
+                    ...meta,
+                });
+
                 await sendProgress(100, 'Cache published successfully', {
                     done: true,
                     cachedAt: new Date().toISOString(),
@@ -301,6 +324,17 @@ async function handleCache(request: Request, env: Env): Promise<Response> {
                 await sendProgress(80, 'Purging CDN cache...');
                 await purgeCloudflareCache(env, baseUrl);
                 await sendProgress(90, 'CDN cache purged');
+
+                // Log cache delete to audit trail
+                const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
+                const meta = getRequestMeta(request);
+                await logAudit(env, {
+                    admin_email: adminEmail || 'unknown',
+                    action: 'cache_delete',
+                    entity_type: 'cache',
+                    entity_label: `Deleted cache (${rowsDeleted} rows)`,
+                    ...meta,
+                });
 
                 await sendProgress(100, 'Cache cleared successfully', {
                     done: true,
@@ -412,7 +446,84 @@ async function handleSeed(request: Request, env: Env): Promise<Response> {
         }
     }
 
+    // Also ensure audit log table exists
+    await ensureAuditTable(env);
+
+    // Log the seed action
+    const meta = getRequestMeta(request);
+    await logAudit(env, {
+        admin_email: adminEmail,
+        action: 'seed',
+        entity_type: 'system',
+        entity_label: 'Database seeded',
+        ...meta,
+    });
+
     return jsonResponse({ success: true, message: 'Database seeded successfully' }, request);
+}
+
+// ─── Action: Audit Log (GET) ───
+async function handleAuditLog(request: Request, env: Env): Promise<Response> {
+    if (request.method !== 'GET') return jsonResponse({ error: 'Method not allowed' }, request, 405);
+
+    await ensureAuditTable(env);
+
+    const db = getDb(env);
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '50');
+    const offset = (page - 1) * limit;
+    const filterAction = url.searchParams.get('action_type') || '';
+    const filterEntity = url.searchParams.get('entity_type') || '';
+    const filterAdmin = url.searchParams.get('admin') || '';
+    const search = url.searchParams.get('search') || '';
+    const dateFrom = url.searchParams.get('from') || '';
+    const dateTo = url.searchParams.get('to') || '';
+
+    let whereClause = '1=1';
+    const args: any[] = [];
+
+    if (filterAction) { whereClause += ` AND action = ?`; args.push(filterAction); }
+    if (filterEntity) { whereClause += ` AND entity_type = ?`; args.push(filterEntity); }
+    if (filterAdmin) { whereClause += ` AND admin_email = ?`; args.push(filterAdmin); }
+    if (search) { whereClause += ` AND (entity_label LIKE ? OR changes_summary LIKE ? OR admin_email LIKE ?)`; args.push(`%${search}%`, `%${search}%`, `%${search}%`); }
+    if (dateFrom) { whereClause += ` AND created_at >= ?`; args.push(dateFrom); }
+    if (dateTo) { whereClause += ` AND created_at <= ?`; args.push(dateTo + ' 23:59:59'); }
+
+    const countRes = await db.execute({ sql: `SELECT COUNT(*) as count FROM admin_audit_log WHERE ${whereClause}`, args });
+    const total = Number(countRes.rows[0]?.count ?? 0);
+
+    const result = await db.execute({
+        sql: `SELECT * FROM admin_audit_log WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        args: [...args, limit, offset],
+    });
+
+    // Get unique admins for filter dropdown
+    const adminsRes = await db.execute(`SELECT DISTINCT admin_email FROM admin_audit_log ORDER BY admin_email`);
+    const admins = adminsRes.rows.map(r => r.admin_email as string);
+
+    // Get unique entity types for filter dropdown
+    const entityTypesRes = await db.execute(`SELECT DISTINCT entity_type FROM admin_audit_log ORDER BY entity_type`);
+    const entityTypes = entityTypesRes.rows.map(r => r.entity_type as string);
+
+    // Recent admin activity summary
+    const recentActivityRes = await db.execute(`
+        SELECT admin_email, MAX(created_at) as last_seen, COUNT(*) as total_actions
+        FROM admin_audit_log
+        GROUP BY admin_email
+        ORDER BY last_seen DESC
+    `);
+
+    return jsonResponse({
+        success: true,
+        logs: result.rows,
+        total,
+        page,
+        limit,
+        admins,
+        entityTypes,
+        adminActivity: recentActivityRes.rows,
+    }, request);
 }
 
 // ─── Main Router ───
@@ -429,7 +540,13 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             case 'login': return await handleLogin(request, env);
             case 'cache': return await handleCache(request, env);
             case 'seed': return await handleSeed(request, env);
-            default: return jsonResponse({ error: 'Unknown action. Use ?action=login|cache|seed' }, request, 400);
+            case 'audit': {
+                if (!(await isAuthorized(request, env.JWT_SECRET))) {
+                    return jsonResponse({ error: 'Unauthorized' }, request, 401);
+                }
+                return await handleAuditLog(request, env);
+            }
+            default: return jsonResponse({ error: 'Unknown action. Use ?action=login|cache|seed|audit' }, request, 400);
         }
     } catch (error) {
         console.error('Admin API error:', error);

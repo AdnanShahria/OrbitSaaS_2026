@@ -43,3 +43,15 @@ export async function isAuthorized(req: Request, secret: string): Promise<boolea
     if (!token) return false;
     return (await verifyToken(token, secret)) !== null;
 }
+
+/**
+ * Extract admin identity (email) from the JWT in the request.
+ * Returns the email string if valid, or null if unauthorized.
+ */
+export async function getAdminIdentity(req: Request, secret: string): Promise<string | null> {
+    const token = getTokenFromRequest(req);
+    if (!token) return null;
+    const payload = await verifyToken(token, secret);
+    if (!payload) return null;
+    return (payload.email as string) || 'unknown';
+}

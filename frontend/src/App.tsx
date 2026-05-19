@@ -133,8 +133,8 @@ const AdminBackup = lazy(() => import('./pages/admin/AdminBackup'));
 const AdminLegal = lazy(() => import('./pages/admin/AdminLegal'));
 const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'));
 const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
-const AdminFinanceDashboard = lazy(() => import('./pages/admin/AdminFinanceDashboard'));
-const AdminFinanceTransactions = lazy(() => import('./pages/admin/AdminFinanceTransactions'));
+const AdminFinanceTransactions = lazy(() => import('./pages/admin/finance/AdminFinanceTransactions'));
+const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
 
 function SitePreloader() {
   return (
@@ -443,8 +443,9 @@ export default function App() {
                       <Route path="legal" element={<AdminLegal />} />
                       <Route path="notifications" element={<AdminNotifications />} />
                       <Route path="profile" element={<AdminProfile />} />
-                      <Route path="finance" element={<AdminFinanceDashboard />} />
-                      <Route path="finance/transactions" element={<AdminFinanceTransactions />} />
+                      <Route path="finance" element={<AdminFinanceTransactions />} />
+                      <Route path="finance/transactions" element={<Navigate to="/admin/finance" replace />} />
+                      <Route path="audit" element={<AdminAuditLog />} />
                     </Route>
                   </Routes>
                 </Suspense>

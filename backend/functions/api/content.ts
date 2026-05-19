@@ -1,6 +1,7 @@
 import { getDb } from '../_lib/db';
 import { getCorsHeaders, handleOptions, jsonResponse } from '../_lib/cors';
-import { isAuthorized } from '../_lib/auth';
+import { isAuthorized, getAdminIdentity } from '../_lib/auth';
+import { ensureAuditTable, logAudit, getRequestMeta } from '../_lib/audit';
 import type { Env } from '../_lib/types';
 
 // Simple hash for ETag generation
@@ -116,6 +117,22 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             try {
                 await db.execute({ sql: 'DELETE FROM kb_gist WHERE lang = ?', args: [lang] });
             } catch { /* skip */ }
+
+            // Audit log: track who updated which section
+            try {
+                await ensureAuditTable(env);
+                const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
+                const meta = getRequestMeta(request);
+                await logAudit(env, {
+                    admin_email: adminEmail || 'unknown',
+                    action: 'update',
+                    entity_type: 'content',
+                    entity_id: `${section}:${lang}`,
+                    entity_label: `${section.charAt(0).toUpperCase() + section.slice(1)} Section (${lang.toUpperCase()})`,
+                    changes_summary: `Updated ${section} content for ${lang === 'en' ? 'English' : 'বাংলা'}`,
+                    ...meta,
+                });
+            } catch { /* audit is non-critical */ }
 
             return jsonResponse({ success: true }, request);
         }
