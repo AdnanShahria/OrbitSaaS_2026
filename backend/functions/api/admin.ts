@@ -346,7 +346,7 @@ async function handleSeed(request: Request, env: Env): Promise<Response> {
     const bcrypt = await import('bcryptjs');
 
     // Dynamic import of translations
-    const { translations } = await import('../../../frontend/src/lib/i18n');
+    const { translations } = await import('../_lib/i18n');
 
     await db.execute(`
     CREATE TABLE IF NOT EXISTS site_content (
