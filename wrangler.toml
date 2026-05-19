@@ -1,7 +1,7 @@
 name = "os-test"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = "dist"
+pages_build_output_dir = "frontend/dist"
 
 # Pages configuration is done via Cloudflare Dashboard
 # This file is for local development with wrangler

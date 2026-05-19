@@ -8,8 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
-dist-ssr
+frontend/dist
+frontend/dist-ssr
 *.local
 .env
 .env.*
@@ -47,5 +47,8 @@ bun.lockb
 .dev.vars
 
 # Unused/Garbage files
-Garbage/
+garbage/
+
+# Auto-generated root functions folder during build
+/functions
 

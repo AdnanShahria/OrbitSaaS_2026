@@ -1,0 +1,64 @@
+# ORBIT SaaS - Custom Web Development, AI & SaaS Agency
+# https://orbitsaas.cloud
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /admin
+Disallow: /api/
+Crawl-delay: 1
+
+# Allow Google AI crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+# Allow OpenAI crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Allow Anthropic crawlers
+User-agent: Anthropic-AI
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+# Allow Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+# Allow Cohere
+User-agent: Cohere-ai
+Allow: /
+
+# Allow Amazon / Alexa
+User-agent: Amazonbot
+Allow: /
+
+# Allow Apple / Siri
+User-agent: Applebot
+Allow: /
+
+# Allow Bing / Microsoft
+User-agent: bingbot
+Allow: /
+
+# Allow Meta
+User-agent: FacebookExternalHit
+Allow: /
+
+# Allow TikTok / ByteDance
+User-agent: Bytespider
+Allow: /
+
+# Sitemaps
+Sitemap: https://orbitsaas.cloud/sitemap.xml
+
+# Host
+Host: https://orbitsaas.cloud

@@ -1,0 +1,10 @@
+{
+    "version": 1,
+    "description": "Route config for Cloudflare Pages. API and project routes go to Functions; everything else is static assets.",
+    "include": [
+        "/api/*",
+        "/project/*",
+        "/sitemap.xml"
+    ],
+    "exclude": []
+}
