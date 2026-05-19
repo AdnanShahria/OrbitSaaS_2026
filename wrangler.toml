@@ -13,6 +13,10 @@ pages_build_output_dir = "frontend/dist"
 # Environment-specific overrides
 [env.production]
 name = "os-test"
+[env.production.vars]
+# VITE_API_URL = "https://orbitsaas.cloud"
 
 [env.preview]
 name = "os-test-preview"
+[env.preview.vars]
+# VITE_API_URL = "https://orbitsaas.cloud"

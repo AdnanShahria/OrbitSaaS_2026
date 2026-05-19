@@ -11,6 +11,7 @@
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:api": "npm run dev --workspace=backend",
     "dev:all": "concurrently \"npm run dev:frontend\" \"npm run dev:api\"",
+    "build": "npm run build:frontend",
     "build:frontend": "npm run build --workspace=frontend",
     "deploy": "npm run build:frontend && npx wrangler pages deploy frontend/dist",
     "lint": "eslint ."
