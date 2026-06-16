@@ -18,6 +18,7 @@ import { useContent } from '@/contexts/ContentContext';
 interface LocalizedMember {
     name: string;
     role: string;
+    bio: string;
 }
 
 interface UnifiedMember {
@@ -36,8 +37,8 @@ interface UnifiedMember {
 const DEFAULT_MEMBER: UnifiedMember = {
     image: '',
     order: 0,
-    en: { name: '', role: '' },
-    bn: { name: '', role: '' },
+    en: { name: '', role: '', bio: '' },
+    bn: { name: '', role: '', bio: '' },
     socials: {
         linkedin: { enabled: false, url: '' },
         twitter: { enabled: false, url: '' },
@@ -237,6 +238,13 @@ function MemberEditor({
                         onChange={(v) => updateLoc(tab, 'role', v)}
                         lang={tab}
                     />
+                    <TextField
+                        label={tab === 'en' ? 'Bio (optional)' : 'সংক্ষিপ্ত পরিচিতি (ঐচ্ছিক)'}
+                        value={item[tab].bio || ''}
+                        onChange={(v) => updateLoc(tab, 'bio', v)}
+                        multiline
+                        lang={tab}
+                    />
                 </div>
             </div>
         </div>
@@ -288,8 +296,8 @@ export default function AdminLeadership() {
             merged.push({
                 image: en.image || bn.image || '',
                 order: en.order ?? bn.order ?? i + 1,
-                en: { name: en.name || '', role: en.role || '' },
-                bn: { name: bn.name || '', role: bn.role || '' },
+                en: { name: en.name || '', role: en.role || '', bio: en.bio || '' },
+                bn: { name: bn.name || '', role: bn.role || '', bio: bn.bio || '' },
                 socials: en.socials || bn.socials || {
                     linkedin: { enabled: false, url: '' },
                     twitter: { enabled: false, url: '' },
@@ -316,6 +324,7 @@ export default function AdminLeadership() {
             const enMembers = sorted.map((m) => ({
                 name: m.en.name,
                 role: m.en.role,
+                bio: m.en.bio,
                 image: m.image,
                 order: m.order,
                 socials: m.socials,
@@ -324,6 +333,7 @@ export default function AdminLeadership() {
             const bnMembers = sorted.map((m) => ({
                 name: m.bn.name,
                 role: m.bn.role,
+                bio: m.bn.bio,
                 image: m.image,
                 order: m.order,
                 socials: m.socials,
@@ -495,6 +505,7 @@ export default function AdminLeadership() {
                         members: members.map(m => ({
                             name: m.en.name,
                             role: m.en.role,
+                            bio: m.en.bio,
                             image: m.image,
                             order: m.order,
                             socials: m.socials,
@@ -507,6 +518,7 @@ export default function AdminLeadership() {
                         members: members.map(m => ({
                             name: m.bn.name,
                             role: m.bn.role,
+                            bio: m.bn.bio,
                             image: m.image,
                             order: m.order,
                             socials: m.socials,
@@ -532,8 +544,8 @@ export default function AdminLeadership() {
                         merged.push({
                             image: en.image || bn.image || '',
                             order: en.order ?? bn.order ?? i + 1,
-                            en: { name: en.name || '', role: en.role || '' },
-                            bn: { name: bn.name || '', role: bn.role || '' },
+                            en: { name: en.name || '', role: en.role || '', bio: en.bio || '' },
+                            bn: { name: bn.name || '', role: bn.role || '', bio: bn.bio || '' },
                             socials: en.socials || bn.socials || {
                                 linkedin: { enabled: false, url: '' },
                                 twitter: { enabled: false, url: '' },

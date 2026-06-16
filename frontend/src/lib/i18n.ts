@@ -1,5 +1,18 @@
 export type Lang = 'en' | 'bn';
 
+export interface LeadershipMember {
+  name: string;
+  role: string;
+  bio?: string;
+  image?: string;
+  order: number;
+  socials?: {
+    linkedin?: { enabled: boolean; url: string };
+    twitter?: { enabled: boolean; url: string };
+    email?: { enabled: boolean; url: string };
+  };
+}
+
 export const translations = {
   en: {
     nav: {
@@ -171,7 +184,7 @@ export const translations = {
     leadership: {
       title: 'Meet Our Team',
       subtitle: 'The minds behind ORBIT SaaS — building the future of software.',
-      members: [] as any[],
+      members: [] as LeadershipMember[],
     },
     reviews: {
       title: 'Client Reviews',
@@ -414,7 +427,7 @@ export const translations = {
     leadership: {
       title: 'আমাদের টিমের সাথে পরিচিত হোন',
       subtitle: 'অরবিট সাস (ORBIT SaaS) এর পেছনের মস্তিষ্কসমূহ — যারা সফটওয়্যারের ভবিষ্যৎ নির্মাণ করছে।',
-      members: [] as any[],
+      members: [] as LeadershipMember[],
     },
     reviews: {
       title: 'ক্লায়েন্ট রিভিউ',

@@ -124,7 +124,7 @@ export function LeadershipSection() {
 
         {/* Members grid */}
         {members.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
             {members.map((member: any, i: number) => {
               const isActive = activeIndex === i;
               return (
@@ -135,7 +135,7 @@ export function LeadershipSection() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-50px' }}
                   transition={{ duration: 0.6, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-                  className={`group relative flex flex-col items-center p-8 rounded-3xl backdrop-blur-md border border-amber-900/5 transition-all duration-500 hover:bg-white/60 hover:shadow-2xl hover:shadow-amber-900/5 hover:-translate-y-2 ${isActive ? 'bg-white/60 shadow-2xl shadow-amber-900/5 -translate-y-2' : 'bg-white/40'}`}
+                  className={`group relative flex flex-col items-center p-4 sm:p-8 rounded-3xl backdrop-blur-md border border-amber-900/5 transition-all duration-500 hover:bg-white/60 hover:shadow-2xl hover:shadow-amber-900/5 hover:-translate-y-2 ${isActive ? 'bg-white/60 shadow-2xl shadow-amber-900/5 -translate-y-2' : 'bg-white/40'}`}
                   onMouseEnter={() => !isMobile && setActiveIndex(i)}
                 >
                   {/* Rising Aura Effect */}
@@ -144,7 +144,7 @@ export function LeadershipSection() {
                   </div>
 
                   {/* Avatar Container */}
-                  <div className="relative w-32 h-32 mb-8 z-10">
+                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 mb-4 sm:mb-8 z-10">
                     {/* Rotating Border */}
                     <div className={`absolute -inset-2 rounded-full border border-dashed transition-all duration-1000 ${isActive ? 'border-amber-500/40 rotate-[30deg]' : 'border-amber-500/0 group-hover:border-amber-500/40 group-hover:rotate-[30deg]'}`} />
                     
@@ -167,12 +167,17 @@ export function LeadershipSection() {
                     </div>
                   </div>
 
-                <h3 className="text-2xl text-[#1A1A1A] mb-2 text-center" style={{ fontFamily: "'Abril Fatface', serif" }}>
+                <h3 className="text-lg sm:text-2xl text-[#1A1A1A] mb-1 sm:mb-2 text-center leading-tight" style={{ fontFamily: "'Abril Fatface', serif" }}>
                   {member.name}
                 </h3>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-700 font-bold mb-6">
+                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] text-emerald-700 font-bold mb-2 sm:mb-3 text-center">
                   {member.role || member.position}
                 </p>
+                {member.bio && (
+                  <p className="text-[10px] sm:text-xs text-slate-500 text-center leading-relaxed mb-3 sm:mb-4 line-clamp-3 px-1">
+                    {member.bio}
+                  </p>
+                )}
 
                 {/* Social links - Premium Style */}
                 <div className="flex justify-center gap-4 mt-auto">
