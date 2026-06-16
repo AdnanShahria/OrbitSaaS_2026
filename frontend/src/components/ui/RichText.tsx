@@ -18,7 +18,7 @@ export const RichText: React.FC<RichTextProps> = ({ text, className }) => {
     <span className={className}>
       {segments.map((seg, i) => {
         if (!seg.bold && !seg.card && !seg.whiteCard && !seg.color && !seg.greenCard) {
-          return <React.Fragment key={i}>{seg.text}</React.Fragment>;
+          return <span key={i}>{seg.text}</span>;
         }
 
         const classes = [

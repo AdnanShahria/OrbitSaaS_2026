@@ -11,14 +11,19 @@
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:api": "npm run dev --workspace=backend",
     "dev:all": "concurrently \"npm run dev:frontend\" \"npm run dev:api\"",
+    "dev:full": "node scripts/dev-full.js",
     "build": "npm run build:frontend",
     "build:frontend": "npm run build --workspace=frontend",
     "deploy": "npm run build:frontend && npx wrangler pages deploy frontend/dist",
     "lint": "eslint ."
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.3",
     "eslint": "^9.32.0",
-    "wrangler": "^4.71.0"
+    "wrangler": "^4.100.0"
+  },
+  "dependencies": {
+    "lovable-tagger": "1.0.20",
+    "vite": "8.0.16"
   }
 }

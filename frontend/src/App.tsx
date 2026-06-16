@@ -13,6 +13,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { SEOHead } from './components/seo/SEOHead';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CustomCursor } from './components/orbit/CustomCursor';
+import { CustomScrollbar } from './components/ui/CustomScrollbar';
 
 /* ═══════════════════════════════════════════════════════════
    APP ORCHESTRATION — Coordinates sequential reveal:
@@ -374,6 +375,7 @@ export default function App() {
           <OrchestrationProvider>
             <LanguageProvider>
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <CustomScrollbar />
               <ScrollToTop />
               <CustomCursor />
               <SEOHead />

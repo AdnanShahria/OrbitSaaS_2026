@@ -54,6 +54,7 @@ export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const isProjectPage = location.pathname.startsWith('/project/');
+  const isAchievementPage = location.pathname.startsWith('/achievement/');
   
   // Find project title if on project page
   const projectId = isProjectPage ? location.pathname.split('/').pop() : null;
@@ -86,10 +87,10 @@ export function Navbar() {
         for (let i = sections.length - 1; i >= 0; i--) {
           const id = sections[i];
           const element = document.getElementById(id);
-          if (element) {
+          if (element && element.offsetHeight > 0) {
             const rect = element.getBoundingClientRect();
             // Adjust offset as needed (150px from top)
-            if (rect.top <= 150) {
+            if (rect.top <= 150 && rect.bottom > 150) {
               // Map the internal DOM ID back to our route-based activeSection identifier
               const virtualSection = id === 'projects' ? 'project' : id === 'techstack' ? 'tech' : id;
               if (activeSection !== virtualSection) {
@@ -127,7 +128,7 @@ export function Navbar() {
   }, []);
 
   // Sections that use Light Mode (Only on the main landing page flows)
-  const isLightMode = !isProjectPage && ['services', 'project', 'achievements', 'leadership'].includes(activeSection);
+  const isLightMode = !isProjectPage && !isAchievementPage && ['services', 'project', 'achievements', 'leadership'].includes(activeSection);
 
   // Theme Variables
   const theme = {
@@ -155,7 +156,7 @@ export function Navbar() {
           initial={{ clipPath: 'inset(0 100% 0 0)', opacity: 0.5 }}
           animate={{ clipPath: 'inset(0 0% 0 0)', opacity: 1 }}
           transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-          className={`relative w-full px-5 sm:px-8 py-2 border rounded-b-3xl ${theme.glass} backdrop-saturate-[180%]`}
+          className={`relative w-full px-2 sm:px-4 py-1 border rounded-b-2xl ${theme.glass} backdrop-saturate-[180%]`}
           style={{
             backgroundColor: theme.bg,
             borderColor: theme.violetBorder,
@@ -169,7 +170,7 @@ export function Navbar() {
             initial={{ x: '-100%', opacity: 0 }}
             animate={{ x: '100%', opacity: [0, 0.4, 0] }}
             transition={{ delay: 0.1, duration: 1.6, ease: "easeInOut" }}
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-[#10B981]/20 to-transparent pointer-events-none z-0 rounded-b-3xl"
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-[#10B981]/20 to-transparent pointer-events-none z-0 rounded-b-2xl"
           />
 
           <div className="flex items-center justify-between max-w-[1400px] mx-auto w-full relative z-10">
@@ -183,14 +184,14 @@ export function Navbar() {
               <Link
                 to="/"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 group px-4 py-2 rounded-full transition-all duration-500 hover:bg-white/5"
+                className="flex items-center gap-2 group px-1 py-1 rounded-full transition-all duration-500 hover:bg-white/5"
               >
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 rounded-lg blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                   <img
                     src={orbitLogo}
                     alt="Orbit"
-                    className="h-9 sm:h-10 w-auto object-contain relative z-10 transition-transform duration-700 group-hover:scale-110 group-hover:rotate-[5deg] rounded-lg"
+                    className="h-7 sm:h-8 w-auto object-contain relative z-10 transition-transform duration-700 group-hover:scale-110 group-hover:rotate-[5deg] rounded-lg"
                   />
                   {/* Premium Shimmer Effect */}
                   <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden rounded-lg">
@@ -202,7 +203,7 @@ export function Navbar() {
                   </div>
                 </div>
                 <span
-                  className="font-normal tracking-[0.1em] text-xl sm:text-2xl transition-all duration-500 group-hover:tracking-[0.15em] relative"
+                  className="font-normal tracking-[0.1em] text-lg sm:text-xl transition-all duration-500 group-hover:tracking-[0.15em] relative"
                   style={{ color: theme.text, fontFamily: "'Abril Fatface', serif" }}
                 >
                   OrbitSaaS
@@ -226,7 +227,7 @@ export function Navbar() {
                       exit={{ opacity: 0, y: -10 }}
                       className="flex items-center gap-3"
                     >
-                      <span className="text-[11px] font-bold text-primary tracking-[0.3em] uppercase truncate max-w-[400px]" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                      <span className="text-[11px] font-bold text-primary tracking-tighter uppercase truncate max-w-[400px]" style={{ fontFamily: "'Outfit', sans-serif" }}>
                         {projectTitle}
                       </span>
                     </motion.div>
@@ -255,7 +256,7 @@ export function Navbar() {
                       className={`relative z-10 ${isContact ? 'px-6 py-2.5 bg-[#059669] rounded-full shadow-[0_4px_15px_rgba(5,150,105,0.3)] hover:scale-105 transition-transform' : 'px-2 py-2'}`}
                     >
                       <motion.span
-                        className={`relative z-10 transition-colors duration-500 text-[10px] font-medium tracking-[0.25em] uppercase`}
+                        className={`relative z-10 transition-colors duration-500 text-[10px] font-medium tracking-tighter uppercase`}
                         style={{
                           fontFamily: "'Outfit', sans-serif",
                           color: isContact ? '#FFFFFF' : theme.textMuted
@@ -280,7 +281,7 @@ export function Navbar() {
                           }
                         }
                       }}
-                      className="relative flex items-center justify-center z-10 px-3 py-2 transition-all duration-300"
+                      className="relative flex items-center justify-center z-10 px-3 py-1 transition-all duration-300"
                     >
                       {isActive && (
                         <motion.div
@@ -290,7 +291,7 @@ export function Navbar() {
                         />
                       )}
                       <motion.span 
-                        className={`relative z-10 transition-colors duration-500 text-[10px] sm:text-[11px] font-bold tracking-[0.2em] uppercase whitespace-nowrap flex overflow-hidden`}
+                        className={`relative z-10 transition-colors duration-500 text-[10px] sm:text-[11px] font-bold tracking-tighter uppercase whitespace-nowrap flex overflow-hidden`}
                         style={{ 
                           fontFamily: "'Outfit', sans-serif",
                           color: isActive 
@@ -352,7 +353,7 @@ export function Navbar() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 0.75, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => toggleLang()}
-                className="hidden sm:flex items-center justify-center min-w-[3.2rem] h-9 sm:h-10 px-3 rounded-full border border-emerald-500/30 bg-[#10B981]/5 text-[#10B981] backdrop-blur-md text-[10px] font-black uppercase tracking-widest transition-all duration-500 hover:bg-[#10B981] hover:border-[#10B981] hover:text-white shadow-lg hover:shadow-emerald-500/20 active:scale-95"
+                className="hidden sm:flex items-center justify-center min-w-[2.8rem] h-7 sm:h-8 px-2.5 rounded-full border border-emerald-500/30 bg-[#10B981]/5 text-[#10B981] backdrop-blur-md text-[10px] font-black uppercase tracking-widest transition-all duration-500 hover:bg-[#10B981] hover:border-[#10B981] hover:text-white shadow-lg hover:shadow-emerald-500/20 active:scale-95"
                 style={{
                   fontFamily: "'Abril Fatface', serif"
                 }}
@@ -378,7 +379,7 @@ export function Navbar() {
                     >
                       <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
                       <span
-                        className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] truncate max-w-[80px]"
+                        className="text-[8px] sm:text-[9px] font-black uppercase tracking-tighter truncate max-w-[80px]"
                         style={{ color: theme.text, fontFamily: "'Outfit', sans-serif" }}
                       >
                         {isProjectPage ? projectTitle : (t?.nav?.[activeSection === 'tech' ? 'techStack' : activeSection === 'project' ? 'projects' : activeSection] || activeSection)}
@@ -400,7 +401,7 @@ export function Navbar() {
                   onClick={() => {
                     window.open(whatsappLink, '_blank');
                   }}
-                  className="group relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full border backdrop-blur-md transition-all duration-500 hover:text-white"
+                  className="group relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border backdrop-blur-md transition-all duration-500 hover:text-white"
                 >
                   {/* Outer pulsating ring */}
                   <div className="absolute inset-0 rounded-full border animate-ping opacity-20 whatsapp-ping-anim" style={{ animationDuration: '3s' }} />
@@ -418,7 +419,7 @@ export function Navbar() {
                 initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
-                className="lg:hidden relative z-[1001] w-10 h-10 flex items-center justify-center rounded-full transition-colors"
+                className="lg:hidden relative z-[1001] w-8 h-8 flex items-center justify-center rounded-full transition-colors"
                 onClick={() => setMobileOpen(!mobileOpen)}
                 style={{ color: mobileOpen ? '#FFFFFF' : theme.text }}
               >

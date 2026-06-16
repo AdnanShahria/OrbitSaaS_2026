@@ -709,21 +709,15 @@
    ══════════════════════════════════════════════════════════ */
 
 ::-webkit-scrollbar {
-  width: 5px;
+  display: none !important;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--bg-darker);
+html, body {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE/Edge */
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(212,160,23,0.2);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(212,160,23,0.4);
-}
+/* Native scrollbar track/thumb styling removed as we now use CustomScrollbar.tsx */
 
 /* ── Custom Scrollbar for Mobile Menu ── */
 .custom-scrollbar::-webkit-scrollbar {

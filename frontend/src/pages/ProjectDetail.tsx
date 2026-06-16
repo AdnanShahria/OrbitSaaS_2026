@@ -19,6 +19,7 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
     const [currentIndex, setCurrentIndex] = useState(0);
     const [direction, setDirection] = useState(0);
     const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [autoPlayKey, setAutoPlayKey] = useState(0);
 
     // Build mixed media array: images + video at position 1 (2nd slide)
     const media: MediaItem[] = (() => {
@@ -30,11 +31,21 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
         return items;
     })();
 
+    useEffect(() => {
+        if (media.length <= 1 || lightboxOpen) return;
+        const timer = setInterval(() => {
+            setDirection(1);
+            setCurrentIndex((prev) => (prev + 1) % media.length);
+        }, 4000);
+        return () => clearInterval(timer);
+    }, [media.length, lightboxOpen, autoPlayKey]);
+
     if (media.length === 0) return null;
 
     const paginate = (newDirection: number) => {
         setDirection(newDirection);
         setCurrentIndex((prev) => (prev + newDirection + media.length) % media.length);
+        setAutoPlayKey(prev => prev + 1);
     };
 
     const openLightbox = () => { setLightboxOpen(true); onLightboxChange?.(true); };

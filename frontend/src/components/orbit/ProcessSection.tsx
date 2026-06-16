@@ -1,12 +1,12 @@
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { useContent } from '@/contexts/ContentContext';
 import { useLang } from '@/contexts/LanguageContext';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, forwardRef } from 'react';
 import { Sparkles, Search, PenTool, Code, CheckCircle2, Truck } from 'lucide-react';
 import { WaveDivider } from '@/components/ui/WaveDivider';
 
 
-function ProcessCard({ card, icon: Icon, isPeak, node, isDelivery }: any) {
+const ProcessCard = forwardRef<HTMLDivElement, any>(({ card, icon: Icon, isPeak, node, isDelivery }, ref) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -37,6 +37,7 @@ function ProcessCard({ card, icon: Icon, isPeak, node, isDelivery }: any) {
 
   return (
     <motion.div
+      ref={ref}
       initial={{
         opacity: 0, scale: 0.8, x: '-50%', y: '-50%',
         left: node.x, top: `calc(${node.y} + ${desktopOffset}px)`
@@ -109,7 +110,8 @@ function ProcessCard({ card, icon: Icon, isPeak, node, isDelivery }: any) {
       </motion.div>
     </motion.div>
   );
-}
+});
+ProcessCard.displayName = 'ProcessCard';
 
 /* ─── Web Audio API Wind Swoosh ─── */
 let swooshAudioCtx: AudioContext | null = null;
