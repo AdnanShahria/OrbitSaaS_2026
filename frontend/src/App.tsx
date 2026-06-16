@@ -449,6 +449,7 @@ export default function App() {
                       <Route path="finance" element={<AdminFinanceTransactions />} />
                       <Route path="finance/transactions" element={<Navigate to="/admin/finance" replace />} />
                       <Route path="audit" element={<AdminAuditLog />} />
+                      <Route path="image-optimizer" element={<AdminImageOptimizer />} />
                     </Route>
                   </Routes>
                 </Suspense>
