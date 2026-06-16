@@ -15,6 +15,7 @@ export default {
         xl: '80rem',
         '2xl': '96rem',
       },
+
     },
     extend: {
       fontFamily: {
