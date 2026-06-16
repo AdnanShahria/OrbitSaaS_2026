@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "npx wrangler pages dev dist --compatibility-date 2024-12-01 --compatibility-flag nodejs_compat",
     "generate-sitemap": "node scripts/generate-sitemap.js",
-    "postbuild": "node scripts/generate-sitemap.js && node scripts/copy-functions.js"
+    "postbuild": "node scripts/generate-sitemap.js && node scripts/copy-functions.js && node scripts/prepare-cloudflare-deploy.js"
   },
   "dependencies": {
     "@babel/helpers": "^7.29.7",

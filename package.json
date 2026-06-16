@@ -3,10 +3,6 @@
   "private": true,
   "type": "module",
   "version": "0.0.1",
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
   "scripts": {
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:api": "npm run dev --workspace=backend",
@@ -25,5 +21,9 @@
   "dependencies": {
     "lovable-tagger": "1.0.20",
     "vite": "8.0.16"
-  }
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ]
 }
