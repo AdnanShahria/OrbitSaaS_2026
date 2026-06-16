@@ -17,7 +17,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const { request } = context;
 
     if (request.method === 'OPTIONS') return handleOptions(request);
-    if (request.method !== 'GET') return jsonResponse({ error: 'Method not allowed' }, request, 405);
+    if (request.method !== 'GET' && request.method !== 'HEAD') return jsonResponse({ error: 'Method not allowed' }, request, 405);
 
     const url = new URL(request.url);
     const imageUrl = url.searchParams.get('url');
@@ -28,6 +28,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
     try {
         const upstream = await fetch(imageUrl, {
+            method: request.method,
             headers: { 'Accept': 'image/*' },
         });
 
@@ -36,16 +37,23 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         }
 
         const contentType = upstream.headers.get('content-type') || 'image/jpeg';
+        const contentLength = upstream.headers.get('content-length');
+
+        const headers: Record<string, string> = {
+            ...getCorsHeaders(request),
+            'Cache-Control': 'public, max-age=86400, s-maxage=31536000, immutable',
+            'CDN-Cache-Control': 'public, s-maxage=31536000, immutable',
+            'Content-Type': contentType,
+        };
+
+        if (contentLength) {
+            headers['Content-Length'] = contentLength;
+        }
 
         // Long-lived cache: CDN caches for 1 year, browser caches for 1 day
-        return new Response(upstream.body, {
+        return new Response(request.method === 'HEAD' ? null : upstream.body, {
             status: 200,
-            headers: {
-                ...getCorsHeaders(request),
-                'Cache-Control': 'public, max-age=86400, s-maxage=31536000, immutable',
-                'CDN-Cache-Control': 'public, s-maxage=31536000, immutable',
-                'Content-Type': contentType,
-            },
+            headers,
         });
     } catch (error) {
         console.error('Image proxy error:', error);
