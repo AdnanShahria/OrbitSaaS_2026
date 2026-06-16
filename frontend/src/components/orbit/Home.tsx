@@ -625,7 +625,9 @@ export function Home() {
                             WhatsApp
                           </a>
                           <a
-                            href="mailto:contact@orbitsaas.com"
+                            href="https://mail.google.com/mail/?view=cm&fs=1&to=contact@orbitsaas.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="h-full px-5 md:px-6 bg-indigo-500 text-white text-sm md:text-base font-bold rounded-xl hover:bg-indigo-400 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap shadow-[0_0_20px_rgba(99,102,241,0.3)]"
                           >
                             Email
@@ -646,7 +648,7 @@ export function Home() {
                   </div>
                   <button
                     onClick={() => navigate('/services')}
-                    className="px-5 py-3 md:px-8 md:py-4 bg-white/5 border border-white/10 text-white text-sm md:text-base font-bold rounded-xl hover:bg-white/10 transition-all duration-300 flex items-center gap-2 group cursor-pointer"
+                    className={`px-5 py-3 md:px-8 md:py-4 bg-white/5 border border-white/10 text-white text-sm md:text-base font-bold rounded-xl hover:bg-white/10 transition-all duration-300 flex items-center gap-2 group cursor-pointer ${showCtaOptions ? 'hidden sm:flex' : 'flex'}`}
                   >
                     {learnMore}
                     <ArrowRight className="transition-transform group-hover:translate-x-1" size={16} />

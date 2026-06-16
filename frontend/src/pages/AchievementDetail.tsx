@@ -5,6 +5,7 @@ import { useLang } from '@/contexts/LanguageContext';
 import { useContent } from '@/contexts/ContentContext';
 import { Navbar } from '@/components/orbit/Navbar';
 import { OrbitFooter } from '@/components/orbit/OrbitFooter';
+import { MobileFooter } from '@/components/orbit/MobileFooter';
 import { Chatbot } from '@/components/orbit/chatbot';
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
@@ -377,7 +378,8 @@ export default function AchievementDetail() {
                     )}
                 </div>
             </main>
-            <OrbitFooter />
+            <div className="block md:hidden"><MobileFooter /></div>
+            <div className="hidden md:block"><OrbitFooter /></div>
             <Chatbot />
         </div>
     );
