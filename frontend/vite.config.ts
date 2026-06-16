@@ -12,6 +12,7 @@ import { VitePWA } from "vite-plugin-pwa";
 async function getPrerenderPlugin() {
   try {
     // Check if puppeteer is importable since it's a peer dependency required by the renderer
+    // @ts-ignore
     await import("puppeteer");
     const { default: prerender } = await import("@prerenderer/rollup-plugin");
     const { default: PuppeteerRenderer } = await import("@prerenderer/renderer-puppeteer");
@@ -54,6 +55,7 @@ export default defineConfig(async ({ mode }) => {
 
   return {
     base: '/',
+    envDir: '../',
     assetsInclude: ['**/*.lottie'],
     server: {
       host: "::",
@@ -157,7 +159,7 @@ export default defineConfig(async ({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          manualChunks(id) {
+          manualChunks(id: string) {
             if (id.includes('node_modules')) {
               if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router-dom/')) {
                 return 'vendor';

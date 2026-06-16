@@ -8,7 +8,7 @@ import {
     LayoutDashboard, Type, ShoppingCart, Users, FolderOpen,
     MessageCircle, Globe, Shield, LogOut, Menu, PanelLeftClose, PanelLeft,
     Lightbulb, Phone, FileText, Cpu, CloudUpload, Loader2, Link as LinkIcon,
-    Database, BarChart3, Star, Trash2, CheckCircle2, XCircle, Bell, Layers, UserCircle, Trophy, Wallet, Activity
+    Database, BarChart3, Star, Trash2, CheckCircle2, XCircle, Bell, Layers, UserCircle, Trophy, Wallet, Activity, Zap
 } from 'lucide-react';
 
 
@@ -37,6 +37,7 @@ const navItems = [
     { label: 'Notifications', path: '/admin/notifications', icon: Bell },
     { label: '🔍 Audit Log', path: '/admin/audit', icon: Activity },
     { label: 'Backup', path: '/admin/backup', icon: Database },
+    { label: 'Image Optimizer', path: '/admin/optimizer', icon: Zap },
 ];
 
 // Progress toast renderer

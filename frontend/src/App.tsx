@@ -32,7 +32,7 @@ interface OrchestrationContextValue {
 
 const OrchestrationContext = createContext<OrchestrationContextValue>({
   phase: 0,
-  advanceTo: () => {},
+  advanceTo: () => { },
   isReady: false,
 });
 
@@ -136,6 +136,7 @@ const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications')
 const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
 const AdminFinanceTransactions = lazy(() => import('./pages/admin/finance/AdminFinanceTransactions'));
 const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
+const AdminImageOptimizer = lazy(() => import('./pages/admin/AdminImageOptimizer'));
 
 function SitePreloader() {
   return (
@@ -165,7 +166,7 @@ function SitePreloader() {
           className="absolute w-4 h-4 rounded-full bg-gradient-to-tr from-[#D4A017] to-[#F5C542] shadow-[0_0_20px_rgba(212,160,23,0.8)]"
         />
       </div>
-      <motion.div 
+      <motion.div
         animate={{ opacity: [0.3, 0.8, 0.3] }}
         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         className="mt-8 text-[11px] font-bold uppercase tracking-[0.4em] text-[#D4A017]/80"
@@ -246,8 +247,8 @@ function PublicSite() {
   useEffect(() => {
     let sessionId = localStorage.getItem('orbit_visitor_session_id');
     if (!sessionId) {
-      sessionId = typeof crypto !== 'undefined' && crypto.randomUUID 
-        ? crypto.randomUUID() 
+      sessionId = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
         : 'session-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       localStorage.setItem('orbit_visitor_session_id', sessionId);
     }
@@ -264,13 +265,13 @@ function PublicSite() {
     // Signal pre-renderer
     setTimeout(() => {
       document.dispatchEvent(new Event('custom-render-trigger'));
-    }, 1500); 
+    }, 1500);
   }, []);
 
   // Handle direct navigation to routes via anchor scrolling
   useEffect(() => {
     if (!isLoaded) return;
-    
+
     // Map existing paths to section IDs
     const routeToId: Record<string, string> = {
       '/services': 'services',
@@ -283,7 +284,7 @@ function PublicSite() {
       '/leadership': 'leadership',
       '/contact': 'contact'
     };
-    
+
     const targetId = routeToId[location.pathname];
     if (targetId) {
       // Use polling to wait until the Suspense component actually renders its children
@@ -301,7 +302,7 @@ function PublicSite() {
 
       return () => clearInterval(interval);
     } else if (location.pathname === '/') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [location.pathname, isLoaded]);
 
@@ -375,13 +376,13 @@ export default function App() {
           <OrchestrationProvider>
             <LanguageProvider>
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <CustomScrollbar />
-              <ScrollToTop />
-              <CustomCursor />
-              <SEOHead />
-              <Toaster position="top-right" theme="dark" richColors closeButton />
-              <NavbarVisibilityWrapper />
-              <Suspense fallback={<SitePreloader />}>
+                <CustomScrollbar />
+                <ScrollToTop />
+                <CustomCursor />
+                <SEOHead />
+                <Toaster position="top-right" theme="dark" richColors closeButton />
+                <NavbarVisibilityWrapper />
+                <Suspense fallback={<SitePreloader />}>
                   <Routes>
                     {/* Public Core Pages with PageFlip Transitions - Consolidated to prevent unmount/flicker */}
                     <Route element={
