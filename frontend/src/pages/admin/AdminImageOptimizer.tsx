@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useContent } from '@/contexts/ContentContext';
 import { SectionHeader } from '@/components/admin/EditorComponents';
-import { ImageIcon, Zap, Loader2, CheckCircle2, ChevronDown, CheckSquare, Square, RefreshCcw, Layers } from 'lucide-react';
+import { ImageIcon, Zap, Loader2, CheckCircle2, ChevronDown, CheckSquare, Square, RefreshCcw, Layers, Lock, X } from 'lucide-react';
 import { uploadToImgBB } from '@/lib/imgbb';
 
 // Regex to find image URLs in text (including i.ibb.co)
@@ -18,6 +18,7 @@ interface DiscoveredImage {
     url: string;
     sections: ImageSectionPath[];
     isCompressed: boolean;
+    serialNumber?: number;
 }
 
 export default function AdminImageOptimizer() {
@@ -29,6 +30,12 @@ export default function AdminImageOptimizer() {
     const [imageSizes, setImageSizes] = useState<Record<string, number>>({});
     const [fetchingSizes, setFetchingSizes] = useState(false);
     const [expandedSegments, setExpandedSegments] = useState<Set<string>>(new Set());
+
+    // OTP Modal States
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [otpInput, setOtpInput] = useState('');
+    const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
     // 1. Recursive Data Scanner
     const discoveredImages = useMemo(() => {
@@ -96,6 +103,11 @@ export default function AdminImageOptimizer() {
         if (content?.bn) scanLang(content.bn, 'bn');
 
         const images = Array.from(imageMap.values());
+        
+        // Add serial number
+        images.forEach((img, index) => {
+            img.serialNumber = index + 1;
+        });
         
         // Auto-select images that don't seem to be already compressed (.webp or i.ibb.co with webp)
         const initialSelected = new Set<string>();
@@ -177,7 +189,68 @@ export default function AdminImageOptimizer() {
         });
     };
 
-    const handleCompressAll = async () => {
+    const triggerCompression = async () => {
+        const imagesToProcess = discoveredImages.filter(img => selectedUrls.has(img.url));
+        if (imagesToProcess.length === 0) return;
+
+        setShowOtpModal(true);
+        setIsSendingOtp(true);
+        try {
+            const token = localStorage.getItem('admin_token');
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${API_BASE}/api/otp?action=send`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed to send OTP');
+            toast.success('OTP sent to your email.');
+        } catch (err: any) {
+            console.error('OTP Send error', err);
+            toast.error('Failed to send OTP email.');
+            setShowOtpModal(false);
+        } finally {
+            setIsSendingOtp(false);
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (!otpInput) {
+            toast.error('Please enter the OTP.');
+            return;
+        }
+
+        setIsVerifyingOtp(true);
+        try {
+            const token = localStorage.getItem('admin_token');
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${API_BASE}/api/otp?action=verify`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}` 
+                },
+                body: JSON.stringify({ code: otpInput })
+            });
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
+                toast.success('OTP verified successfully!');
+                setShowOtpModal(false);
+                setOtpInput('');
+                // Start compression
+                runCompression();
+            } else {
+                toast.error(data.error || 'Invalid OTP');
+            }
+        } catch (err: any) {
+            console.error('OTP Verify error', err);
+            toast.error('Failed to verify OTP.');
+        } finally {
+            setIsVerifyingOtp(false);
+        }
+    };
+
+    const runCompression = async () => {
         const imagesToProcess = discoveredImages.filter(img => selectedUrls.has(img.url));
         if (imagesToProcess.length === 0) return;
         
@@ -256,8 +329,50 @@ export default function AdminImageOptimizer() {
         setIsCompressing(false);
     };
 
+    const totalCompressed = discoveredImages.filter(img => img.isCompressed).length;
+
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 relative">
+            {showOtpModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+                    <div className="bg-card border border-border p-6 rounded-2xl shadow-2xl w-full max-w-sm relative">
+                        <button 
+                            onClick={() => setShowOtpModal(false)}
+                            className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center">
+                                <Lock className="w-6 h-6 text-blue-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold">Verification Required</h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {isSendingOtp ? 'Sending OTP to your email...' : 'Enter the 6-digit OTP sent to your email to proceed.'}
+                                </p>
+                            </div>
+                            <input 
+                                type="text"
+                                maxLength={6}
+                                placeholder="000000"
+                                value={otpInput}
+                                onChange={(e) => setOtpInput(e.target.value)}
+                                className="w-full text-center text-2xl tracking-widest font-mono p-3 bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                disabled={isSendingOtp || isVerifyingOtp}
+                            />
+                            <button
+                                onClick={handleVerifyOtp}
+                                disabled={isSendingOtp || isVerifyingOtp || otpInput.length < 6}
+                                className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 flex justify-center items-center gap-2 transition-colors"
+                            >
+                                {isVerifyingOtp ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</> : 'Verify & Compress'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <SectionHeader
                 title="Bulk Image Optimizer"
                 description="Scan and compress all existing images in your database to improve website loading speed."
@@ -270,9 +385,15 @@ export default function AdminImageOptimizer() {
                     </div>
                     <div className="flex-1 space-y-5">
                         <div>
-                            <h3 className="font-semibold text-foreground text-xl flex items-center gap-2">
-                                Found {discoveredImages.length} Images <span className="text-sm font-normal text-muted-foreground bg-secondary px-2 py-0.5 rounded-full border border-border ml-2">{selectedUrls.size} selected</span>
-                            </h3>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <h3 className="font-semibold text-foreground text-xl flex items-center gap-2">
+                                    Found {discoveredImages.length} Images 
+                                    <span className="text-sm font-normal text-muted-foreground bg-secondary px-2 py-0.5 rounded-full border border-border ml-2">{selectedUrls.size} selected</span>
+                                </h3>
+                                <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm font-semibold flex items-center gap-1.5">
+                                    <CheckCircle2 className="w-4 h-4" /> Total Compressed: {totalCompressed}
+                                </div>
+                            </div>
                             <p className="text-sm text-muted-foreground mt-1">
                                 These images are automatically segmented by category. Use the selection tools below to choose which ones to compress.
                             </p>
@@ -301,7 +422,7 @@ export default function AdminImageOptimizer() {
                         {discoveredImages.length > 0 && (
                             <div className="pt-2 border-t border-border/50">
                                 <button
-                                    onClick={handleCompressAll}
+                                    onClick={triggerCompression}
                                     disabled={isCompressing || selectedUrls.size === 0}
                                     className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
@@ -371,7 +492,10 @@ export default function AdminImageOptimizer() {
                                                                 <img src={img.url} alt="Preview" className="w-full h-full object-cover" loading="lazy" />
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="text-xs font-medium text-foreground truncate" title={img.url}>{img.url}</p>
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="text-xs font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded-md border border-primary/20">#{img.serialNumber}</span>
+                                                                    <p className="text-xs font-medium text-foreground truncate" title={img.url}>{img.url}</p>
+                                                                </div>
                                                                 
                                                                 <div className="flex flex-wrap gap-1.5 mt-2 items-center">
                                                                     <span className="text-[10px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full font-medium border border-border/50">
