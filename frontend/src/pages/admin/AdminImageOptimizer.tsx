@@ -4,6 +4,7 @@ import { useContent } from '@/contexts/ContentContext';
 import { SectionHeader } from '@/components/admin/EditorComponents';
 import { ImageIcon, Zap, Loader2, CheckCircle2, ChevronDown, CheckSquare, Square, RefreshCcw, Layers, Lock, X } from 'lucide-react';
 import { uploadToImgBB } from '@/lib/imgbb';
+import imageCompression from 'browser-image-compression';
 
 // Regex to find image URLs in text (including i.ibb.co)
 const URL_REGEX = /https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp|gif)(?:\?[^\s"'<>]+)?|https?:\/\/i\.ibb\.co\/[^\s"'<>]+/g;
@@ -36,6 +37,17 @@ export default function AdminImageOptimizer() {
     const [otpInput, setOtpInput] = useState('');
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+    const [isSandboxFlow, setIsSandboxFlow] = useState(false);
+
+    // Sandbox States
+    const [sandboxFile, setSandboxFile] = useState<File | null>(null);
+    const [sandboxPreview, setSandboxPreview] = useState<string | null>(null);
+    const [sandboxCompressedBlob, setSandboxCompressedBlob] = useState<Blob | null>(null);
+    const [sandboxCompressing, setSandboxCompressing] = useState(false);
+    const [sandboxResultUrl, setSandboxResultUrl] = useState<string | null>(null);
+
+    // Store sizes for newly compressed images
+    const [newImageSizes, setNewImageSizes] = useState<Record<string, number>>({});
 
     // 1. Recursive Data Scanner
     const discoveredImages = useMemo(() => {
@@ -193,6 +205,30 @@ export default function AdminImageOptimizer() {
         const imagesToProcess = discoveredImages.filter(img => selectedUrls.has(img.url));
         if (imagesToProcess.length === 0) return;
 
+        setIsSandboxFlow(false);
+        setShowOtpModal(true);
+        setIsSendingOtp(true);
+        try {
+            const token = localStorage.getItem('admin_token');
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${API_BASE}/api/otp?action=send`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed to send OTP');
+            toast.success('OTP sent to your email.');
+        } catch (err: any) {
+            console.error('OTP Send error', err);
+            toast.error('Failed to send OTP email.');
+            setShowOtpModal(false);
+        } finally {
+            setIsSendingOtp(false);
+        }
+    };
+
+    const triggerSandboxOTP = async () => {
+        if (!sandboxCompressedBlob) return;
+        setIsSandboxFlow(true);
         setShowOtpModal(true);
         setIsSendingOtp(true);
         try {
@@ -237,8 +273,11 @@ export default function AdminImageOptimizer() {
                 toast.success('OTP verified successfully!');
                 setShowOtpModal(false);
                 setOtpInput('');
-                // Start compression
-                runCompression();
+                if (isSandboxFlow) {
+                    runSandboxUpload();
+                } else {
+                    runCompression();
+                }
             } else {
                 toast.error(data.error || 'Invalid OTP');
             }
@@ -279,6 +318,17 @@ export default function AdminImageOptimizer() {
 
                 const newUrl = await uploadToImgBB(file);
                 
+                // Fetch the new size to display it
+                try {
+                    const newRes = await fetch(`${API_BASE}/api/img-proxy?url=${encodeURIComponent(newUrl)}`, { method: 'HEAD' });
+                    const newSize = newRes.headers.get('content-length');
+                    if (newSize) {
+                        setNewImageSizes(prev => ({ ...prev, [img.url]: parseInt(newSize, 10) }));
+                    }
+                } catch (e) {
+                    // Ignore
+                }
+
                 urlReplacements.set(img.url, newUrl);
                 successCount++;
                 results.push({ url: img.url, newUrl }); // modify array in place to avoid lag
@@ -329,6 +379,63 @@ export default function AdminImageOptimizer() {
         setIsCompressing(false);
     };
 
+    const handleSandboxFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setSandboxFile(file);
+        setSandboxPreview(URL.createObjectURL(file));
+        setSandboxCompressedBlob(null);
+        setSandboxResultUrl(null);
+    };
+
+    const handleSandboxCompress = async () => {
+        if (!sandboxFile) return;
+        setSandboxCompressing(true);
+        try {
+            const options = {
+                maxSizeMB: 0.15, // 150KB target
+                maxWidthOrHeight: 1920,
+                useWebWorker: true,
+                fileType: 'image/webp'
+            };
+            const compressed = await imageCompression(sandboxFile, options);
+            setSandboxCompressedBlob(compressed);
+            toast.success('Local compression successful!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Local compression failed.');
+        } finally {
+            setSandboxCompressing(false);
+        }
+    };
+
+    const runSandboxUpload = async () => {
+        if (!sandboxFile || !sandboxCompressedBlob) return;
+        const toastId = toast.loading('Uploading to ImgBB...');
+        try {
+            const fileToUpload = new File([sandboxCompressedBlob], sandboxFile.name.replace(/\.[^/.]+$/, ".webp"), {
+                type: 'image/webp',
+            });
+            
+            const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
+            const formData = new FormData();
+            formData.append('image', fileToUpload);
+
+            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!res.ok) throw new Error('ImgBB upload failed');
+            const data = await res.json();
+            setSandboxResultUrl(data.data.url);
+            toast.success('Sandbox test upload successful!', { id: toastId });
+        } catch (error) {
+            console.error(error);
+            toast.error('Sandbox upload failed', { id: toastId });
+        }
+    };
+
     const totalCompressed = discoveredImages.filter(img => img.isCompressed).length;
 
     return (
@@ -377,6 +484,72 @@ export default function AdminImageOptimizer() {
                 title="Bulk Image Optimizer"
                 description="Scan and compress all existing images in your database to improve website loading speed."
             />
+
+            {/* Test Sandbox Section */}
+            <div className="bg-card rounded-xl border border-border p-6 shadow-sm mb-8">
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-amber-500" /> Image Compression Sandbox
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                    Upload a file from your computer to test the compression algorithm (target 150KB) and the OTP verification flow without affecting live data.
+                </p>
+                <div className="flex flex-col md:flex-row gap-6">
+                    <div className="flex-1 space-y-4">
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleSandboxFileChange}
+                            className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                        {sandboxFile && (
+                            <div className="text-sm bg-secondary p-3 rounded-lg border border-border">
+                                <p><strong>Original Size:</strong> {formatSize(sandboxFile.size)}</p>
+                                {sandboxCompressedBlob && (
+                                    <p className="text-emerald-500 font-medium mt-1">
+                                        <strong>Compressed Size:</strong> {formatSize(sandboxCompressedBlob.size)}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                onClick={handleSandboxCompress}
+                                disabled={!sandboxFile || sandboxCompressing}
+                                className="px-4 py-2 bg-blue-500/10 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-500/20 transition disabled:opacity-50"
+                            >
+                                {sandboxCompressing ? 'Compressing...' : '1. Test Local Compression'}
+                            </button>
+                            <button
+                                onClick={triggerSandboxOTP}
+                                disabled={!sandboxCompressedBlob}
+                                className="px-4 py-2 bg-emerald-500/10 text-emerald-600 rounded-lg text-sm font-semibold hover:bg-emerald-500/20 transition disabled:opacity-50"
+                            >
+                                2. Test OTP & Upload
+                            </button>
+                        </div>
+                        {sandboxResultUrl && (
+                            <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                                <p className="text-sm text-emerald-600 font-semibold mb-1">Upload Successful!</p>
+                                <a href={sandboxResultUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline break-all">
+                                    {sandboxResultUrl}
+                                </a>
+                            </div>
+                        )}
+                    </div>
+                    {sandboxPreview && (
+                        <div className="w-full md:w-64 flex-shrink-0">
+                            <img 
+                                src={sandboxCompressedBlob ? URL.createObjectURL(sandboxCompressedBlob) : sandboxPreview} 
+                                alt="Sandbox Preview" 
+                                className="w-full h-auto max-h-48 object-cover rounded-xl border border-border" 
+                            />
+                            <p className="text-center text-xs text-muted-foreground mt-2">
+                                {sandboxCompressedBlob ? 'Compressed Preview' : 'Original Preview'}
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
                 <div className="flex flex-col md:flex-row items-start gap-6">
@@ -499,8 +672,14 @@ export default function AdminImageOptimizer() {
                                                                 
                                                                 <div className="flex flex-wrap gap-1.5 mt-2 items-center">
                                                                     <span className="text-[10px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full font-medium border border-border/50">
-                                                                        {formatSize(sizeBytes)}
+                                                                        Original: {formatSize(sizeBytes)}
                                                                     </span>
+                                                                    {newImageSizes[img.url] && (
+                                                                        <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full font-bold border border-emerald-500/20 flex items-center gap-1">
+                                                                            <CheckCircle2 className="w-3 h-3" />
+                                                                            New: {formatSize(newImageSizes[img.url])}
+                                                                        </span>
+                                                                    )}
                                                                     {img.isCompressed && !result?.newUrl && (
                                                                         <span className="text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
                                                                             Already Compressed (WebP)

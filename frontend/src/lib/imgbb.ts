@@ -5,7 +5,7 @@ const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
 export async function uploadToImgBB(file: File): Promise<string> {
     // Compress the file before uploading
     const options = {
-        maxSizeMB: 0.5, // 500KB target
+        maxSizeMB: 0.15, // 150KB target
         maxWidthOrHeight: 1920, // Max 1080p equivalent
         useWebWorker: true,
         fileType: 'image/webp' // Convert everything to webp for maximum compression
