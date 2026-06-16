@@ -15,6 +15,7 @@ export async function uploadToImgBB(file: File): Promise<string> {
     try {
         if (file.type.startsWith('image/')) {
             const compressedBlob = await imageCompression(file, options);
+            console.log(`[Image Optimizer] Compressed "${file.name}": ${(file.size / 1024 / 1024).toFixed(2)} MB -> ${(compressedBlob.size / 1024).toFixed(2)} KB`);
             // Convert Blob back to File to maintain filename
             fileToUpload = new File([compressedBlob], file.name.replace(/\.[^/.]+$/, ".webp"), {
                 type: 'image/webp',

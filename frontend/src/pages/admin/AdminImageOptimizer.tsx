@@ -19,6 +19,7 @@ export default function AdminImageOptimizer() {
     const [isCompressing, setIsCompressing] = useState(false);
     const [progress, setProgress] = useState({ done: 0, total: 0 });
     const [results, setResults] = useState<{ url: string; newUrl?: string; error?: string }[]>([]);
+    const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set());
 
     // Scan for images across all sections
     const discoveredImages = useMemo(() => {
@@ -54,14 +55,27 @@ export default function AdminImageOptimizer() {
         if (content?.en) scanLang(content.en, 'en');
         if (content?.bn) scanLang(content.bn, 'bn');
 
-        return Array.from(imageMap.values());
+        const images = Array.from(imageMap.values());
+        
+        // Auto-select images that don't seem to be already compressed (.webp or i.ibb.co with webp)
+        const initialSelected = new Set<string>();
+        images.forEach(img => {
+            const isLikelyCompressed = img.url.toLowerCase().endsWith('.webp');
+            if (!isLikelyCompressed) {
+                initialSelected.add(img.url);
+            }
+        });
+        setSelectedUrls(initialSelected);
+
+        return images;
     }, [content]);
 
     const handleCompressAll = async () => {
-        if (discoveredImages.length === 0) return;
+        const imagesToProcess = discoveredImages.filter(img => selectedUrls.has(img.url));
+        if (imagesToProcess.length === 0) return;
         
         setIsCompressing(true);
-        setProgress({ done: 0, total: discoveredImages.length });
+        setProgress({ done: 0, total: imagesToProcess.length });
         setResults([]);
         
         const toastId = toast.loading('Compressing images...');
@@ -73,8 +87,8 @@ export default function AdminImageOptimizer() {
         // We need to keep track of URL mappings to update the sections later
         const urlReplacements = new Map<string, string>();
 
-        for (let i = 0; i < discoveredImages.length; i++) {
-            const img = discoveredImages[i];
+        for (let i = 0; i < imagesToProcess.length; i++) {
+            const img = imagesToProcess[i];
             
             try {
                 // 1. Fetch image using the proxy to bypass CORS/503 blocks
@@ -100,7 +114,7 @@ export default function AdminImageOptimizer() {
                 newResults.push({ url: img.url, error: err.message });
             }
             
-            setProgress({ done: i + 1, total: discoveredImages.length });
+            setProgress({ done: i + 1, total: imagesToProcess.length });
             setResults([...newResults]);
         }
         
@@ -162,7 +176,7 @@ export default function AdminImageOptimizer() {
                     <div className="flex-1 space-y-4">
                         <div>
                             <h3 className="font-semibold text-foreground text-lg flex items-center gap-2">
-                                Found {discoveredImages.length} Images
+                                Found {discoveredImages.length} Images ({selectedUrls.size} selected for compression)
                             </h3>
                             <p className="text-sm text-muted-foreground mt-1">
                                 These images are currently referenced in your database. Compressing them will download, optimize, and re-upload them to ImgBB, updating your content automatically.
@@ -197,15 +211,36 @@ export default function AdminImageOptimizer() {
                     <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
                         {discoveredImages.map((img, i) => {
                             const result = results.find(r => r.url === img.url);
+                            const isLikelyCompressed = img.url.toLowerCase().endsWith('.webp');
+                            const isSelected = selectedUrls.has(img.url);
                             
                             return (
-                                <div key={i} className="p-4 flex items-center gap-4 hover:bg-secondary/20 transition-colors">
+                                <div key={i} className={`p-4 flex items-center gap-4 transition-colors ${isSelected ? 'bg-secondary/10 hover:bg-secondary/20' : 'opacity-70 hover:opacity-100 hover:bg-secondary/10'}`}>
+                                    <div className="flex items-center h-full pt-1">
+                                        <input 
+                                            type="checkbox" 
+                                            className="w-4 h-4 rounded border-border bg-background text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                            checked={isSelected}
+                                            onChange={(e) => {
+                                                const newSet = new Set(selectedUrls);
+                                                if (e.target.checked) newSet.add(img.url);
+                                                else newSet.delete(img.url);
+                                                setSelectedUrls(newSet);
+                                            }}
+                                            disabled={isCompressing || (result && result.newUrl ? true : false)}
+                                        />
+                                    </div>
                                     <div className="w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-secondary/50">
                                         <img src={img.url} alt="Preview" className="w-full h-full object-cover" loading="lazy" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-foreground truncate">{img.url}</p>
-                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                        <p className="text-sm font-medium text-foreground truncate" title={img.url}>{img.url}</p>
+                                        <div className="flex flex-wrap gap-1.5 mt-2 items-center">
+                                            {isLikelyCompressed && !result?.newUrl && (
+                                                <span className="text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
+                                                    Already Compressed (WebP)
+                                                </span>
+                                            )}
                                             {img.sections.map((s, idx) => (
                                                 <span key={idx} className="text-[10px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full">
                                                     {s.lang.toUpperCase()}: {s.section}
@@ -217,11 +252,11 @@ export default function AdminImageOptimizer() {
                                         {result && (
                                             <div className="mt-2 text-xs">
                                                 {result.newUrl ? (
-                                                    <span className="text-emerald-500 flex items-center gap-1">
-                                                        <CheckCircle2 className="w-3.5 h-3.5" /> Compressed successfully
+                                                    <span className="text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md inline-flex items-center gap-1 font-medium">
+                                                        <CheckCircle2 className="w-3.5 h-3.5" /> Compressed version generated and applied! It will be used from now on.
                                                     </span>
                                                 ) : (
-                                                    <span className="text-red-500">Failed: {result.error}</span>
+                                                    <span className="text-red-500 bg-red-500/10 px-2 py-1 rounded-md inline-block font-medium">Failed: {result.error}</span>
                                                 )}
                                             </div>
                                         )}
