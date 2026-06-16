@@ -10,39 +10,47 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // Helper: returns the prerender plugin only for production builds
 async function getPrerenderPlugin() {
-  const { default: prerender } = await import("@prerenderer/rollup-plugin");
-  const { default: PuppeteerRenderer } = await import("@prerenderer/renderer-puppeteer");
+  try {
+    // Check if puppeteer is importable since it's a peer dependency required by the renderer
+    await import("puppeteer");
+    const { default: prerender } = await import("@prerenderer/rollup-plugin");
+    const { default: PuppeteerRenderer } = await import("@prerenderer/renderer-puppeteer");
 
-  return prerender({
-    routes: [
-      '/',
-      '/services',
-      '/process',
-      '/techstack',
-      '/why-us',
-      '/projects',
-      '/reviews',
-      '/leadership',
-      '/contact'
-    ],
-    renderer: new PuppeteerRenderer({
-      renderAfterDocumentEvent: 'custom-render-trigger',
-      // Optional: wait for a specific time just to be safe if event fails
-      renderAfterTime: 5000,
-      timeout: 60000, // Important for Lottie/3D loading
-      maxConcurrentRoutes: 4,
-    }),
-    postProcess(renderedRoute) {
-      // Strip out any scripts that aren't needed for SEO to keep payload light
-      // The object is mutated in place, return void
-    }
-  });
+    return prerender({
+      routes: [
+        '/',
+        '/services',
+        '/process',
+        '/techstack',
+        '/why-us',
+        '/projects',
+        '/reviews',
+        '/leadership',
+        '/contact'
+      ],
+      renderer: new PuppeteerRenderer({
+        renderAfterDocumentEvent: 'custom-render-trigger',
+        // Optional: wait for a specific time just to be safe if event fails
+        renderAfterTime: 5000,
+        timeout: 60000, // Important for Lottie/3D loading
+        maxConcurrentRoutes: 4,
+      }),
+      postProcess(renderedRoute) {
+        // Strip out any scripts that aren't needed for SEO to keep payload light
+        // The object is mutated in place, return void
+      }
+    });
+  } catch (err) {
+    console.warn("[Prerender] Skipping prerendering: puppeteer or @prerenderer dependencies are not installed.");
+    return null;
+  }
 }
 
 // https://vitejs.dev/config/
 export default defineConfig(async ({ mode }) => {
-  // Only load the prerender plugin in production
-  const prerenderPlugin = mode === "production" ? await getPrerenderPlugin() : null;
+  // Only load the prerender plugin in production and when not running in CI/Cloudflare Pages
+  const isCI = process.env.CI === "true" || !!process.env.CF_PAGES;
+  const prerenderPlugin = (mode === "production" && !isCI) ? await getPrerenderPlugin() : null;
 
   return {
     base: '/',
@@ -149,13 +157,32 @@ export default defineConfig(async ({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom'],
-            'framer-motion': ['framer-motion'],
-            ui: ['@radix-ui/react-accordion', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', 'lucide-react', 'clsx', 'tailwind-merge'],
-            three: ['three', '@react-three/fiber', '@react-three/drei'],
-            charts: ['recharts'],
-            lottie: ['@lottiefiles/dotlottie-react', 'lottie-react'],
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router-dom/')) {
+                return 'vendor';
+              }
+              if (id.includes('framer-motion')) {
+                return 'framer-motion';
+              }
+              if (
+                id.includes('@radix-ui/') ||
+                id.includes('lucide-react/') ||
+                id.includes('clsx/') ||
+                id.includes('tailwind-merge/')
+              ) {
+                return 'ui';
+              }
+              if (id.includes('three/') || id.includes('@react-three/')) {
+                return 'three';
+              }
+              if (id.includes('recharts/')) {
+                return 'charts';
+              }
+              if (id.includes('@lottiefiles/') || id.includes('lottie-react/')) {
+                return 'lottie';
+              }
+            }
           },
         },
       },

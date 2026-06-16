@@ -13,6 +13,7 @@
     "postbuild": "node scripts/generate-sitemap.js && node scripts/copy-functions.js"
   },
   "dependencies": {
+    "@babel/helpers": "^7.29.7",
     "@hookform/resolvers": "^3.10.0",
     "@lottiefiles/dotlottie-react": "^0.18.2",
     "@radix-ui/react-accordion": "^1.2.11",
