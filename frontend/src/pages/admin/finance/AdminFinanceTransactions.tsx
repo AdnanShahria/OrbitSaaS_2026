@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { SectionHeader } from '@/components/admin/EditorComponents';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,7 +13,7 @@ interface Transaction {
     subcategory?: string; description: string; date: string; project_id?: string;
     client_name?: string; payment_method: string; receipt_url?: string;
     tags: string[]; is_recurring: number; recurring_interval?: string; notes?: string;
-    recipient?: string; parent_id?: string; created_at?: string;
+    recipient?: string; parent_id?: string; created_at?: string; updated_at?: string; created_by?: string; updated_by?: string;
 }
 
 interface Category { id: string; name: string; name_bn?: string; type: string; icon?: string; color?: string; }
@@ -78,6 +78,92 @@ export default function AdminFinanceTransactions() {
     // Toggle exact timestamps state
     const [expandedTimestamps, setExpandedTimestamps] = useState<Record<string, boolean>>({});
 
+    // OTP Modal States
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [otpInput, setOtpInput] = useState('');
+    const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+    const [selectedOtpEmail, setSelectedOtpEmail] = useState('adnanshahria2019@gmail.com');
+    const [financeToken, setFinanceToken] = useState<string | null>(null);
+    const [otpSent, setOtpSent] = useState(false);
+    const pendingActionRef = useRef<(() => Promise<void>) | null>(null);
+
+    const triggerOtpAndExecute = async (actionFn: () => Promise<void>) => {
+        if (financeToken) {
+            await actionFn();
+            return;
+        }
+        pendingActionRef.current = actionFn;
+        setShowOtpModal(true);
+        setOtpSent(false);
+        setOtpInput('');
+    };
+
+    const handleSendOtp = async () => {
+        setIsSendingOtp(true);
+        try {
+            const token = localStorage.getItem('admin_token');
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${API_BASE}/api/finance-otp?action=send`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}` 
+                },
+                body: JSON.stringify({ email: selectedOtpEmail })
+            });
+            if (!res.ok) throw new Error('Failed to send OTP');
+            toast.success(`Financial OTP sent to ${selectedOtpEmail}.`);
+            setOtpSent(true);
+        } catch (err: any) {
+            console.error('OTP Send error', err);
+            toast.error('Failed to send OTP email.');
+        } finally {
+            setIsSendingOtp(false);
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (!otpInput) {
+            toast.error('Please enter the OTP.');
+            return;
+        }
+
+        setIsVerifyingOtp(true);
+        try {
+            const token = localStorage.getItem('admin_token');
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${API_BASE}/api/finance-otp?action=verify`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}` 
+                },
+                body: JSON.stringify({ code: otpInput })
+            });
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
+                toast.success('Financial authorization verified!');
+                setFinanceToken(data.finance_token);
+                setShowOtpModal(false);
+                setOtpInput('');
+                setOtpSent(false);
+                if (pendingActionRef.current) {
+                    await pendingActionRef.current();
+                    pendingActionRef.current = null;
+                }
+            } else {
+                toast.error(data.error || 'Invalid or expired OTP');
+            }
+        } catch (err: any) {
+            console.error('OTP Verify error', err);
+            toast.error('Failed to verify OTP.');
+        } finally {
+            setIsVerifyingOtp(false);
+        }
+    };
+
     const formatExactTimestamp = (createdAt?: string, fallbackDate?: string) => {
         const val = createdAt || fallbackDate;
         if (!val) return '—';
@@ -139,19 +225,23 @@ export default function AdminFinanceTransactions() {
     useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
 
     const openCreate = () => {
-        setEditTx(null);
-        setForm({ ...emptyTx, subcategory: 'Pending' });
-        setMiscExpenseAmount(0);
-        setMiscExpenseDescription('Tea/coffee & bus fare');
-        setShowModal(true);
+        triggerOtpAndExecute(async () => {
+            setEditTx(null);
+            setForm({ ...emptyTx, subcategory: 'Pending' });
+            setMiscExpenseAmount(0);
+            setMiscExpenseDescription('Tea/coffee & bus fare');
+            setShowModal(true);
+        });
     };
 
     const openEdit = (tx: Transaction) => {
-        setEditTx(tx);
-        setForm({ ...tx });
-        setMiscExpenseAmount(0);
-        setMiscExpenseDescription('Tea/coffee & bus fare');
-        setShowModal(true);
+        triggerOtpAndExecute(async () => {
+            setEditTx(tx);
+            setForm({ ...tx });
+            setMiscExpenseAmount(0);
+            setMiscExpenseDescription('Tea/coffee & bus fare');
+            setShowModal(true);
+        });
     };
 
     const handleSave = async () => {
@@ -187,60 +277,71 @@ export default function AdminFinanceTransactions() {
 
             const method = editTx ? 'PUT' : 'POST';
             const url = editTx ? `${API_BASE}/api/finance?action=transactions&id=${editTx.id}` : `${API_BASE}/api/finance?action=transactions`;
-            const res = await fetch(url, { method, headers, body: JSON.stringify(payload) });
+            const res = await fetch(url, {
+                method,
+                headers: { ...headers, 'Finance-Token': financeToken || '' },
+                body: JSON.stringify(payload)
+            });
 
-            if (res.ok) {
-                toast.success(editTx ? 'Transaction updated' : 'Transaction saved, splits and misc expenses generated!');
-                setShowModal(false);
-                fetchTransactions();
-            } else { toast.error('Save failed'); }
-        } catch { toast.error('Error saving'); }
+            if (!res.ok) throw new Error();
+            toast.success(editTx ? 'Transaction updated!' : 'Transaction saved!');
+            setShowModal(false);
+            fetchTransactions();
+        } catch { toast.error('Failed to save transaction'); }
         finally { setSaving(false); }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Delete this transaction? If it is an income transaction with automatic splits, all linked distributions will also be deleted.')) return;
-        try {
-            const res = await fetch(`${API_BASE}/api/finance?action=transactions&id=${id}`, { method: 'DELETE', headers });
-            if (res.ok) {
-                toast.success('Deleted successfully');
+        if (!confirm('Delete this transaction?')) return;
+        triggerOtpAndExecute(async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/finance?action=transactions&id=${id}`, { 
+                    method: 'DELETE', 
+                    headers: { ...headers, 'Finance-Token': financeToken || '' } 
+                });
+                if (!res.ok) throw new Error();
+                toast.success('Transaction deleted!');
                 fetchTransactions();
-            } else { toast.error('Delete failed'); }
-        } catch { toast.error('Error'); }
+            } catch { toast.error('Failed to delete transaction'); }
+        });
     };
 
     const handleCreateCategory = async () => {
-        if (!newCatName) { toast.error('Category name required'); return; }
-        setCatSaving(true);
-        try {
-            const res = await fetch(`${API_BASE}/api/finance?action=categories`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    name: newCatName,
-                    type: newCatType,
-                    icon: '📦',
-                    color: newCatColor
-                })
-            });
-            if (res.ok) {
-                toast.success('Category created successfully!');
-                setNewCatName('');
-                fetchCategories();
-            } else { toast.error('Failed to create category'); }
-        } catch { toast.error('Error'); }
-        finally { setCatSaving(false); }
+        if (!newCatName) return;
+        triggerOtpAndExecute(async () => {
+            setCatSaving(true);
+            try {
+                const res = await fetch(`${API_BASE}/api/finance?action=categories`, {
+                    method: 'POST',
+                    headers: { ...headers, 'Finance-Token': financeToken || '' },
+                    body: JSON.stringify({
+                        name: newCatName,
+                        type: newCatType,
+                        icon: '📦',
+                        color: newCatColor
+                    })
+                });
+                if (res.ok) {
+                    toast.success('Category created successfully!');
+                    setNewCatName('');
+                    fetchCategories();
+                } else { toast.error('Failed to create category'); }
+            } catch { toast.error('Error'); }
+            finally { setCatSaving(false); }
+        });
     };
 
     const handleDeleteCategory = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this category?')) return;
-        try {
-            const res = await fetch(`${API_BASE}/api/finance?action=categories&id=${id}`, { method: 'DELETE', headers });
-            if (res.ok) {
-                toast.success('Category deleted');
-                fetchCategories();
-            } else { toast.error('Failed'); }
-        } catch { toast.error('Error'); }
+        if (!confirm('Delete this category? Transactions may lose mapping.')) return;
+        triggerOtpAndExecute(async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/finance?action=categories&id=${id}`, { method: 'DELETE', headers: { ...headers, 'Finance-Token': financeToken || '' } });
+                if (res.ok) {
+                    toast.success('Category deleted successfully');
+                    fetchCategories();
+                } else { toast.error('Delete failed'); }
+            } catch { toast.error('Error'); }
+        });
     };
 
     // Typable Money Input Split Logic & Auto-balancer of 4th Field
@@ -428,7 +529,72 @@ export default function AdminFinanceTransactions() {
     const devShare = Math.round((form.amount * devPercent) / 100);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {/* Financial OTP Modal */}
+            {showOtpModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+                    <div className="bg-card border-2 border-indigo-500/30 p-6 rounded-2xl shadow-2xl w-full max-w-sm relative">
+                        <button 
+                            onClick={() => setShowOtpModal(false)}
+                            className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="w-14 h-14 bg-indigo-500/10 rounded-full flex items-center justify-center border border-indigo-500/20">
+                                <Shield className="w-7 h-7 text-indigo-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-foreground">Financial Identity</h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {!otpSent ? 'Select your email to receive an authorization code.' : 'Enter the 6-digit OTP sent to your email.'}
+                                </p>
+                            </div>
+                            
+                            {!otpSent ? (
+                                <>
+                                    <select 
+                                        value={selectedOtpEmail} 
+                                        onChange={(e) => setSelectedOtpEmail(e.target.value)}
+                                        className="w-full bg-secondary border border-border rounded-lg px-3 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                                    >
+                                        <option value="adnanshahria2019@gmail.com">Adnan Shahria (adnanshahria2019@gmail.com)</option>
+                                        <option value="abdurrafiu7@gmail.com">Abdur Rafiu (abdurrafiu7@gmail.com)</option>
+                                        <option value="nisarfeni2015@gmail.com">Nisar (nisarfeni2015@gmail.com)</option>
+                                    </select>
+                                    <button
+                                        onClick={handleSendOtp}
+                                        disabled={isSendingOtp}
+                                        className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-2 transition-colors"
+                                    >
+                                        {isSendingOtp ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : 'Send OTP'}
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <input 
+                                        type="text"
+                                        maxLength={6}
+                                        placeholder="000000"
+                                        value={otpInput}
+                                        onChange={(e) => setOtpInput(e.target.value)}
+                                        className="w-full text-center text-3xl tracking-widest font-mono p-4 bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        disabled={isVerifyingOtp}
+                                    />
+                                    <button
+                                        onClick={handleVerifyOtp}
+                                        disabled={isVerifyingOtp || otpInput.length < 6}
+                                        className="w-full py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 disabled:opacity-50 flex justify-center items-center gap-2 transition-colors"
+                                    >
+                                        {isVerifyingOtp ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</> : 'Verify & Continue'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <SectionHeader title="📊 Corporate Transactions" description="Track and partition SaaS income, operational funding expenses, and distribution splits." />
@@ -528,6 +694,11 @@ export default function AdminFinanceTransactions() {
                                                 <td className="px-4 py-3 font-medium text-foreground max-w-[240px] truncate">
                                                     <div>{tx.description}</div>
                                                     {tx.parent_id && <div className="text-[10px] text-primary">Linked to Income Split</div>}
+                                                    {tx.created_by && (
+                                                        <div className="text-[10px] text-muted-foreground mt-1">
+                                                            By: <span className="text-indigo-400">{tx.created_by.split('@')[0]}</span>
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3 text-muted-foreground text-xs">
                                                     {tx.type === 'distribution' ? (

@@ -1,8 +1,19 @@
 import { getDb } from '../_lib/db';
 import { handleOptions, jsonResponse } from '../_lib/cors';
-import { isAuthorized, getAdminIdentity } from '../_lib/auth';
+import { isAuthorized, getAdminIdentity, verifyToken } from '../_lib/auth';
 import { ensureAuditTable, logAudit, getRequestMeta } from '../_lib/audit';
 import type { Env } from '../_lib/types';
+
+// ─── Author Tracking Helper ───
+async function getFinanceIdentity(req: Request, secret: string): Promise<string> {
+    const authHeader = req.headers.get('Finance-Token');
+    if (!authHeader) return 'unknown';
+    const payload = await verifyToken(authHeader, secret);
+    if (payload && payload.purpose === 'finance_auth' && payload.verified_email) {
+        return payload.verified_email as string;
+    }
+    return 'unknown';
+}
 
 // ─── Ensure finance tables exist & run migrations if needed ───
 async function ensureTables(env: Env) {
@@ -29,7 +40,9 @@ async function ensureTables(env: Env) {
             recipient TEXT,
             parent_id TEXT,
             created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now'))
+            updated_at TEXT DEFAULT (datetime('now')),
+            created_by TEXT,
+            updated_by TEXT
         )
     `);
 
@@ -37,7 +50,7 @@ async function ensureTables(env: Env) {
     try {
         const tableInfo = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='finance_transactions'");
         const sql = tableInfo.rows[0]?.sql as string || '';
-        if (sql && (!sql.includes('distribution') || !sql.includes('recipient') || !sql.includes('parent_id'))) {
+        if (sql && (!sql.includes('distribution') || !sql.includes('recipient') || !sql.includes('parent_id') || !sql.includes('created_by'))) {
             // Need migration! Rename and copy
             await db.execute(`ALTER TABLE finance_transactions RENAME TO temp_finance_transactions`);
             
@@ -62,7 +75,9 @@ async function ensureTables(env: Env) {
                     recipient TEXT,
                     parent_id TEXT,
                     created_at TEXT DEFAULT (datetime('now')),
-                    updated_at TEXT DEFAULT (datetime('now'))
+                    updated_at TEXT DEFAULT (datetime('now')),
+                    created_by TEXT,
+                    updated_by TEXT
                 )
             `);
             
@@ -79,16 +94,19 @@ async function ensureTables(env: Env) {
             const recipientSel = tempCols.includes('recipient') ? 'recipient' : 'NULL';
             const parentIdSel = tempCols.includes('parent_id') ? 'parent_id' : 'NULL';
 
+            const createdBySel = tempCols.includes('created_by') ? 'created_by' : 'NULL';
+            const updatedBySel = tempCols.includes('updated_by') ? 'updated_by' : 'NULL';
+
             await db.execute(`
                 INSERT INTO finance_transactions (
                     id, type, amount, currency, category, subcategory, description, date,
                     project_id, client_name, payment_method, receipt_url, tags, is_recurring,
-                    recurring_interval, notes, recipient, parent_id, created_at, updated_at
+                    recurring_interval, notes, recipient, parent_id, created_at, updated_at, created_by, updated_by
                 )
                 SELECT 
                     id, type, amount, currency, category, subcategory, description, date,
                     project_id, client_name, payment_method, receipt_url, tags, is_recurring,
-                    recurring_interval, notes, ${recipientSel}, ${parentIdSel}, created_at, updated_at
+                    recurring_interval, notes, ${recipientSel}, ${parentIdSel}, created_at, updated_at, ${createdBySel}, ${updatedBySel}
                 FROM temp_finance_transactions
             `);
             
@@ -384,11 +402,13 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
     if (request.method === 'POST') {
         const body = await request.json() as any;
         const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+        const authorEmail = await getFinanceIdentity(request, env.JWT_SECRET);
+        if (authorEmail === 'unknown') return jsonResponse({ error: 'Financial Authorization Token missing or expired.' }, request, 401);
 
         // 1. Insert parent transaction
         await db.execute({
-            sql: `INSERT INTO finance_transactions (id, type, amount, currency, category, subcategory, description, date, project_id, client_name, payment_method, receipt_url, tags, is_recurring, recurring_interval, notes, recipient, parent_id)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            sql: `INSERT INTO finance_transactions (id, type, amount, currency, category, subcategory, description, date, project_id, client_name, payment_method, receipt_url, tags, is_recurring, recurring_interval, notes, recipient, parent_id, created_by, updated_by)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
                 id, body.type, body.amount, body.currency || 'BDT', body.category,
                 body.subcategory || null, body.description, body.date,
@@ -396,7 +416,7 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
                 body.payment_method || 'cash', body.receipt_url || null,
                 body.tags ? JSON.stringify(body.tags) : null,
                 body.is_recurring ? 1 : 0, body.recurring_interval || null,
-                body.notes || null, body.recipient || null, body.parent_id || null
+                body.notes || null, body.recipient || null, body.parent_id || null, authorEmail, authorEmail
             ],
         });
 
@@ -407,12 +427,12 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
                 if (dist.amount > 0) {
                     const distId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
                     await db.execute({
-                        sql: `INSERT INTO finance_transactions (id, type, amount, currency, category, subcategory, description, date, recipient, parent_id, notes, payment_method)
-                              VALUES (?, 'distribution', ?, ?, 'Distribution', 'Pending', ?, ?, ?, ?, ?, 'bank_transfer')`,
+                        sql: `INSERT INTO finance_transactions (id, type, amount, currency, category, subcategory, description, date, recipient, parent_id, notes, payment_method, created_by, updated_by)
+                              VALUES (?, 'distribution', ?, ?, 'Distribution', 'Pending', ?, ?, ?, ?, ?, 'bank_transfer', ?, ?)`,
                         args: [
                             distId, dist.amount, body.currency || 'BDT',
                             `Split: ${dist.recipient} Share from "${body.description}"`,
-                            body.date, dist.recipient, id, 'Automatic split share'
+                            body.date, dist.recipient, id, 'Automatic split share', authorEmail, authorEmail
                         ]
                     });
                     distributionsCreated++;
@@ -424,12 +444,12 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
         if (body.type === 'income' && body.misc_amount && body.misc_amount > 0) {
             const miscId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
             await db.execute({
-                sql: `INSERT INTO finance_transactions (id, type, amount, currency, category, subcategory, description, date, parent_id, notes, payment_method, recipient)
-                      VALUES (?, 'expense', ?, ?, 'Miscellaneous', 'Misc Income Deduction', ?, ?, ?, ?, ?, 'Company Funding')`,
+                sql: `INSERT INTO finance_transactions (id, type, amount, currency, category, subcategory, description, date, parent_id, notes, payment_method, recipient, created_by, updated_by)
+                      VALUES (?, 'expense', ?, ?, 'Miscellaneous', 'Misc Income Deduction', ?, ?, ?, ?, ?, 'Company Funding', ?, ?)`,
                 args: [
                     miscId, body.misc_amount, body.currency || 'BDT',
                     body.misc_description || 'Miscellaneous Expense (Bus/Tea)',
-                    body.date, id, 'Deducted directly from Company Funding split', body.payment_method || 'cash'
+                    body.date, id, 'Deducted directly from Company Funding split', body.payment_method || 'cash', authorEmail, authorEmail
                 ]
             });
         }
@@ -444,10 +464,9 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
         }
 
         // Audit log
-        const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
         const meta = getRequestMeta(request);
         await logAudit(env, {
-            admin_email: adminEmail || 'unknown',
+            admin_email: authorEmail || 'unknown',
             action: 'create',
             entity_type: 'transaction',
             entity_id: id,
@@ -464,6 +483,8 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
         if (!id) return jsonResponse({ error: 'ID required' }, request, 400);
 
         const body = await request.json() as any;
+        const authorEmail = await getFinanceIdentity(request, env.JWT_SECRET);
+        if (authorEmail === 'unknown') return jsonResponse({ error: 'Financial Authorization Token missing or expired.' }, request, 401);
 
         await db.execute({
             sql: `UPDATE finance_transactions SET
@@ -472,7 +493,8 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
                     payment_method = ?, receipt_url = ?, tags = ?,
                     is_recurring = ?, recurring_interval = ?, notes = ?,
                     recipient = ?, parent_id = ?,
-                    updated_at = datetime('now')
+                    updated_at = datetime('now'),
+                    updated_by = ?
                   WHERE id = ?`,
             args: [
                 body.type, body.amount, body.currency || 'BDT', body.category,
@@ -481,15 +503,14 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
                 body.payment_method || 'cash', body.receipt_url || null,
                 body.tags ? JSON.stringify(body.tags) : null,
                 body.is_recurring ? 1 : 0, body.recurring_interval || null,
-                body.notes || null, body.recipient || null, body.parent_id || null, id,
+                body.notes || null, body.recipient || null, body.parent_id || null, authorEmail, id,
             ],
         });
 
         // Audit log
-        const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
         const meta = getRequestMeta(request);
         await logAudit(env, {
-            admin_email: adminEmail || 'unknown',
+            admin_email: authorEmail || 'unknown',
             action: 'update',
             entity_type: 'transaction',
             entity_id: id,
@@ -518,10 +539,11 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
         await db.execute({ sql: 'DELETE FROM finance_transactions WHERE id = ?', args: [id] });
 
         // Audit log
-        const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
+        const authorEmail = await getFinanceIdentity(request, env.JWT_SECRET);
+        if (authorEmail === 'unknown') return jsonResponse({ error: 'Financial Authorization Token missing or expired.' }, request, 401);
         const meta = getRequestMeta(request);
         await logAudit(env, {
-            admin_email: adminEmail || 'unknown',
+            admin_email: authorEmail || 'unknown',
             action: 'delete',
             entity_type: 'transaction',
             entity_id: id,
@@ -545,6 +567,9 @@ async function handleCategories(request: Request, env: Env): Promise<Response> {
     }
 
     if (request.method === 'POST') {
+        const authorEmail = await getFinanceIdentity(request, env.JWT_SECRET);
+        if (authorEmail === 'unknown') return jsonResponse({ error: 'Financial Authorization Token missing or expired.' }, request, 401);
+
         const body = await request.json() as any;
         const id = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 
@@ -558,6 +583,9 @@ async function handleCategories(request: Request, env: Env): Promise<Response> {
     }
 
     if (request.method === 'DELETE') {
+        const authorEmail = await getFinanceIdentity(request, env.JWT_SECRET);
+        if (authorEmail === 'unknown') return jsonResponse({ error: 'Financial Authorization Token missing or expired.' }, request, 401);
+
         const url = new URL(request.url);
         const id = url.searchParams.get('id');
         if (!id) return jsonResponse({ error: 'ID required' }, request, 400);
