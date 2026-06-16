@@ -424,7 +424,7 @@ export function Home() {
   return (
     <section 
       id="home" 
-      className="relative min-h-[100svh] flex flex-col items-center pt-24 md:pt-32 lg:pt-36 pb-16 overflow-hidden noise-overlay border-none"
+      className="relative min-h-[100svh] flex flex-col items-center pt-20 md:pt-28 lg:pt-32 pb-16 overflow-hidden noise-overlay border-none"
       style={{ 
         // Prevent FOUC: entire section invisible until phase 1
         opacity: phase >= 1 ? 1 : 0,
@@ -459,7 +459,7 @@ export function Home() {
       />
 
       {/* ── Grid Layout ── */}
-      <div className="w-full max-w-none mx-auto px-4 sm:px-6 relative z-10 pt-8 md:pt-0 pb-12 overflow-x-hidden">
+      <div className="w-full max-w-none mx-auto px-4 sm:px-6 relative z-10 pt-4 md:pt-0 pb-12 overflow-x-hidden">
         <div className="grid lg:grid-cols-12 gap-8 lg:gap-16 xl:gap-24 2xl:gap-32 items-center relative">
           
           {/* Left Side: Content */}
@@ -470,13 +470,27 @@ export function Home() {
               animate={phase >= 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ duration: 0.6 }}
             >
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-indigo-500/20 bg-indigo-500/5 text-indigo-400 text-xs font-bold tracking-[0.2em] uppercase mb-10 md:mb-8">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              <div className="flex w-full mb-10 md:mb-8">
+                <span className="relative inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-[9px] sm:text-xs font-black tracking-widest uppercase shadow-[0_0_15px_rgba(99,102,241,0.2)] whitespace-nowrap overflow-hidden group">
+                  {/* Shiny sweep animation */}
+                  <motion.span 
+                    animate={{ x: ['-100%', '200%'] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" 
+                  />
+                  <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-indigo-500"></span>
+                  </span>
+                  <motion.span
+                    animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                    className="bg-gradient-to-r from-indigo-300 via-fuchsia-300 to-indigo-300 bg-[length:200%_auto] bg-clip-text text-transparent"
+                  >
+                    {tagline}
+                  </motion.span>
                 </span>
-                {tagline}
-              </span>
+              </div>
 
               <h1 
                 className="font-black leading-[1.05] tracking-tight mb-8"
@@ -501,7 +515,7 @@ export function Home() {
                 </div>
                 
                 {/* Line 2: Dynamic Phrases — visible with phase 1, typewriter starts at phase 1 */}
-                <div className="text-[2.2rem] md:text-[4rem] lg:text-[3.5rem] xl:text-[4.5rem] relative inline-flex items-center min-h-[1.1em] mt-1 lg:mt-2">
+                <div className="text-[1.6rem] sm:text-[2.2rem] md:text-[4rem] lg:text-[3.5rem] xl:text-[4.5rem] relative inline-flex items-center min-h-[1.1em] mt-1 lg:mt-2 whitespace-nowrap">
                   <span
                     className="leading-none"
                     style={{
@@ -537,7 +551,7 @@ export function Home() {
                 <div className="mb-10 md:mb-12 relative">
                   <div className="absolute -inset-4 bg-indigo-500/5 blur-3xl rounded-[3rem] -z-10" />
                   
-                  <div className="w-fit grid grid-cols-2 gap-x-4 gap-y-6 md:flex md:flex-wrap md:items-center md:gap-x-8 md:gap-y-4 bg-white/[0.03] border border-white/[0.08] backdrop-blur-3xl rounded-2xl p-4 md:px-8 md:py-5 shadow-2xl relative overflow-hidden group/stats">
+                  <div className="w-fit grid grid-cols-2 gap-x-3 gap-y-4 md:flex md:flex-wrap md:items-center md:gap-x-8 md:gap-y-4 bg-white/[0.03] border border-white/[0.08] backdrop-blur-3xl rounded-2xl p-3 sm:p-4 md:px-8 md:py-5 shadow-2xl relative overflow-hidden group/stats">
                     {/* Premium iridescent scan line */}
                     <motion.div 
                       animate={{ x: ['-200%', '200%'] }}
@@ -546,7 +560,7 @@ export function Home() {
                     />
                     
                     {stats.map((stat: any, i: number) => (
-                      <div key={i} className="flex items-center gap-8 group/stat">
+                      <div key={i} className="flex items-center gap-6 group/stat">
                         <div className="flex flex-col">
                           <div className="flex items-baseline gap-2">
                             <span className="text-xl md:text-2xl font-black bg-gradient-to-br from-white to-white/70 bg-clip-text text-transparent tabular-nums tracking-tight">

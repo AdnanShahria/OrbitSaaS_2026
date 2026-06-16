@@ -460,7 +460,7 @@ export function Navbar() {
             {/* Background Texture for Mobile Menu */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '40px 40px' }} />
 
-            <div className="mt-20 flex flex-col gap-8 flex-grow overflow-y-auto custom-scrollbar pr-4">
+            <div className="mt-16 flex flex-col gap-3 flex-grow overflow-y-auto custom-scrollbar pr-4">
               {isProjectPage ? (
                 <motion.div
                   initial={{ opacity: 0, x: -30 }}
@@ -474,9 +474,9 @@ export function Navbar() {
                     }}
                     className="group flex items-center gap-4 w-full text-left"
                   >
-                    <ArrowLeft className="w-8 h-8 text-emerald-500 group-hover:-translate-x-2 transition-transform" />
+                    <ArrowLeft className="w-6 h-6 text-emerald-500 group-hover:-translate-x-2 transition-transform" />
                     <span
-                      className="text-4xl sm:text-7xl transition-all duration-300 hover:translate-x-4"
+                      className="text-2xl sm:text-4xl transition-all duration-300 hover:translate-x-4"
                       style={{
                         color: isLightMode ? '#1a1a1a' : '#ffffff',
                         fontFamily: "'Abril Fatface', serif"
@@ -513,7 +513,7 @@ export function Navbar() {
                         >
                           <span className="text-xs font-black text-emerald-500/40 tabular-nums">0{i + 1}</span>
                           <span
-                            className={`text-4xl sm:text-7xl transition-all duration-300 hover:translate-x-4`}
+                            className={`text-2xl sm:text-4xl transition-all duration-300 hover:translate-x-4`}
                             style={{
                               color: theme.text,
                               fontFamily: "'Abril Fatface', serif"
@@ -543,7 +543,7 @@ export function Navbar() {
                         >
                           <span className="text-xs font-black text-emerald-500/40 tabular-nums">0{i + 1}</span>
                           <span
-                            className={`text-4xl sm:text-7xl transition-all duration-300 ${isActive ? 'text-emerald-500' : 'hover:translate-x-4'}`}
+                            className={`text-2xl sm:text-4xl transition-all duration-300 ${isActive ? 'text-emerald-500' : 'hover:translate-x-4'}`}
                             style={{
                               color: !isActive ? (isLightMode ? '#1a1a1a' : '#ffffff') : undefined,
                               fontFamily: "'Abril Fatface', serif"

@@ -95,7 +95,7 @@ export function CustomScrollbar() {
 
   return (
     <div 
-      className="fixed right-0 w-[5px] bg-black z-[9999]"
+      className="fixed right-0 w-[5px] bg-transparent z-[9999]"
       style={{
         top: '80px',
         bottom: '0px',

@@ -25,7 +25,7 @@ const c = {
 };
 
 // Clears the current line completely and resets cursor to column 1
-const CLEAR_LINE = '\x1b[2K\x1b[G';
+const CLEAR_LINE = '\x1b[2K\r';
 
 // ── Branding ─────────────────────────────────────────────────────────
 function printLogo() {
@@ -74,7 +74,6 @@ let pulsePhase = 0;
 
 function getStatusLine() {
     const spinner = dots[frame % dots.length];
-    frame++;
 
     // Pulsing dots effect for waiting items
     pulsePhase++;
@@ -91,8 +90,53 @@ function getStatusLine() {
 
 const spinnerInterval = setInterval(() => {
     if (frontendReady && backendReady) return;
+    frame++;
     process.stdout.write(`${CLEAR_LINE}${getStatusLine()}`);
 }, 100);
+
+// ── API Tracking Dashboard ───────────────────────────────────────────
+let apiCallsHistory = [];
+let lastApiCallTime = 0;
+let dashboardInterval;
+
+function trackApiCall() {
+    apiCallsHistory.push(Date.now());
+    lastApiCallTime = Date.now();
+}
+
+function renderDashboard() {
+    if (!frontendReady || !backendReady) return;
+    
+    const now = Date.now();
+    apiCallsHistory = apiCallsHistory.filter(time => now - time < 60000);
+    const rate = apiCallsHistory.length;
+    
+    let status = '';
+    if (rate === 0) status = `${c.dim}Idle${c.reset}`;
+    else if (rate <= 15) status = `${c.green}Optimal${c.reset}`;
+    else if (rate <= 30) status = `${c.yellow}Elevated${c.reset}`;
+    else status = `${c.red}${c.bold}Spamming!${c.reset}`;
+
+    const dashSpinner = dots[frame % dots.length];
+    const isRecent = (now - lastApiCallTime) < 500;
+    const spark = isRecent ? `${c.cyan}${c.bold}⚡${c.reset}` : `${c.dim}⚡${c.reset}`;
+    
+    // Construct the visible text first to measure its length
+    const plainText = `  *  *  API Calls (60s): ${rate}  │  Status: ` + status.replace(/\x1b\[\d+m/g, '');
+    let output = `  ${c.magenta}${dashSpinner}${c.reset}  ${spark}  ${c.white}API Calls (60s): ${c.bold}${rate}${c.reset}  ${c.dim}│${c.reset}  ${c.white}Status: ${status}`;
+    
+    // If the terminal is too narrow, just show API calls
+    if (process.stdout.columns && plainText.length > process.stdout.columns) {
+        output = `  ${c.magenta}${dashSpinner}${c.reset}  ${spark}  ${c.white}APIs/min: ${c.bold}${rate}${c.reset}`;
+    }
+    
+    process.stdout.write(`${CLEAR_LINE}${output}`);
+}
+
+function printLog(tag, line) {
+    process.stdout.write(`${CLEAR_LINE}  ${tag} ${c.dim}${line}${c.reset}\n`);
+    renderDashboard();
+}
 
 // ── Ready banner ─────────────────────────────────────────────────────
 function showReadyBanner() {
@@ -110,6 +154,11 @@ function showReadyBanner() {
     console.log(`  ${c.green}${c.bold}│${c.reset}  ${c.dim}Press ${c.yellow}Ctrl+C${c.reset}${c.dim} to stop${c.reset}                   ${c.green}${c.bold}│${c.reset}`);
     console.log(`  ${c.green}${c.bold}└──────────────────────────────────────────┘${c.reset}`);
     console.log();
+
+    dashboardInterval = setInterval(() => {
+        frame++;
+        renderDashboard();
+    }, 100);
 }
 
 // ── Stream child output ──────────────────────────────────────────────
@@ -137,10 +186,15 @@ function handleOutput(stream, label, color, isStderr = false) {
             line.includes('Invalid key: Expected never')
         )) return;
 
+        // Detect API calls
+        if (label === 'Backend' && line.match(/api/i)) {
+            trackApiCall();
+        }
+
         // After ready, show log output cleanly
         if (frontendReady && backendReady) {
             const tag = `${color}${c.bold}[${label}]${c.reset}`;
-            console.log(`  ${tag} ${c.dim}${line}${c.reset}`);
+            printLog(tag, line);
         }
     });
 }
@@ -166,6 +220,7 @@ function shutdown(reason) {
     isShuttingDown = true;
 
     clearInterval(spinnerInterval);
+    if (dashboardInterval) clearInterval(dashboardInterval);
     process.stdout.write(CLEAR_LINE);
 
     if (reason) {
