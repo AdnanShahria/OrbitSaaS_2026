@@ -463,11 +463,14 @@ function SuggestedProjectCard({ item, routeId }: { item: any, routeId: string })
     return (
         <Link
             to={`/project/${routeId}`}
-            className="group flex gap-3 rounded-xl overflow-hidden border border-[#22C55E]/20 bg-white transition-all duration-500 hover:border-[#FACC15]/60 hover:bg-[#FDFBF7] hover:shadow-[0_10px_20px_rgba(34,197,94,0.03)] p-2"
+            className="group relative flex gap-4 rounded-2xl overflow-hidden border border-black/[0.05] bg-white p-3 transition-all duration-500 hover:-translate-y-1 hover:bg-[#FAFAFA] hover:border-[#22C55E]/30 hover:shadow-[0_15px_30px_-10px_rgba(34,197,94,0.15)]"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            <div className="relative w-28 sm:w-36 flex-shrink-0 aspect-video rounded-lg overflow-hidden bg-gray-100">
+            {/* Premium Glow on Hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#22C55E]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <div className="relative w-28 sm:w-36 flex-shrink-0 aspect-video rounded-xl overflow-hidden bg-gray-100 border border-black/[0.05]">
                 <AnimatePresence mode="popLayout">
                     <motion.div
                         key={currentImage + "_wrapper"}
@@ -481,26 +484,22 @@ function SuggestedProjectCard({ item, routeId }: { item: any, routeId: string })
                             src={currentImage}
                             alt={item.title}
                             showSkeleton={activeIndex === -1}
-                            className="w-full h-full object-cover no-browser-trigger"
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 no-browser-trigger"
                         />
                     </motion.div>
                 </AnimatePresence>
                 <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform [transition-duration:1.2s] ease-in-out bg-gradient-to-r from-transparent via-white/[0.2] to-transparent" />
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform [transition-duration:1.2s] ease-in-out bg-gradient-to-r from-transparent via-black/[0.05] to-transparent" />
                 </div>
-                {/* Bottom Fade */}
-                <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
             </div>
-            <div className="flex flex-col justify-center py-0.5 min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#22C55E] mb-1 line-clamp-1">
+            <div className="flex flex-col justify-center min-w-0 z-10">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#22C55E] mb-1.5 line-clamp-1 opacity-80 group-hover:opacity-100 transition-opacity">
                     {itemCats.slice(0, 2).join(' · ')}
                 </span>
-                <h3 className="font-display text-xs sm:text-sm font-bold text-gray-900 group-hover:text-[#22C55E] transition-colors line-clamp-2 leading-snug">
+                <h3 className="font-display text-sm font-bold text-gray-900 group-hover:text-black transition-colors line-clamp-2 leading-snug">
                     {item.title}
                 </h3>
             </div>
-            {/* Hover Border Glow (Golden) */}
-            <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700 shadow-[inset_0_0_0_1.5px_#FACC15]" />
         </Link>
     );
 }
@@ -530,16 +529,16 @@ export default function ProjectDetail() {
     }
 
     // Get potential projects
-    const projectEn = idx >= 0 ? enItems[idx] : undefined;
-    const projectBn = idx >= 0 ? bnItems[idx] : undefined;
-
-    // Determine fallback
-    // If we are in BN mode, and BN project exists and has a title, use it. Otherwise use EN.
+    const baseItem = idx >= 0 ? enItems[idx] : undefined;
     const isBn = lang === 'bn';
-    const hasBnContent = projectBn && projectBn.title && projectBn.title.trim() !== '';
-    const project = (isBn && hasBnContent) ? projectBn : projectEn;
 
-    if (!project || idx < 0 || projectEn?.hidden) {
+    const project = baseItem ? {
+        ...baseItem,
+        title: isBn && baseItem.bn?.title?.trim() ? baseItem.bn.title : baseItem.title || baseItem.en?.title || '',
+        desc: isBn && baseItem.bn?.description?.trim() ? baseItem.bn.description : baseItem.desc || baseItem.en?.description || ''
+    } : undefined;
+
+    if (!project || idx < 0 || baseItem?.hidden) {
         return (
             <div className="min-h-[100dvh] bg-background text-foreground">
                 <Navbar />
@@ -687,10 +686,13 @@ export default function ProjectDetail() {
                     {/* Right: Suggested Projects Sidebar */}
                     {(() => {
                         const buildItem = (enItem: any, i: number) => {
-                            const bnItem = bnItems[i];
-                            const showBn = lang === 'bn' && bnItem && bnItem.title && bnItem.title.trim() !== '';
-                            const displayItem = showBn ? bnItem : enItem;
-                            return { ...displayItem, _id: enItem.id || '', _originalIndex: i };
+                            return {
+                                ...enItem,
+                                _id: enItem.id || '',
+                                _originalIndex: i,
+                                title: isBn && enItem.bn?.title?.trim() ? enItem.bn.title : enItem.title || enItem.en?.title || '',
+                                desc: isBn && enItem.bn?.description?.trim() ? enItem.bn.description : enItem.desc || enItem.en?.description || ''
+                            };
                         };
 
                         const suggested = enItems
@@ -716,7 +718,7 @@ export default function ProjectDetail() {
                                     {(() => {
                                         const reviewsData = (content.en as any).reviews;
                                         const reviewItems: any[] = reviewsData?.items || [];
-                                        const projectSlug = projectEn?.id || String(idx);
+                                        const projectSlug = baseItem?.id || String(idx);
                                         const projectReviews = reviewItems.filter((r: any) => r.projectId === projectSlug && !r.hidden);
                                         if (projectReviews.length === 0) return null;
                                         return (

@@ -218,21 +218,32 @@ function CollapsibleCards({ blocks }: { blocks: string[] }) {
     );
 }
 
-function SuggestedAchievementCard({ item }: { item: AchievementItem }) {
+function SuggestedAchievementCard({ item, routeId }: { item: any, routeId: string }) {
     const coverImage = item.images?.[0] || item.image || '/placeholder.png';
+    const itemCats: string[] = item.categories || (item.category ? [item.category] : []);
+
     return (
-        <Link to={`/achievement/${item.id}`} className="group flex gap-3 rounded-xl overflow-hidden border border-[#22C55E]/20 bg-zinc-950/40 transition-all duration-500 hover:border-[#FACC15]/60 hover:bg-zinc-900/60 hover:shadow-[0_10px_20px_rgba(34,197,94,0.03)] p-2">
-            <div className="relative w-28 sm:w-36 flex-shrink-0 aspect-video rounded-lg overflow-hidden bg-black/20">
-                <ImageWithSkeleton src={coverImage} alt={item.title} className="w-full h-full object-cover no-browser-trigger" />
+        <Link
+            to={`/achievement/${routeId}`}
+            className="group relative flex gap-4 rounded-2xl overflow-hidden border border-white/[0.05] bg-zinc-950/40 p-3 transition-all duration-500 hover:-translate-y-1 hover:bg-zinc-900/60 hover:border-[#FACC15]/30 hover:shadow-[0_15px_30px_-10px_rgba(250,204,21,0.1)]"
+        >
+            {/* Premium Glow on Hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FACC15]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <div className="relative w-28 sm:w-36 flex-shrink-0 aspect-video rounded-xl overflow-hidden bg-black/20 border border-white/[0.05]">
+                <ImageWithSkeleton src={coverImage} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 no-browser-trigger" />
                 <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                     <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform [transition-duration:1.2s] ease-in-out bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />
                 </div>
             </div>
-            <div className="flex flex-col justify-center py-0.5 min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#22C55E] mb-1 line-clamp-1">{item.category}</span>
-                <h3 className="font-display text-xs sm:text-sm font-bold text-white group-hover:text-[#22C55E] transition-colors line-clamp-2 leading-snug">{item.title}</h3>
+            <div className="flex flex-col justify-center min-w-0 z-10">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#FACC15] mb-1.5 line-clamp-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                    {itemCats.slice(0, 2).join(' · ')}
+                </span>
+                <h3 className="font-display text-sm font-bold text-white/90 group-hover:text-white transition-colors line-clamp-2 leading-snug">
+                    {item.title}
+                </h3>
             </div>
-            <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700 shadow-[inset_0_0_0_1.5px_#FACC15]" />
         </Link>
     );
 }
@@ -243,25 +254,33 @@ export default function AchievementDetail() {
     const { content } = useContent();
     const [lightboxOpen, setLightboxOpen] = useState(false);
 
+    // Try slug-based lookup first
     const enData = (content.en as any).achievements || {};
     const bnData = (content.bn as any).achievements || {};
-    const enItems: AchievementItem[] = Array.isArray(enData.items) && enData.items.length > 0 ? enData.items : fallbackAchievements;
-    const bnItems: AchievementItem[] = Array.isArray(bnData.items) ? bnData.items : [];
+    const enItems: any[] = Array.isArray(enData.items) ? enData.items : [];
+    const bnItems: any[] = Array.isArray(bnData.items) ? bnData.items : [];
 
-    // Find by slug first, then by numeric index
-    let idx = enItems.findIndex((item) => item.id === id);
-    if (idx < 0) {
+    let idx = -1;
+    const slugIndex = enItems.findIndex((item: any) => item.id && item.id === id);
+    if (slugIndex >= 0) {
+        idx = slugIndex;
+    } else {
         const numericIdx = parseInt(id || '-1', 10);
-        if (!isNaN(numericIdx) && numericIdx >= 0 && numericIdx < enItems.length) idx = numericIdx;
+        if (!isNaN(numericIdx) && numericIdx >= 0 && numericIdx < enItems.length) {
+            idx = numericIdx;
+        }
     }
 
-    const achievementEn = idx >= 0 ? enItems[idx] : undefined;
-    const achievementBn = idx >= 0 ? bnItems[idx] : undefined;
+    const baseItem = idx >= 0 ? enItems[idx] : undefined;
     const isBn = lang === 'bn';
-    const hasBnContent = achievementBn && achievementBn.title && achievementBn.title.trim() !== '';
-    const achievement = (isBn && hasBnContent) ? achievementBn : achievementEn;
 
-    if (!achievement || idx < 0 || achievementEn?.hidden) {
+    const achievement = baseItem ? {
+        ...baseItem,
+        title: isBn && baseItem.bn?.title?.trim() ? baseItem.bn.title : baseItem.title || baseItem.en?.title || '',
+        desc: isBn && baseItem.bn?.description?.trim() ? baseItem.bn.description : baseItem.desc || baseItem.en?.description || ''
+    } : undefined;
+
+    if (!achievement || idx < 0 || baseItem?.hidden) {
         return (
             <div className="min-h-[100dvh] bg-background text-foreground">
                 <Navbar />
@@ -288,7 +307,15 @@ export default function AchievementDetail() {
     const currentUrl = `https://orbitsaas.cloud/achievement/${id}`;
 
     // Suggested achievements
-    const suggested = enItems.filter((_item, i) => i !== idx && !_item.hidden).slice(0, 6);
+    const suggested = enItems.map((item, i) => {
+        if (i === idx || item.hidden) return null;
+        return {
+            ...item,
+            _id: item.id || '',
+            title: isBn && item.bn?.title?.trim() ? item.bn.title : item.title || item.en?.title || '',
+            desc: isBn && item.bn?.description?.trim() ? item.bn.description : item.desc || item.en?.description || ''
+        };
+    }).filter(Boolean).slice(0, 6);
 
     return (
         <div className="min-h-[100dvh] relative bg-background text-foreground">
@@ -326,7 +353,7 @@ export default function AchievementDetail() {
                                 {achievement.date && (
                                     <span className="px-3 py-1.5 rounded-full bg-[#FACC15]/10 text-[#FACC15] text-sm font-medium border border-[#FACC15]/20">{achievement.date}</span>
                                 )}
-                                {achievement.tags && achievement.tags.map((tag, j) => (
+                                {achievement.tags && Array.isArray(achievement.tags) && achievement.tags.map((tag, j) => (
                                     <span key={`tag-${j}`} className="px-3 py-1.5 rounded-full bg-secondary text-muted-foreground text-sm font-medium border border-border">{tag}</span>
                                 ))}
                             </div>
@@ -371,7 +398,7 @@ export default function AchievementDetail() {
                             <div className="lg:sticky lg:top-24">
                                 <h2 className="font-display text-lg font-bold text-foreground mb-4">More Achievements</h2>
                                 <div className="flex flex-col gap-3">
-                                    {suggested.map((item) => <SuggestedAchievementCard key={item.id} item={item} />)}
+                                    {suggested.map((item) => <SuggestedAchievementCard key={item._id} item={item} routeId={item._id} />)}
                                 </div>
                             </div>
                         </motion.div>

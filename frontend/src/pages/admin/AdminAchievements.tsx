@@ -303,7 +303,6 @@ export default function AdminAchievements() {
         <div className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <SectionHeader title="Achievements Manager" description="Manage achievements with images, rich descriptions, SEO & social sharing" />
-                <LangToggle lang={lang} setLang={setLang} />
             </div>
             <ErrorAlert message={error} />
 

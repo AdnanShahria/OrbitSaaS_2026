@@ -4,6 +4,9 @@ import { toast } from 'sonner';
 import { SectionHeader } from '@/components/admin/EditorComponents';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 import {
     Plus, Trash2, Edit3, Search, Download, X, Save,
     Calendar, CreditCard, Loader2, ChevronLeft, ChevronRight, Settings, PlusCircle, Users, Share2, Shield, TrendingUp, TrendingDown, Landmark, HelpCircle, LayoutDashboard
@@ -52,6 +55,7 @@ export default function AdminFinanceTransactions() {
     const [editTx, setEditTx] = useState<Transaction | null>(null);
     const [form, setForm] = useState<any>({ ...emptyTx });
     const [saving, setSaving] = useState(false);
+    const [selectedTeamForDist, setSelectedTeamForDist] = useState<string>('');
 
     // Distribution split percentages (for Income form)
     const [companyFundingPercent, setCompanyFundingPercent] = useState(30);
@@ -75,6 +79,7 @@ export default function AdminFinanceTransactions() {
     const [newCatName, setNewCatName] = useState('');
     const [newCatType, setNewCatType] = useState('expense');
     const [newCatColor, setNewCatColor] = useState('#10B981');
+    const [newCatParentId, setNewCatParentId] = useState('');
     const [catSaving, setCatSaving] = useState(false);
 
     // Toggle exact timestamps state
@@ -412,12 +417,14 @@ export default function AdminFinanceTransactions() {
                     name: newCatName,
                     type: newCatType,
                     icon: '📦',
-                    color: newCatColor
+                    color: newCatColor,
+                    parent_id: newCatType === 'receiver' && newCatParentId ? newCatParentId : null
                 })
             });
             if (res.ok) {
-                toast.success('Category created successfully!');
+                toast.success('Entity created successfully!');
                 setNewCatName('');
+                setNewCatParentId('');
                 fetchCategories();
             } else { toast.error('Failed to create category'); }
         } catch { toast.error('Error'); }
@@ -491,23 +498,73 @@ export default function AdminFinanceTransactions() {
 
     const handleExport = async () => {
         try {
-            const params = new URLSearchParams({ action: 'export' });
+            const params = new URLSearchParams({ action: 'transactions', limit: '2000' });
             if (filterType) params.set('type', filterType);
             const res = await fetch(`${API_BASE}/api/finance?${params}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) { toast.error('Export failed'); return; }
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `orbit_finance_${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            toast.success('CSV exported!');
-        } catch { toast.error('Export error'); }
+            const json = await res.json();
+            let txs = json.transactions || [];
+            
+            if (filterCategory) {
+                txs = txs.filter((t: any) => t.category === filterCategory || t.recipient === filterCategory);
+            }
+
+            const doc = new jsPDF();
+            
+            // Header
+            doc.setFontSize(20);
+            doc.text('Orbit SaaS Corporate Finance Report', 14, 22);
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 14, 30);
+            
+            // Filters summary
+            let filtersText = 'Filters applied: ';
+            filtersText += filterType ? `Type=${filterType.toUpperCase()} ` : 'All Types ';
+            filtersText += filterCategory ? `Entity=${filterCategory}` : '';
+            doc.setFontSize(10);
+            doc.text(filtersText, 14, 38);
+
+            const tableColumn = ["Date", "Type", "Entity/Category", "Description", "Amount", "Method"];
+            const tableRows: any[] = [];
+
+            txs.forEach((t: any) => {
+                const date = new Date(t.date).toLocaleDateString();
+                const type = t.type.toUpperCase();
+                const entity = t.recipient || t.category || '-';
+                const desc = t.description || '-';
+                const amount = `${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount, t.currency)}`;
+                const method = t.payment_method || '-';
+                
+                tableRows.push([date, type, entity, desc, amount, method]);
+            });
+
+            autoTable(doc, {
+                head: [tableColumn],
+                body: tableRows,
+                startY: 45,
+                theme: 'striped',
+                headStyles: { fillColor: [79, 70, 229] }, // Indigo-600
+                willDrawCell: (data) => {
+                    if (data.section === 'body' && data.column.index === 4) {
+                        const type = data.row.raw[1]; // Index 1 is Type
+                        if (type === 'INCOME') {
+                            doc.setTextColor(16, 185, 129); // Emerald-500
+                        } else if (type === 'EXPENSE' || type === 'DISTRIBUTION') {
+                            doc.setTextColor(244, 63, 94); // Rose-500
+                        }
+                    }
+                }
+            });
+
+            doc.save(`orbit_finance_report_${new Date().toISOString().split('T')[0]}.pdf`);
+            toast.success('PDF report exported successfully!');
+        } catch (e) { 
+            console.error(e);
+            toast.error('Export error occurred while generating PDF'); 
+        }
     };
 
     // Load Overall Company Funding Report
@@ -750,10 +807,10 @@ export default function AdminFinanceTransactions() {
                         <Landmark className="w-4 h-4" /> Company Funding Ledger
                     </button>
                     <button onClick={() => setShowCategoryModal(true)} className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-foreground rounded-lg hover:bg-secondary/80 text-sm font-medium transition-all">
-                        <Settings className="w-4 h-4" /> Entity & Category Manager
+                        <Settings className="w-4 h-4" /> Entity Manager
                     </button>
                     <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 text-sm font-medium transition-all">
-                        <Download className="w-4 h-4" /> Export CSV
+                        <Download className="w-4 h-4" /> Export PDF
                     </button>
                     <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 text-sm font-semibold shadow-lg shadow-emerald-500/20 transition-all">
                         <Plus className="w-4 h-4" /> Add Transaction
@@ -771,20 +828,18 @@ export default function AdminFinanceTransactions() {
                         className="w-full bg-secondary rounded-lg pl-9 pr-4 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/50 border border-border"
                     />
                 </div>
-                <select
-                    value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }}
-                    className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none cursor-pointer"
-                >
-                    <option value="">All Types</option>
-                    {TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-                <select
-                    value={filterCategory} onChange={e => { setFilterCategory(e.target.value); setPage(1); }}
-                    className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none cursor-pointer max-w-[200px]"
-                >
-                    <option value="">All Categories</option>
-                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                </select>
+                <div className="w-[150px]">
+                    <CustomSelect
+                        value={filterType} onChange={v => { setFilterType(v); setPage(1); }}
+                        options={[{value: '', label: 'All Types'}, ...TYPES.map(t => ({value: t.value, label: t.label}))]}
+                    />
+                </div>
+                <div className="w-[200px]">
+                    <CustomSelect
+                        value={filterCategory} onChange={v => { setFilterCategory(v); setPage(1); }}
+                        options={[{value: '', label: 'All Entities'}, ...categories.map(c => ({value: c.name, label: c.name}))]}
+                    />
+                </div>
             </div>
 
             {/* Table */}
@@ -905,13 +960,13 @@ export default function AdminFinanceTransactions() {
                         >
                             <div className="flex items-center justify-between mb-5">
                                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                                    <Settings className="w-5 h-5 text-primary animate-spin" /> Entity & Category Manager
+                                    <Settings className="w-5 h-5 text-primary animate-spin" /> Entity Manager
                                 </h2>
                                 <button onClick={() => setShowCategoryModal(false)} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground"><X className="w-5 h-5" /></button>
                             </div>
 
                             <div className="bg-secondary/40 border border-border rounded-xl p-4 mb-5 space-y-4">
-                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Create New Entity or Category</h3>
+                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Create New Entity</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <div className="md:col-span-2">
                                         <label className="text-xs font-semibold text-muted-foreground block mb-1">Name *</label>
@@ -920,16 +975,37 @@ export default function AdminFinanceTransactions() {
                                     </div>
                                     <div>
                                         <label className="text-xs font-semibold text-muted-foreground block mb-1">Type *</label>
-                                        <select value={newCatType} onChange={e => setNewCatType(e.target.value)}
-                                            className="w-full bg-secondary rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border cursor-pointer">
-                                            <option value="income">Income</option>
-                                            <option value="expense">Expense</option>
-                                            <option value="distribution">Distribution</option>
-                                            <option value="both">Both (Income & Expense)</option>
-                                            <option value="receiver">Receiver (Recipient)</option>
-                                            <option value="client">Client</option>
-                                        </select>
+                                        <CustomSelect 
+                                            value={newCatType} 
+                                            onChange={v => setNewCatType(v)}
+                                            options={[
+                                                {value: 'income', label: 'Income'},
+                                                {value: 'expense', label: 'Expense'},
+                                                {value: 'distribution', label: 'Distribution'},
+                                                {value: 'both', label: 'Both (Income & Expense)'},
+                                                {value: 'receiver', label: 'Receiver (Recipient)'},
+                                                {value: 'client', label: 'Client'},
+                                            ]}
+                                        />
                                     </div>
+                                    
+                                    <AnimatePresence>
+                                        {newCatType === 'receiver' && (
+                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="md:col-span-3">
+                                                <label className="text-xs font-semibold text-muted-foreground block mb-1">Link to Parent Team (Optional)</label>
+                                                <CustomSelect 
+                                                    value={newCatParentId} 
+                                                    onChange={v => setNewCatParentId(v)}
+                                                    placeholder="None (Independent Team/Entity)"
+                                                    options={[
+                                                        {value: '', label: 'None (Independent Team/Entity)'},
+                                                        ...categories.filter(c => c.type === 'receiver' && !c.parent_id).map(c => ({ value: c.id, label: c.name }))
+                                                    ]}
+                                                />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
                                     <div className="md:col-span-3">
                                         <label className="text-xs font-semibold text-muted-foreground block mb-1">Hex Color</label>
                                         <div className="flex gap-2">
@@ -940,12 +1016,12 @@ export default function AdminFinanceTransactions() {
                                 </div>
                                 <button onClick={handleCreateCategory} disabled={catSaving}
                                     className="w-full py-2 bg-primary text-primary-foreground font-semibold rounded-lg hover:opacity-95 text-xs flex items-center justify-center gap-1.5 disabled:opacity-50">
-                                    <PlusCircle className="w-4 h-4" /> Create Category
+                                    <PlusCircle className="w-4 h-4" /> Create Entity
                                 </button>
                             </div>
 
                             <div>
-                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">All Active Entities & Categories</h3>
+                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">All Active Entities</h3>
                                 <div className="space-y-2 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
                                     {categories.map(cat => (
                                         <div key={cat.id} className="flex items-center justify-between p-2.5 bg-secondary/20 border border-border/80 rounded-xl">
@@ -1441,27 +1517,48 @@ export default function AdminFinanceTransactions() {
                                     <div className="space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <div>
-                                                <label className="text-sm font-medium text-foreground block mb-1.5">Recipient Identity *</label>
-                                                <select value={form.recipient || ''} onChange={e => setForm((f: any) => ({ ...f, recipient: e.target.value, category: 'Distribution' }))}
-                                                    className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer font-bold">
-                                                    <option value="">Select recipient team...</option>
-                                                    <option value="Company Funding">Company Funding</option>
-                                                    <option value="Broker Allowance">Broker Allowance</option>
-                                                    <option value="Marketing Team">Marketing Team</option>
-                                                    <option value="Development Team">Development Team</option>
-                                                    {categories.filter(c => c.type === 'receiver').map(c => (
-                                                        <option key={c.id} value={c.name}>{c.name}</option>
-                                                    ))}
-                                                    <option value="Other Custom">Other Custom Recipient</option>
-                                                </select>
+                                                <label className="text-sm font-medium text-foreground block mb-1.5">Recipient Identity / Team *</label>
+                                                <CustomSelect 
+                                                    value={selectedTeamForDist} 
+                                                    onChange={v => {
+                                                        setSelectedTeamForDist(v);
+                                                        setForm((f: any) => ({ ...f, recipient: v, category: 'Distribution' }));
+                                                    }}
+                                                    placeholder="Select recipient team..."
+                                                    options={[
+                                                        {value: 'Company Funding', label: 'Company Funding'},
+                                                        {value: 'Broker Allowance', label: 'Broker Allowance'},
+                                                        {value: 'Marketing Team', label: 'Marketing Team'},
+                                                        {value: 'Development Team', label: 'Development Team'},
+                                                        ...categories.filter(c => c.type === 'receiver' && !c.parent_id).map(c => ({value: c.name, label: c.name})),
+                                                        {value: 'Other Custom', label: 'Other Custom Recipient'}
+                                                    ]}
+                                                />
                                             </div>
-                                            {form.recipient === 'Other Custom' && (
+                                            
+                                            {selectedTeamForDist === 'Other Custom' && (
                                                 <div>
                                                     <label className="text-sm font-medium text-foreground block mb-1.5">Custom Recipient Name *</label>
                                                     <input type="text" onChange={e => setForm((f: any) => ({ ...f, recipient: e.target.value }))}
                                                         className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none border border-border" placeholder="e.g. Design Vendor" />
                                                 </div>
                                             )}
+
+                                            <AnimatePresence>
+                                                {selectedTeamForDist && categories.some(c => c.name === selectedTeamForDist) && categories.filter(c => c.parent_id === categories.find(t => t.name === selectedTeamForDist)?.id).length > 0 && (
+                                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="md:col-span-2">
+                                                        <label className="text-sm font-medium text-foreground block mb-1.5">Distribute To (Entire Team or Member) *</label>
+                                                        <CustomSelect
+                                                            value={form.recipient}
+                                                            onChange={v => setForm((f: any) => ({ ...f, recipient: v }))}
+                                                            options={[
+                                                                {value: selectedTeamForDist, label: `Entire Team (${selectedTeamForDist})`},
+                                                                ...categories.filter(c => c.parent_id === categories.find(t => t.name === selectedTeamForDist)?.id).map(c => ({value: c.name, label: `👤 ${c.name}`}))
+                                                            ]}
+                                                        />
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-foreground block mb-1.5">Distribution Status</label>

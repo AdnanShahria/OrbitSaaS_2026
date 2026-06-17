@@ -125,7 +125,8 @@ async function ensureTables(env: Env) {
             type TEXT NOT NULL CHECK(type IN ('income','expense','distribution','both','receiver','client')),
             icon TEXT,
             color TEXT,
-            sort_order INTEGER DEFAULT 0
+            sort_order INTEGER DEFAULT 0,
+            parent_id TEXT
         )
     `);
 
@@ -133,7 +134,7 @@ async function ensureTables(env: Env) {
     try {
         const catTableInfo = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='finance_categories'");
         const catSql = catTableInfo.rows[0]?.sql as string || '';
-        if (catSql && (!catSql.includes('distribution') || !catSql.includes('receiver'))) {
+        if (catSql && (!catSql.includes('distribution') || !catSql.includes('receiver') || !catSql.includes('parent_id'))) {
             await db.execute(`ALTER TABLE finance_categories RENAME TO temp_finance_categories`);
             await db.execute(`
                 CREATE TABLE finance_categories (
@@ -143,11 +144,13 @@ async function ensureTables(env: Env) {
                     type TEXT NOT NULL CHECK(type IN ('income','expense','distribution','both','receiver','client')),
                     icon TEXT,
                     color TEXT,
-                    sort_order INTEGER DEFAULT 0
+                    sort_order INTEGER DEFAULT 0,
+                    parent_id TEXT
                 )
             `);
             await db.execute(`
-                INSERT INTO finance_categories SELECT * FROM temp_finance_categories
+                INSERT INTO finance_categories (id, name, name_bn, type, icon, color, sort_order) 
+                SELECT id, name, name_bn, type, icon, color, sort_order FROM temp_finance_categories
             `);
             await db.execute(`DROP TABLE temp_finance_categories`);
         }
@@ -574,9 +577,9 @@ async function handleCategories(request: Request, env: Env): Promise<Response> {
         const id = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 
         await db.execute({
-            sql: `INSERT INTO finance_categories (id, name, name_bn, type, icon, color, sort_order)
-                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            args: [id, body.name, body.name_bn || null, body.type, body.icon || '📦', body.color || '#78716C', body.sort_order || 0],
+            sql: `INSERT INTO finance_categories (id, name, name_bn, type, icon, color, sort_order, parent_id)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [id, body.name, body.name_bn || null, body.type, body.icon || '📦', body.color || '#78716C', body.sort_order || 0, body.parent_id || null],
         });
 
         // Audit log
@@ -758,46 +761,7 @@ async function handleBudgets(request: Request, env: Env): Promise<Response> {
 
 
 
-// ─── Action: Export CSV ───
-async function handleExport(request: Request, env: Env): Promise<Response> {
-    const db = getDb(env);
-    const url = new URL(request.url);
-    const type = url.searchParams.get('type') || '';
-    const dateFrom = url.searchParams.get('from') || '';
-    const dateTo = url.searchParams.get('to') || '';
-
-    let whereClause = '1=1';
-    const args: any[] = [];
-    if (type) { whereClause += ` AND type = ?`; args.push(type); }
-    if (dateFrom) { whereClause += ` AND date >= ?`; args.push(dateFrom); }
-    if (dateTo) { whereClause += ` AND date <= ?`; args.push(dateTo); }
-
-    const result = await db.execute({
-        sql: `SELECT * FROM finance_transactions WHERE ${whereClause} ORDER BY date DESC`,
-        args,
-    });
-
-    const headers = ['Date', 'Type', 'Category', 'Description', 'Amount', 'Currency', 'Client', 'Payment Method', 'Notes'];
-    const csvLines = [headers.join(',')];
-    for (const r of result.rows) {
-        csvLines.push([
-            r.date, r.type, `"${(r.category as string || '').replace(/"/g, '""')}"`,
-            `"${(r.description as string || '').replace(/"/g, '""')}"`,
-            r.amount, r.currency,
-            `"${(r.client_name as string || '').replace(/"/g, '""')}"`,
-            r.payment_method,
-            `"${(r.notes as string || '').replace(/"/g, '""')}"`,
-        ].join(','));
-    }
-
-    return new Response(csvLines.join('\n'), {
-        status: 200,
-        headers: {
-            'Content-Type': 'text/csv',
-            'Content-Disposition': `attachment; filename="orbit_finance_${new Date().toISOString().split('T')[0]}.csv"`,
-        },
-    });
-}
+// Legacy export route removed (handled by client-side jsPDF now)
 
 // ─── Main Router ───
 export const onRequest: PagesFunction<Env> = async (context) => {
@@ -825,8 +789,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             case 'categories': return await handleCategories(request, env);
             case 'savings': return await handleSavings(request, env);
             case 'budgets': return await handleBudgets(request, env);
-            case 'export': return await handleExport(request, env);
-            default: return jsonResponse({ error: 'Unknown action. Use ?action=dashboard|transactions|categories|savings|budgets|export' }, request, 400);
+            default: return jsonResponse({ error: 'Unknown action. Use ?action=dashboard|transactions|categories|savings|budgets' }, request, 400);
         }
     } catch (error) {
         console.error('Finance API error:', error);
