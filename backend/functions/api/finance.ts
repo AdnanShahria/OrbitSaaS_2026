@@ -53,7 +53,7 @@ async function ensureTables(env: Env) {
         if (sql && (!sql.includes('distribution') || !sql.includes('recipient') || !sql.includes('parent_id') || !sql.includes('created_by'))) {
             // Need migration! Rename and copy
             await db.execute(`ALTER TABLE finance_transactions RENAME TO temp_finance_transactions`);
-            
+
             await db.execute(`
                 CREATE TABLE finance_transactions (
                     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
@@ -80,11 +80,11 @@ async function ensureTables(env: Env) {
                     updated_by TEXT
                 )
             `);
-            
+
             // Check if temp table has older columns first and select them
             const tempColumnsRes = await db.execute("PRAGMA table_info(temp_finance_transactions)");
             const tempCols = tempColumnsRes.rows.map(r => r.name as string);
-            
+
             const colsToSelect = [
                 'id', 'type', 'amount', 'currency', 'category', 'subcategory', 'description', 'date',
                 'project_id', 'client_name', 'payment_method', 'receipt_url', 'tags', 'is_recurring',
@@ -109,7 +109,7 @@ async function ensureTables(env: Env) {
                     recurring_interval, notes, ${recipientSel}, ${parentIdSel}, created_at, updated_at, ${createdBySel}, ${updatedBySel}
                 FROM temp_finance_transactions
             `);
-            
+
             await db.execute(`DROP TABLE temp_finance_transactions`);
             console.log("Migration for finance_transactions completed successfully.");
         }
@@ -122,7 +122,7 @@ async function ensureTables(env: Env) {
             id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)))),
             name TEXT NOT NULL,
             name_bn TEXT,
-            type TEXT NOT NULL CHECK(type IN ('income','expense','distribution','both')),
+            type TEXT NOT NULL CHECK(type IN ('income','expense','distribution','both','receiver','client')),
             icon TEXT,
             color TEXT,
             sort_order INTEGER DEFAULT 0
@@ -133,14 +133,14 @@ async function ensureTables(env: Env) {
     try {
         const catTableInfo = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='finance_categories'");
         const catSql = catTableInfo.rows[0]?.sql as string || '';
-        if (catSql && !catSql.includes('distribution')) {
+        if (catSql && (!catSql.includes('distribution') || !catSql.includes('receiver'))) {
             await db.execute(`ALTER TABLE finance_categories RENAME TO temp_finance_categories`);
             await db.execute(`
                 CREATE TABLE finance_categories (
                     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)))),
                     name TEXT NOT NULL,
                     name_bn TEXT,
-                    type TEXT NOT NULL CHECK(type IN ('income','expense','distribution','both')),
+                    type TEXT NOT NULL CHECK(type IN ('income','expense','distribution','both','receiver','client')),
                     icon TEXT,
                     color TEXT,
                     sort_order INTEGER DEFAULT 0
@@ -756,224 +756,7 @@ async function handleBudgets(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: 'Method not allowed' }, request, 405);
 }
 
-// ─── Action: Seed default categories & demo data ───
-async function handleSeed(request: Request, env: Env): Promise<Response> {
-    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, request, 405);
 
-    const db = getDb(env);
-    await ensureTables(env);
-    await ensureAuditTable(env);
-
-    // 1. Seed categories
-    for (let i = 0; i < DEFAULT_CATEGORIES.length; i++) {
-        const cat = DEFAULT_CATEGORIES[i];
-        await db.execute({
-            sql: `INSERT OR IGNORE INTO finance_categories (id, name, name_bn, type, icon, color, sort_order)
-                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            args: [`fc_${i}`, cat.name, cat.name_bn, cat.type, cat.icon, cat.color, i],
-        });
-    }
-
-    // 2. Clear old data to prevent infinite growth on multiple seeds
-    await db.execute(`DELETE FROM finance_transactions`);
-    await db.execute(`DELETE FROM finance_savings_goals`);
-    await db.execute(`DELETE FROM finance_budgets`);
-
-    // 3. Seed Savings Goals
-    const goal1Id = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
-    const goal2Id = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
-    await db.execute({
-        sql: `INSERT INTO finance_savings_goals (id, name, target_amount, current_amount, currency, deadline, status)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [goal1Id, 'Emergency Fund', 500000, 350000, 'BDT', '2027-12-31', 'active'],
-    });
-    await db.execute({
-        sql: `INSERT INTO finance_savings_goals (id, name, target_amount, current_amount, currency, deadline, status)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [goal2Id, 'Office Renovation', 200000, 120000, 'BDT', '2026-12-31', 'active'],
-    });
-
-    // 4. Generate historical transactions for the last 6 months (up to current date)
-    const now = new Date();
-    const transactions = [];
-
-    // Let's seed monthly transaction loops for the last 6 months
-    for (let monthOffset = 5; monthOffset >= 0; monthOffset--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - monthOffset, 15);
-        const year = d.getFullYear();
-        const monthStr = String(d.getMonth() + 1).padStart(2, '0');
-        const datePrefix = `${year}-${monthStr}`;
-
-        // Seed Budgets for this month
-        const budgetCategories = [
-            { cat: 'Hosting & Infrastructure', amt: 30000 },
-            { cat: 'Tools & Software', amt: 15000 },
-            { cat: 'Team & Salary', amt: 120000 },
-            { cat: 'Marketing', amt: 35000 },
-            { cat: 'Office & Utilities', amt: 20000 },
-            { cat: 'Food & Entertainment', amt: 10000 }
-        ];
-        for (const bc of budgetCategories) {
-            const bId = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
-            await db.execute({
-                sql: `INSERT OR IGNORE INTO finance_budgets (id, category, month, budget_amount, currency) VALUES (?, ?, ?, ?, ?)`,
-                args: [bId, bc.cat, datePrefix, bc.amt, 'BDT']
-            });
-        }
-
-        // Add monthly income
-        transactions.push({
-            type: 'income',
-            amount: 120000 + Math.floor(Math.random() * 20000),
-            category: 'Freelance / Client Work',
-            description: 'Client Project Retainer Payment',
-            date: `${datePrefix}-15`,
-            payment_method: 'bank_transfer',
-            client_name: 'Orbit Tech LLC'
-        });
-
-        transactions.push({
-            type: 'income',
-            amount: 85000 + Math.floor(Math.random() * 15000),
-            category: 'Product Sales',
-            description: 'Orbit SaaS Subscription Sales',
-            date: `${datePrefix}-25`,
-            payment_method: 'card',
-            client_name: 'Stripe SaaS Sales'
-        });
-
-        transactions.push({
-            type: 'income',
-            amount: 10000 + Math.floor(Math.random() * 5000),
-            category: 'Investments',
-            description: 'Mutual Fund Investment Dividend',
-            date: `${datePrefix}-05`,
-            payment_method: 'bank_transfer',
-            client_name: 'IDLC Assets'
-        });
-
-        // Add monthly expenses
-        transactions.push({
-            type: 'expense',
-            amount: 22000 + Math.floor(Math.random() * 5000),
-            category: 'Hosting & Infrastructure',
-            description: 'AWS Servers & Vercel Pro Hosting',
-            date: `${datePrefix}-02`,
-            payment_method: 'card'
-        });
-
-        transactions.push({
-            type: 'expense',
-            amount: 12000 + Math.floor(Math.random() * 2000),
-            category: 'Tools & Software',
-            description: 'Notion, Slack, Figma & Google Workspace Pro',
-            date: `${datePrefix}-03`,
-            payment_method: 'card'
-        });
-
-        transactions.push({
-            type: 'expense',
-            amount: 110000,
-            category: 'Team & Salary',
-            description: 'Core Engineering & Designer Salaries',
-            date: `${datePrefix}-28`,
-            payment_method: 'bank_transfer'
-        });
-
-        transactions.push({
-            type: 'expense',
-            amount: 25000 + Math.floor(Math.random() * 10000),
-            category: 'Marketing',
-            description: 'Google Ads & LinkedIn Outreach Campaign',
-            date: `${datePrefix}-10`,
-            payment_method: 'card'
-        });
-
-        transactions.push({
-            type: 'expense',
-            amount: 18000,
-            category: 'Office & Utilities',
-            description: 'Co-working Office Spaces Rent & Highspeed Internet',
-            date: `${datePrefix}-05`,
-            payment_method: 'cash'
-        });
-
-        transactions.push({
-            type: 'expense',
-            amount: 6000 + Math.floor(Math.random() * 4000),
-            category: 'Food & Entertainment',
-            description: 'Monthly Team Dinner & Outing',
-            date: `${datePrefix}-18`,
-            payment_method: 'cash'
-        });
-
-        // Seed a Savings Goal deposit to make savings goal data active
-        transactions.push({
-            type: 'savings_deposit',
-            amount: 15000,
-            category: 'Miscellaneous',
-            description: 'Monthly allocation to Emergency Fund',
-            date: `${datePrefix}-28`,
-            payment_method: 'bank_transfer'
-        });
-    }
-
-    // Insert all generated transactions into DB with high-fidelity split distributions
-    let totalSeeded = 0;
-    for (const t of transactions) {
-        const tId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-        await db.execute({
-            sql: `INSERT INTO finance_transactions (id, type, amount, category, description, date, payment_method, client_name)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [tId, t.type, t.amount, t.category, t.description, t.date, t.payment_method, t.client_name || null]
-        });
-        totalSeeded++;
-
-        // If it's income, automatically generate and seed the four-way split distribution!
-        if (t.type === 'income') {
-            const companyAmt = Math.round((t.amount * 30) / 100);
-            const brokerAmt = Math.round((t.amount * 10) / 100);
-            const marketingAmt = Math.round((t.amount * 25) / 100);
-            const devAmt = Math.round((t.amount * 35) / 100);
-
-            const splits = [
-                { recipient: 'Company Funding', amt: companyAmt },
-                { recipient: 'Broker Allowance', amt: brokerAmt },
-                { recipient: 'Marketing Team', amt: marketingAmt },
-                { recipient: 'Development Team', amt: devAmt }
-            ];
-
-            for (const s of splits) {
-                if (s.amt > 0) {
-                    const distId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-                    await db.execute({
-                        sql: `INSERT INTO finance_transactions (id, type, amount, category, description, date, recipient, parent_id, notes, payment_method)
-                              VALUES (?, 'distribution', ?, 'Distribution', ?, ?, ?, ?, 'Seeded split share', 'bank_transfer')`,
-                        args: [
-                            distId, s.amt, `Split: ${s.recipient} Share from "${t.description}"`,
-                            t.date, s.recipient, tId
-                        ]
-                    });
-                    totalSeeded++;
-                }
-            }
-        }
-    }
-
-    // Audit log
-    const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
-    const meta = getRequestMeta(request);
-    await logAudit(env, {
-        admin_email: adminEmail || 'unknown',
-        action: 'seed',
-        entity_type: 'finance',
-        entity_label: 'Finance tables initialized & categories seeded',
-        changes_summary: `Seeded ${totalSeeded} historical transactions (including linked split distributions), 2 savings goals and budgets for the last 6 months.`,
-        ...meta,
-    });
-
-    return jsonResponse({ success: true, message: `Finance tables initialized and seeded with ${totalSeeded} transactions!` }, request);
-}
 
 // ─── Action: Export CSV ───
 async function handleExport(request: Request, env: Env): Promise<Response> {
@@ -1025,13 +808,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const url = new URL(request.url);
     const action = url.searchParams.get('action') || '';
 
-    // Seed action creates tables too
-    if (action === 'seed') {
-        if (!(await isAuthorized(request, env.JWT_SECRET))) {
-            return jsonResponse({ error: 'Unauthorized' }, request, 401);
-        }
-        return handleSeed(request, env);
-    }
+
 
     // All other actions require auth + tables
     if (!(await isAuthorized(request, env.JWT_SECRET))) {
@@ -1049,7 +826,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             case 'savings': return await handleSavings(request, env);
             case 'budgets': return await handleBudgets(request, env);
             case 'export': return await handleExport(request, env);
-            default: return jsonResponse({ error: 'Unknown action. Use ?action=dashboard|transactions|categories|savings|budgets|export|seed' }, request, 400);
+            default: return jsonResponse({ error: 'Unknown action. Use ?action=dashboard|transactions|categories|savings|budgets|export' }, request, 400);
         }
     } catch (error) {
         console.error('Finance API error:', error);

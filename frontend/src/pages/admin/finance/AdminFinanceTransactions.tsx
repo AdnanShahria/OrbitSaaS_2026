@@ -160,9 +160,9 @@ export default function AdminFinanceTransactions() {
             const API_BASE = import.meta.env.VITE_API_URL || '';
             const res = await fetch(`${API_BASE}/api/finance-otp?action=send`, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}` 
+                    Authorization: `Bearer ${token}`
                 },
                 body: JSON.stringify({ email: selectedOtpEmail })
             });
@@ -189,14 +189,14 @@ export default function AdminFinanceTransactions() {
             const API_BASE = import.meta.env.VITE_API_URL || '';
             const res = await fetch(`${API_BASE}/api/finance-otp?action=verify`, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}` 
+                    Authorization: `Bearer ${token}`
                 },
                 body: JSON.stringify({ code: otpInput })
             });
             const data = await res.json();
-            
+
             if (res.ok && data.success) {
                 toast.success('Financial authorization verified!');
                 setFinanceToken(data.finance_token);
@@ -252,12 +252,15 @@ export default function AdminFinanceTransactions() {
     const fetchTransactions = useCallback(async () => {
         setLoading(true);
         try {
-            const params = new URLSearchParams({ action: 'transactions', page: String(page), limit: '30' });
+            const params = new URLSearchParams({ action: 'transactions', page: String(page), limit: '30', _t: Date.now().toString() });
             if (search) params.set('search', search);
             if (filterType) params.set('type', filterType);
             if (filterCategory) params.set('category', filterCategory);
 
-            const res = await fetch(`${API_BASE}/api/finance?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API_BASE}/api/finance?${params}`, { 
+                headers: { Authorization: `Bearer ${token}` },
+                cache: 'no-store'
+            });
             if (!res.ok) throw new Error();
             const json = await res.json();
             setTransactions(json.transactions || []);
@@ -268,7 +271,10 @@ export default function AdminFinanceTransactions() {
 
     const fetchCategories = useCallback(async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/finance?action=categories`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API_BASE}/api/finance?action=categories&_t=${Date.now()}`, { 
+                headers: { Authorization: `Bearer ${token}` },
+                cache: 'no-store'
+            });
             if (res.ok) {
                 const json = await res.json();
                 setCategories(json.categories || []);
@@ -369,9 +375,9 @@ export default function AdminFinanceTransactions() {
         if (!confirm('Delete this transaction?')) return;
         triggerOtpAndExecute(async (fToken) => {
             try {
-                const res = await fetch(`${API_BASE}/api/finance?action=transactions&id=${id}`, { 
-                    method: 'DELETE', 
-                    headers: { ...headers, 'Finance-Token': fToken } 
+                const res = await fetch(`${API_BASE}/api/finance?action=transactions&id=${id}`, {
+                    method: 'DELETE',
+                    headers: { ...headers, 'Finance-Token': fToken }
                 });
                 // If the backend rejects the token, evict cache and re-prompt
                 if (res.status === 401) {
@@ -512,7 +518,10 @@ export default function AdminFinanceTransactions() {
         setCustomStartDate('');
         setCustomEndDate('');
         try {
-            const res = await fetch(`${API_BASE}/api/finance?action=transactions&limit=2000`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API_BASE}/api/finance?action=transactions&limit=2000&_t=${Date.now()}`, { 
+                headers: { Authorization: `Bearer ${token}` },
+                cache: 'no-store'
+            });
             if (res.ok) {
                 const json = await res.json();
                 setRawReportTxs(json.transactions || []);
@@ -561,7 +570,7 @@ export default function AdminFinanceTransactions() {
         } else if (reportTimeline === 'custom') {
             const start = customStartDate ? new Date(customStartDate + 'T00:00:00') : null;
             const end = customEndDate ? new Date(customEndDate + 'T23:59:59') : null;
-            
+
             filtered = rawReportTxs.filter(t => {
                 const d = new Date(t.date + 'T00:00:00');
                 if (start && d < start) return false;
@@ -586,8 +595,8 @@ export default function AdminFinanceTransactions() {
         const netBalance = totalFunding - totalExpenses;
 
         // Combined Ledger (Injections + Expenses)
-        const ledger = filtered.filter(t => 
-            (t.type === 'distribution' && t.recipient === 'Company Funding') || 
+        const ledger = filtered.filter(t =>
+            (t.type === 'distribution' && t.recipient === 'Company Funding') ||
             (t.type === 'expense')
         ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -619,7 +628,7 @@ export default function AdminFinanceTransactions() {
             <AnimatePresence>
                 {showOtpModal && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md">
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -628,16 +637,16 @@ export default function AdminFinanceTransactions() {
                             {/* Decorative background glow */}
                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-indigo-500/10 blur-[50px] rounded-full pointer-events-none" />
 
-                            <button 
+                            <button
                                 type="button"
                                 onClick={closeOtpModal}
                                 className="absolute top-5 right-5 text-muted-foreground/70 hover:text-foreground hover:bg-secondary/50 p-2 rounded-full transition-all z-20"
                             >
                                 <X className="w-5 h-5" />
                             </button>
-                            
+
                             <div className="flex flex-col items-center text-center space-y-6 relative z-10">
-                                <motion.div 
+                                <motion.div
                                     initial={{ scale: 0.5, rotate: -10 }}
                                     animate={{ scale: 1, rotate: 0 }}
                                     transition={{ type: "spring", stiffness: 200, damping: 15 }}
@@ -645,14 +654,14 @@ export default function AdminFinanceTransactions() {
                                 >
                                     <Shield className="w-8 h-8 text-indigo-400" />
                                 </motion.div>
-                                
+
                                 <div className="space-y-2">
                                     <h3 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Financial Identity</h3>
                                     <p className="text-sm text-muted-foreground">
                                         {!otpSent ? 'Select your email to receive an authorization code.' : 'Enter the 6-digit OTP sent to your email.'}
                                     </p>
                                 </div>
-                                
+
                                 {!otpSent ? (
                                     <div className="w-full space-y-4 mt-2">
                                         <div className="relative group text-left">
@@ -663,12 +672,12 @@ export default function AdminFinanceTransactions() {
                                             >
                                                 <span className="truncate pr-4">{OTP_EMAILS.find(e => e.value === selectedOtpEmail)?.label || selectedOtpEmail}</span>
                                                 <div className={`text-muted-foreground transition-transform duration-200 shrink-0 ${isOtpDropdownOpen ? 'rotate-180' : ''}`}>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                                                 </div>
                                             </button>
                                             <AnimatePresence>
                                                 {isOtpDropdownOpen && (
-                                                    <motion.div 
+                                                    <motion.div
                                                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -683,11 +692,10 @@ export default function AdminFinanceTransactions() {
                                                                     setSelectedOtpEmail(emailObj.value);
                                                                     setIsOtpDropdownOpen(false);
                                                                 }}
-                                                                className={`w-full text-left px-4 py-3.5 text-sm transition-colors ${
-                                                                    selectedOtpEmail === emailObj.value 
-                                                                        ? 'bg-indigo-500/10 text-indigo-400 font-semibold border-l-2 border-indigo-500' 
+                                                                className={`w-full text-left px-4 py-3.5 text-sm transition-colors ${selectedOtpEmail === emailObj.value
+                                                                        ? 'bg-indigo-500/10 text-indigo-400 font-semibold border-l-2 border-indigo-500'
                                                                         : 'text-muted-foreground hover:bg-secondary hover:text-foreground border-l-2 border-transparent'
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 {emailObj.label}
                                                             </button>
@@ -706,7 +714,7 @@ export default function AdminFinanceTransactions() {
                                     </div>
                                 ) : (
                                     <div className="w-full space-y-5 mt-2">
-                                        <input 
+                                        <input
                                             type="text"
                                             maxLength={6}
                                             placeholder="••••••"
@@ -742,7 +750,7 @@ export default function AdminFinanceTransactions() {
                         <Landmark className="w-4 h-4" /> Company Funding Ledger
                     </button>
                     <button onClick={() => setShowCategoryModal(true)} className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-foreground rounded-lg hover:bg-secondary/80 text-sm font-medium transition-all">
-                        <Settings className="w-4 h-4" /> Manage Categories
+                        <Settings className="w-4 h-4" /> Entity & Category Manager
                     </button>
                     <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 text-sm font-medium transition-all">
                         <Download className="w-4 h-4" /> Export CSV
@@ -893,31 +901,33 @@ export default function AdminFinanceTransactions() {
                 {showCategoryModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowCategoryModal(false)}>
                         <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
-                             className="bg-card border border-border rounded-2xl p-6 w-full max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl custom-scrollbar"
+                            className="bg-card border border-border rounded-2xl p-6 w-full max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl custom-scrollbar"
                         >
                             <div className="flex items-center justify-between mb-5">
                                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                                    <Settings className="w-5 h-5 text-primary animate-spin" /> Custom Category Manager
+                                    <Settings className="w-5 h-5 text-primary animate-spin" /> Entity & Category Manager
                                 </h2>
                                 <button onClick={() => setShowCategoryModal(false)} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground"><X className="w-5 h-5" /></button>
                             </div>
 
                             <div className="bg-secondary/40 border border-border rounded-xl p-4 mb-5 space-y-4">
-                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Create New Category</h3>
+                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Create New Entity or Category</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <div className="md:col-span-2">
-                                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Category Name *</label>
+                                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Name *</label>
                                         <input type="text" value={newCatName} onChange={e => setNewCatName(e.target.value)}
-                                               placeholder="e.g. Server Upgrades" className="w-full bg-secondary rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border" />
+                                            placeholder="e.g. Server Upgrades" className="w-full bg-secondary rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border" />
                                     </div>
                                     <div>
                                         <label className="text-xs font-semibold text-muted-foreground block mb-1">Type *</label>
                                         <select value={newCatType} onChange={e => setNewCatType(e.target.value)}
-                                                className="w-full bg-secondary rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border cursor-pointer">
+                                            className="w-full bg-secondary rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border cursor-pointer">
                                             <option value="income">Income</option>
                                             <option value="expense">Expense</option>
                                             <option value="distribution">Distribution</option>
                                             <option value="both">Both (Income & Expense)</option>
+                                            <option value="receiver">Receiver (Recipient)</option>
+                                            <option value="client">Client</option>
                                         </select>
                                     </div>
                                     <div className="md:col-span-3">
@@ -929,13 +939,13 @@ export default function AdminFinanceTransactions() {
                                     </div>
                                 </div>
                                 <button onClick={handleCreateCategory} disabled={catSaving}
-                                        className="w-full py-2 bg-primary text-primary-foreground font-semibold rounded-lg hover:opacity-95 text-xs flex items-center justify-center gap-1.5 disabled:opacity-50">
+                                    className="w-full py-2 bg-primary text-primary-foreground font-semibold rounded-lg hover:opacity-95 text-xs flex items-center justify-center gap-1.5 disabled:opacity-50">
                                     <PlusCircle className="w-4 h-4" /> Create Category
                                 </button>
                             </div>
 
                             <div>
-                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">All Active Categories</h3>
+                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">All Active Entities & Categories</h3>
                                 <div className="space-y-2 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
                                     {categories.map(cat => (
                                         <div key={cat.id} className="flex items-center justify-between p-2.5 bg-secondary/20 border border-border/80 rounded-xl">
@@ -961,7 +971,7 @@ export default function AdminFinanceTransactions() {
                 {showReportModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md" onClick={() => setShowReportModal(false)}>
                         <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
-                                    className="bg-card/95 border-2 border-indigo-500/50 shadow-[0_0_40px_rgba(99,102,241,0.25)] rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar transition-all"
+                            className="bg-card/95 border-2 border-indigo-500/50 shadow-[0_0_40px_rgba(99,102,241,0.25)] rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar transition-all"
                         >
                             <div className="flex items-center justify-between mb-6 border-b border-border/60 pb-3">
                                 <div className="flex items-center gap-2.5">
@@ -995,11 +1005,10 @@ export default function AdminFinanceTransactions() {
                                                 <button
                                                     key={opt.id}
                                                     onClick={() => setReportTimeline(opt.id)}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                                                        reportTimeline === opt.id
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${reportTimeline === opt.id
                                                             ? 'bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/25 scale-[1.02]'
                                                             : 'bg-secondary/60 border-border/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {opt.label}
                                                 </button>
@@ -1169,7 +1178,7 @@ export default function AdminFinanceTransactions() {
                 {showModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)}>
                         <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
-                                    className="bg-card border border-border rounded-2xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl custom-scrollbar"
+                            className="bg-card border border-border rounded-2xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl custom-scrollbar"
                         >
                             <div className="flex items-center justify-between mb-5">
                                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -1185,7 +1194,7 @@ export default function AdminFinanceTransactions() {
                                     <div className="grid grid-cols-3 gap-2">
                                         {TYPES.map(t => (
                                             <button key={t.value} onClick={() => setForm((f: any) => ({ ...f, type: t.value, category: '' }))}
-                                                    className={`px-2 py-2.5 rounded-lg text-xs font-bold border transition-all ${form.type === t.value ? `${t.bg} ${t.color} border-current` : 'bg-secondary border-border text-muted-foreground hover:text-foreground'}`}
+                                                className={`px-2 py-2.5 rounded-lg text-xs font-bold border transition-all ${form.type === t.value ? `${t.bg} ${t.color} border-current` : 'bg-secondary border-border text-muted-foreground hover:text-foreground'}`}
                                             >{t.label}</button>
                                         ))}
                                     </div>
@@ -1196,12 +1205,12 @@ export default function AdminFinanceTransactions() {
                                     <div className="col-span-2">
                                         <label className="text-sm font-medium text-foreground block mb-1.5">Amount *</label>
                                         <input type="number" value={form.amount || ''} onChange={e => setForm((f: any) => ({ ...f, amount: parseFloat(e.target.value) || 0 }))}
-                                               className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/50 border border-border" placeholder="0" />
+                                            className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/50 border border-border" placeholder="0" />
                                     </div>
                                     <div>
                                         <label className="text-sm font-medium text-foreground block mb-1.5">Currency</label>
                                         <select value={form.currency} onChange={e => setForm((f: any) => ({ ...f, currency: e.target.value }))}
-                                                className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer">
+                                            className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer">
                                             <option value="BDT">৳ BDT</option>
                                             <option value="USD">$ USD</option>
                                         </select>
@@ -1212,7 +1221,7 @@ export default function AdminFinanceTransactions() {
                                 <div>
                                     <label className="text-sm font-medium text-foreground block mb-1.5">Description *</label>
                                     <input type="text" value={form.description} onChange={e => setForm((f: any) => ({ ...f, description: e.target.value }))}
-                                           className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/50 border border-border" placeholder="e.g. Agency Retainer, Server Upgrades" />
+                                        className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/50 border border-border" placeholder="e.g. Agency Retainer, Server Upgrades" />
                                 </div>
 
                                 {/* Date + Payment Method */}
@@ -1220,12 +1229,12 @@ export default function AdminFinanceTransactions() {
                                     <div>
                                         <label className="text-sm font-medium text-foreground block mb-1.5">Date *</label>
                                         <input type="date" value={form.date} onChange={e => setForm((f: any) => ({ ...f, date: e.target.value }))}
-                                               className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none border border-border" />
+                                            className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none border border-border" />
                                     </div>
                                     <div>
                                         <label className="text-sm font-medium text-foreground block mb-1.5">Payment Method</label>
                                         <select value={form.payment_method} onChange={e => setForm((f: any) => ({ ...f, payment_method: e.target.value }))}
-                                                className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer">
+                                            className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer">
                                             {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                                         </select>
                                     </div>
@@ -1238,167 +1247,172 @@ export default function AdminFinanceTransactions() {
                                             <div>
                                                 <label className="text-sm font-medium text-foreground block mb-1.5">Category *</label>
                                                 <select value={form.category} onChange={e => setForm((f: any) => ({ ...f, category: e.target.value }))}
-                                                        className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer">
+                                                    className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer">
                                                     <option value="">Select category...</option>
                                                     {formCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                                                 </select>
                                             </div>
                                             <div>
                                                 <label className="text-sm font-medium text-foreground block mb-1.5">Client / Source</label>
-                                                <input type="text" value={form.client_name || ''} onChange={e => setForm((f: any) => ({ ...f, client_name: e.target.value }))}
-                                                       className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none border border-border" placeholder="Client Name" />
+                                                <input type="text" list="clientList" value={form.client_name || ''} onChange={e => setForm((f: any) => ({ ...f, client_name: e.target.value }))}
+                                                    className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none border border-border" placeholder="Client Name" />
+                                                <datalist id="clientList">
+                                                    {categories.filter(c => c.type === 'client').map(c => (
+                                                        <option key={c.id} value={c.name} />
+                                                    ))}
+                                                </datalist>
                                             </div>
                                         </div>
 
                                         {!editTx && (
-                                             <div className="bg-secondary/40 border border-primary/20 rounded-xl p-4 space-y-4">
-                                                 <div className="flex items-center justify-between border-b border-border/80 pb-2">
-                                                     <span className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1">
-                                                         <Share2 className="w-3.5 h-3.5 text-primary" /> Live Distribution Split (Automatic)
-                                                     </span>
-                                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${totalSplitPercent === 100 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                                                         Total: {totalSplitPercent}%
-                                                     </span>
-                                                 </div>
+                                            <div className="bg-secondary/40 border border-primary/20 rounded-xl p-4 space-y-4">
+                                                <div className="flex items-center justify-between border-b border-border/80 pb-2">
+                                                    <span className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+                                                        <Share2 className="w-3.5 h-3.5 text-primary" /> Live Distribution Split (Automatic)
+                                                    </span>
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${totalSplitPercent === 100 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                                        Total: {totalSplitPercent}%
+                                                    </span>
+                                                </div>
 
-                                                 <div className="space-y-4">
-                                                     {/* Company Funding */}
-                                                     <div className="space-y-1">
-                                                         <div className="flex items-center justify-between text-xs font-semibold">
-                                                             <span className="text-muted-foreground flex items-center gap-1">🏢 Company Funding:</span>
-                                                             <div className="flex items-center gap-1">
-                                                                 <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                 <input type="number" min="0" value={companyFundingShare}
-                                                                        onChange={e => handleSplitChange('company', 'amount', parseFloat(e.target.value) || 0)}
-                                                                        className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                             </div>
-                                                         </div>
-                                                         <div className="flex items-center gap-3">
-                                                             <input type="range" min="0" max="100" value={companyFundingPercent}
-                                                                    onChange={e => handleSplitChange('company', 'percent', parseInt(e.target.value) || 0)}
-                                                                    className="flex-1 accent-emerald-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
-                                                             <div className="flex items-center gap-1">
-                                                                 <input type="number" min="0" max="100" value={companyFundingPercent}
-                                                                        onChange={e => handleSplitChange('company', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                                                                        className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                                 <span className="text-xs text-muted-foreground">%</span>
-                                                             </div>
-                                                         </div>
-                                                     </div>
+                                                <div className="space-y-4">
+                                                    {/* Company Funding */}
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center justify-between text-xs font-semibold">
+                                                            <span className="text-muted-foreground flex items-center gap-1">🏢 Company Funding:</span>
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[10px] text-muted-foreground">Amt:</span>
+                                                                <input type="number" min="0" value={companyFundingShare}
+                                                                    onChange={e => handleSplitChange('company', 'amount', parseFloat(e.target.value) || 0)}
+                                                                    className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <input type="range" min="0" max="100" value={companyFundingPercent}
+                                                                onChange={e => handleSplitChange('company', 'percent', parseInt(e.target.value) || 0)}
+                                                                className="flex-1 accent-emerald-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
+                                                            <div className="flex items-center gap-1">
+                                                                <input type="number" min="0" max="100" value={companyFundingPercent}
+                                                                    onChange={e => handleSplitChange('company', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                                                                    className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
+                                                                <span className="text-xs text-muted-foreground">%</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
 
-                                                     {/* Broker Allowance */}
-                                                     <div className="space-y-1">
-                                                         <div className="flex items-center justify-between text-xs font-semibold">
-                                                             <span className="text-muted-foreground flex items-center gap-1">💼 Broker Allowance:</span>
-                                                             <div className="flex items-center gap-1">
-                                                                 <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                 <input type="number" min="0" value={brokerShare}
-                                                                        onChange={e => handleSplitChange('broker', 'amount', parseFloat(e.target.value) || 0)}
-                                                                        className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                             </div>
-                                                         </div>
-                                                         <div className="flex items-center gap-3">
-                                                             <input type="range" min="0" max="100" value={brokerPercent}
-                                                                    onChange={e => handleSplitChange('broker', 'percent', parseInt(e.target.value) || 0)}
-                                                                    className="flex-1 accent-indigo-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
-                                                             <div className="flex items-center gap-1">
-                                                                 <input type="number" min="0" max="100" value={brokerPercent}
-                                                                        onChange={e => handleSplitChange('broker', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                                                                        className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                                 <span className="text-xs text-muted-foreground">%</span>
-                                                             </div>
-                                                         </div>
-                                                     </div>
+                                                    {/* Broker Allowance */}
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center justify-between text-xs font-semibold">
+                                                            <span className="text-muted-foreground flex items-center gap-1">💼 Broker Allowance:</span>
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[10px] text-muted-foreground">Amt:</span>
+                                                                <input type="number" min="0" value={brokerShare}
+                                                                    onChange={e => handleSplitChange('broker', 'amount', parseFloat(e.target.value) || 0)}
+                                                                    className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <input type="range" min="0" max="100" value={brokerPercent}
+                                                                onChange={e => handleSplitChange('broker', 'percent', parseInt(e.target.value) || 0)}
+                                                                className="flex-1 accent-indigo-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
+                                                            <div className="flex items-center gap-1">
+                                                                <input type="number" min="0" max="100" value={brokerPercent}
+                                                                    onChange={e => handleSplitChange('broker', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                                                                    className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
+                                                                <span className="text-xs text-muted-foreground">%</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
 
-                                                     {/* Marketing Percentage */}
-                                                     <div className="space-y-1">
-                                                         <div className="flex items-center justify-between text-xs font-semibold">
-                                                             <span className="text-muted-foreground flex items-center gap-1">📢 Marketing Share:</span>
-                                                             <div className="flex items-center gap-1">
-                                                                 <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                 <input type="number" min="0" value={marketingShare}
-                                                                        onChange={e => handleSplitChange('marketing', 'amount', parseFloat(e.target.value) || 0)}
-                                                                        className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                             </div>
-                                                         </div>
-                                                         <div className="flex items-center gap-3">
-                                                             <input type="range" min="0" max="100" value={marketingPercent}
-                                                                    onChange={e => handleSplitChange('marketing', 'percent', parseInt(e.target.value) || 0)}
-                                                                    className="flex-1 accent-pink-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
-                                                             <div className="flex items-center gap-1">
-                                                                 <input type="number" min="0" max="100" value={marketingPercent}
-                                                                        onChange={e => handleSplitChange('marketing', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                                                                        className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                                 <span className="text-xs text-muted-foreground">%</span>
-                                                             </div>
-                                                         </div>
-                                                     </div>
+                                                    {/* Marketing Percentage */}
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center justify-between text-xs font-semibold">
+                                                            <span className="text-muted-foreground flex items-center gap-1">📢 Marketing Share:</span>
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[10px] text-muted-foreground">Amt:</span>
+                                                                <input type="number" min="0" value={marketingShare}
+                                                                    onChange={e => handleSplitChange('marketing', 'amount', parseFloat(e.target.value) || 0)}
+                                                                    className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <input type="range" min="0" max="100" value={marketingPercent}
+                                                                onChange={e => handleSplitChange('marketing', 'percent', parseInt(e.target.value) || 0)}
+                                                                className="flex-1 accent-pink-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
+                                                            <div className="flex items-center gap-1">
+                                                                <input type="number" min="0" max="100" value={marketingPercent}
+                                                                    onChange={e => handleSplitChange('marketing', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                                                                    className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
+                                                                <span className="text-xs text-muted-foreground">%</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
 
-                                                     {/* Development Percentage */}
-                                                     <div className="space-y-1">
-                                                         <div className="flex items-center justify-between text-xs font-semibold">
-                                                             <span className="text-muted-foreground flex items-center gap-1">🛠️ Development Share:</span>
-                                                             <div className="flex items-center gap-1">
-                                                                 <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                 <input type="number" min="0" value={devShare}
-                                                                        onChange={e => handleSplitChange('dev', 'amount', parseFloat(e.target.value) || 0)}
-                                                                        className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                             </div>
-                                                         </div>
-                                                         <div className="flex items-center gap-3">
-                                                             <input type="range" min="0" max="100" value={devPercent}
-                                                                    onChange={e => handleSplitChange('dev', 'percent', parseInt(e.target.value) || 0)}
-                                                                    className="flex-1 accent-amber-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
-                                                             <div className="flex items-center gap-1">
-                                                                 <input type="number" min="0" max="100" value={devPercent}
-                                                                        onChange={e => handleSplitChange('dev', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                                                                        className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                                 <span className="text-xs text-muted-foreground">%</span>
-                                                             </div>
-                                                         </div>
-                                                     </div>
-                                                 </div>
+                                                    {/* Development Percentage */}
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center justify-between text-xs font-semibold">
+                                                            <span className="text-muted-foreground flex items-center gap-1">🛠️ Development Share:</span>
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[10px] text-muted-foreground">Amt:</span>
+                                                                <input type="number" min="0" value={devShare}
+                                                                    onChange={e => handleSplitChange('dev', 'amount', parseFloat(e.target.value) || 0)}
+                                                                    className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <input type="range" min="0" max="100" value={devPercent}
+                                                                onChange={e => handleSplitChange('dev', 'percent', parseInt(e.target.value) || 0)}
+                                                                className="flex-1 accent-amber-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
+                                                            <div className="flex items-center gap-1">
+                                                                <input type="number" min="0" max="100" value={devPercent}
+                                                                    onChange={e => handleSplitChange('dev', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                                                                    className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
+                                                                <span className="text-xs text-muted-foreground">%</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-                                                 <div className="flex items-center gap-2 pt-2 border-t border-border/80">
-                                                     <button type="button" onClick={handleAutoBalance}
-                                                             className="flex-1 py-1.5 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-[10px] font-bold text-foreground transition-all flex items-center justify-center gap-1">
-                                                         ⚖️ Auto-Balance splits to 100%
-                                                     </button>
-                                                     <button type="button" onClick={() => { setCompanyFundingPercent(25); setBrokerPercent(25); setMarketingPercent(25); setDevPercent(25); }}
-                                                             className="py-1.5 px-3 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all">
-                                                         Equal (25% each)
-                                                     </button>
-                                                 </div>
-                                                 {totalSplitPercent !== 100 && (
-                                                     <p className="text-[10px] text-amber-400 font-medium animate-pulse text-center">
-                                                         ⚠️ Warning: Sum is {totalSplitPercent}%. It is highly recommended to balance to 100%.
-                                                     </p>
-                                                 )}
+                                                <div className="flex items-center gap-2 pt-2 border-t border-border/80">
+                                                    <button type="button" onClick={handleAutoBalance}
+                                                        className="flex-1 py-1.5 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-[10px] font-bold text-foreground transition-all flex items-center justify-center gap-1">
+                                                        ⚖️ Auto-Balance splits to 100%
+                                                    </button>
+                                                    <button type="button" onClick={() => { setCompanyFundingPercent(25); setBrokerPercent(25); setMarketingPercent(25); setDevPercent(25); }}
+                                                        className="py-1.5 px-3 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all">
+                                                        Equal (25% each)
+                                                    </button>
+                                                </div>
+                                                {totalSplitPercent !== 100 && (
+                                                    <p className="text-[10px] text-amber-400 font-medium animate-pulse text-center">
+                                                        ⚠️ Warning: Sum is {totalSplitPercent}%. It is highly recommended to balance to 100%.
+                                                    </p>
+                                                )}
 
-                                                 {/* ☕ Miscellaneous Expense Input Inside Income Modal */}
-                                                 <div className="border-t border-border/80 pt-3 mt-3 space-y-2">
-                                                     <label className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                                                         ☕ Miscellaneous Expense Deduction
-                                                     </label>
-                                                     <div className="grid grid-cols-3 gap-2">
-                                                         <div className="col-span-1">
-                                                             <label className="text-[10px] text-muted-foreground block mb-1">Deduct Amount</label>
-                                                             <input type="number" min="0" value={miscExpenseAmount || ''} onChange={e => setMiscExpenseAmount(parseFloat(e.target.value) || 0)}
-                                                                    className="w-full bg-secondary border border-border rounded px-2 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-amber-500/50 font-bold" placeholder="0" />
-                                                         </div>
-                                                         <div className="col-span-2">
-                                                             <label className="text-[10px] text-muted-foreground block mb-1">Expense Remarks</label>
-                                                             <input type="text" value={miscExpenseDescription} onChange={e => setMiscExpenseDescription(e.target.value)}
-                                                                    className="w-full bg-secondary border border-border rounded px-2 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-amber-500/50" placeholder="e.g. Bus fare & tea" />
-                                                         </div>
-                                                     </div>
-                                                     {miscExpenseAmount > 0 && (
-                                                         <p className="text-[9px] text-muted-foreground leading-normal mt-1">
-                                                             💡 <strong>{formatCurrency(miscExpenseAmount, form.currency)}</strong> will be subtracted from the income total. The net split amount will be <strong>{formatCurrency(form.amount - miscExpenseAmount, form.currency)}</strong>. A linked operational expense of type <strong>expense</strong> will be created in Company Funding!
-                                                         </p>
-                                                     )}
-                                                 </div>
-                                             </div>
+                                                {/* ☕ Miscellaneous Expense Input Inside Income Modal */}
+                                                <div className="border-t border-border/80 pt-3 mt-3 space-y-2">
+                                                    <label className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                                                        ☕ Miscellaneous Expense Deduction
+                                                    </label>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        <div className="col-span-1">
+                                                            <label className="text-[10px] text-muted-foreground block mb-1">Deduct Amount</label>
+                                                            <input type="number" min="0" value={miscExpenseAmount || ''} onChange={e => setMiscExpenseAmount(parseFloat(e.target.value) || 0)}
+                                                                className="w-full bg-secondary border border-border rounded px-2 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-amber-500/50 font-bold" placeholder="0" />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <label className="text-[10px] text-muted-foreground block mb-1">Expense Remarks</label>
+                                                            <input type="text" value={miscExpenseDescription} onChange={e => setMiscExpenseDescription(e.target.value)}
+                                                                className="w-full bg-secondary border border-border rounded px-2 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-amber-500/50" placeholder="e.g. Bus fare & tea" />
+                                                        </div>
+                                                    </div>
+                                                    {miscExpenseAmount > 0 && (
+                                                        <p className="text-[9px] text-muted-foreground leading-normal mt-1">
+                                                            💡 <strong>{formatCurrency(miscExpenseAmount, form.currency)}</strong> will be subtracted from the income total. The net split amount will be <strong>{formatCurrency(form.amount - miscExpenseAmount, form.currency)}</strong>. A linked operational expense of type <strong>expense</strong> will be created in Company Funding!
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
                                         )}
                                     </>
                                 )}
@@ -1409,7 +1423,7 @@ export default function AdminFinanceTransactions() {
                                         <div>
                                             <label className="text-sm font-medium text-foreground block mb-1.5">Expense Category *</label>
                                             <select value={form.category} onChange={e => setForm((f: any) => ({ ...f, category: e.target.value }))}
-                                                    className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer">
+                                                className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer">
                                                 <option value="">Select category...</option>
                                                 {formCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                                             </select>
@@ -1417,7 +1431,7 @@ export default function AdminFinanceTransactions() {
                                         <div>
                                             <label className="text-sm font-medium text-foreground block mb-1.5">Project ID (Optional)</label>
                                             <input type="text" value={form.project_id || ''} onChange={e => setForm((f: any) => ({ ...f, project_id: e.target.value }))}
-                                                   className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none border border-border" placeholder="Project tag ID" />
+                                                className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none border border-border" placeholder="Project tag ID" />
                                         </div>
                                     </div>
                                 )}
@@ -1429,12 +1443,15 @@ export default function AdminFinanceTransactions() {
                                             <div>
                                                 <label className="text-sm font-medium text-foreground block mb-1.5">Recipient Identity *</label>
                                                 <select value={form.recipient || ''} onChange={e => setForm((f: any) => ({ ...f, recipient: e.target.value, category: 'Distribution' }))}
-                                                        className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer font-bold">
+                                                    className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border cursor-pointer font-bold">
                                                     <option value="">Select recipient team...</option>
                                                     <option value="Company Funding">Company Funding</option>
                                                     <option value="Broker Allowance">Broker Allowance</option>
                                                     <option value="Marketing Team">Marketing Team</option>
                                                     <option value="Development Team">Development Team</option>
+                                                    {categories.filter(c => c.type === 'receiver').map(c => (
+                                                        <option key={c.id} value={c.name}>{c.name}</option>
+                                                    ))}
                                                     <option value="Other Custom">Other Custom Recipient</option>
                                                 </select>
                                             </div>
@@ -1442,7 +1459,7 @@ export default function AdminFinanceTransactions() {
                                                 <div>
                                                     <label className="text-sm font-medium text-foreground block mb-1.5">Custom Recipient Name *</label>
                                                     <input type="text" onChange={e => setForm((f: any) => ({ ...f, recipient: e.target.value }))}
-                                                           className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none border border-border" placeholder="e.g. Design Vendor" />
+                                                        className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none border border-border" placeholder="e.g. Design Vendor" />
                                                 </div>
                                             )}
                                         </div>
@@ -1450,11 +1467,11 @@ export default function AdminFinanceTransactions() {
                                             <label className="text-sm font-medium text-foreground block mb-1.5">Distribution Status</label>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <button type="button" onClick={() => setForm((f: any) => ({ ...f, subcategory: 'Pending' }))}
-                                                        className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${form.subcategory !== 'Distributed' ? 'bg-amber-500/10 text-amber-400 border-amber-500' : 'bg-secondary border-border text-muted-foreground hover:text-foreground'}`}>
+                                                    className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${form.subcategory !== 'Distributed' ? 'bg-amber-500/10 text-amber-400 border-amber-500' : 'bg-secondary border-border text-muted-foreground hover:text-foreground'}`}>
                                                     ⏳ Pending Distribution
                                                 </button>
                                                 <button type="button" onClick={() => setForm((f: any) => ({ ...f, subcategory: 'Distributed' }))}
-                                                        className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${form.subcategory === 'Distributed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500' : 'bg-secondary border-border text-muted-foreground hover:text-foreground'}`}>
+                                                    className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${form.subcategory === 'Distributed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500' : 'bg-secondary border-border text-muted-foreground hover:text-foreground'}`}>
                                                     ✅ Distributed (Paid Out)
                                                 </button>
                                             </div>
@@ -1466,7 +1483,7 @@ export default function AdminFinanceTransactions() {
                                 <div>
                                     <label className="text-sm font-medium text-foreground block mb-1.5">Notes & Remarks</label>
                                     <textarea value={form.notes || ''} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} rows={2}
-                                              className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/50 border border-border resize-y" placeholder="Additional details..." />
+                                        className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/50 border border-border resize-y" placeholder="Additional details..." />
                                 </div>
                             </div>
 
@@ -1474,7 +1491,7 @@ export default function AdminFinanceTransactions() {
                             <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-border">
                                 <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
                                 <button onClick={handleSave} disabled={saving}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 text-sm font-semibold disabled:opacity-50 shadow-lg shadow-emerald-500/20">
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 text-sm font-semibold disabled:opacity-50 shadow-lg shadow-emerald-500/20">
                                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                     {editTx ? 'Update Mutation' : 'Authorize Mutation'}
                                 </button>

@@ -62,24 +62,6 @@ export default function AdminFinanceDashboard() {
         }
     }, []);
 
-    const handleSeed = async () => {
-        setSeeding(true);
-        try {
-            const token = localStorage.getItem('admin_token');
-            const API_BASE = import.meta.env.VITE_API_URL || '';
-            const res = await fetch(`${API_BASE}/api/finance?action=seed`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (res.ok) {
-                toast.success('Finance system initialized with 3 transactional types and automated split distribution generator!');
-                fetchDashboard();
-            } else {
-                toast.error('Failed to initialize');
-            }
-        } catch { toast.error('Error initializing'); }
-        finally { setSeeding(false); }
-    };
 
     useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 
@@ -104,19 +86,12 @@ export default function AdminFinanceDashboard() {
                 <SectionHeader title="💰 Financial Command Center" description="Monitor SaaS Income, Operational Funding, and Partitioned Distribution Splits." />
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={handleSeed}
-                        disabled={seeding}
-                        className="flex items-center gap-2 px-3 py-2 bg-secondary text-foreground border border-border rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium disabled:opacity-50"
-                    >
-                        {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                        Reset Mock DB
-                    </button>
-                    <button
                         onClick={() => navigate('/admin/finance/transactions')}
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-semibold shadow-lg shadow-emerald-500/20"
                     >
-                        <Plus className="w-4 h-4" /> Add Transaction
+                        <Plus className="w-4 h-4" /> Record
                     </button>
+
                 </div>
             </div>
 
@@ -132,14 +107,11 @@ export default function AdminFinanceDashboard() {
                     </div>
                     <h3 className="text-xl font-bold text-foreground mb-2">No Financial Data Yet</h3>
                     <p className="text-sm text-muted-foreground mb-6 max-w-sm text-center">
-                        Start tracking your income and expenses. Click "Reset Mock DB" to set up your corporate categories, budgets, savings goals, and 6 months of high-fidelity transactional history!
+                        Start tracking your income and expenses. Record your corporate categories, budgets, savings goals, and transactional history!
                     </p>
                     <div className="flex gap-3">
-                        <button onClick={handleSeed} disabled={seeding} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 text-sm font-semibold disabled:opacity-50">
-                            {seeding ? 'Initializing...' : 'Initialize Mock Database'}
-                        </button>
-                        <button onClick={() => navigate('/admin/finance/transactions')} className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/85 text-sm font-medium">
-                            Add Transaction
+                        <button onClick={() => navigate('/admin/finance/transactions')} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 text-sm font-semibold">
+                            Record Transaction
                         </button>
                     </div>
                 </motion.div>
