@@ -20,7 +20,7 @@ interface Transaction {
     recipient?: string; parent_id?: string; created_at?: string; updated_at?: string; created_by?: string; updated_by?: string;
 }
 
-interface Category { id: string; name: string; name_bn?: string; type: string; icon?: string; color?: string; }
+interface Category { id: string; name: string; name_bn?: string; type: string; icon?: string; color?: string; parent_id?: string | null; }
 
 const PAYMENT_METHODS = ['Bank Transfer', 'Cash', 'bKash', 'Nagad', 'PayPal', 'Stripe', 'Card', 'Wise', 'Other'];
 const TYPES = [
