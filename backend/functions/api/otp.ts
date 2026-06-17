@@ -1,6 +1,7 @@
 import { getDb } from '../_lib/db';
 import { handleOptions, jsonResponse } from '../_lib/cors';
-import { isAuthorized } from '../_lib/auth';
+import { isAuthorized, getAdminIdentity } from '../_lib/auth';
+import { ensureAuditTable, logAudit, getRequestMeta } from '../_lib/audit';
 import type { Env } from '../_lib/types';
 
 // Generate a random 6-digit OTP
@@ -61,8 +62,14 @@ async function sendOtpEmail(env: Env, otp: string, targetEmail: string) {
 }
 
 async function handleSend(request: Request, env: Env): Promise<Response> {
-    if (!(await isAuthorized(request, env.JWT_SECRET))) {
+    const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
+    if (!adminEmail || adminEmail === 'unknown') {
         return jsonResponse({ error: 'Unauthorized' }, request, 401);
+    }
+
+    const ALLOWED_MAILS = ['adnanshahria2019@gmail.com', 'nisarfeni2015@gmail.com'];
+    if (!ALLOWED_MAILS.includes(adminEmail)) {
+        return jsonResponse({ error: 'You are not authorized to perform image optimization.' }, request, 403);
     }
 
     const db = getDb(env);
@@ -87,19 +94,15 @@ async function handleSend(request: Request, env: Env): Promise<Response> {
         args: [otp],
     });
 
-    // Send email without blocking
-    const targetEmail = env.ADMIN_EMAIL || env.GMAIL_USER;
-    if (targetEmail) {
-        await sendOtpEmail(env, otp, targetEmail);
-    } else {
-        console.warn("No target email configured to receive OTP");
-    }
+    // Send email without blocking to the requesting admin
+    await sendOtpEmail(env, otp, adminEmail);
 
-    return jsonResponse({ success: true, message: 'OTP sent successfully' }, request);
+    return jsonResponse({ success: true, message: `OTP sent successfully to ${adminEmail}` }, request);
 }
 
 async function handleVerify(request: Request, env: Env): Promise<Response> {
-    if (!(await isAuthorized(request, env.JWT_SECRET))) {
+    const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
+    if (!adminEmail || adminEmail === 'unknown') {
         return jsonResponse({ error: 'Unauthorized' }, request, 401);
     }
 
@@ -133,6 +136,21 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
         sql: `DELETE FROM otps WHERE id = ?`,
         args: [otpId],
     });
+
+    // Log OTP verification to audit trail
+    try {
+        await ensureAuditTable(env);
+        const meta = getRequestMeta(request);
+        await logAudit(env, {
+            admin_email: adminEmail,
+            action: 'image_optimize',
+            entity_type: 'auth',
+            entity_label: 'Image optimizer OTP verified',
+            ...meta,
+        });
+    } catch (err) {
+        console.error('Audit logging failed for image optimizer verification:', err);
+    }
 
     return jsonResponse({ success: true, message: 'OTP verified successfully' }, request);
 }

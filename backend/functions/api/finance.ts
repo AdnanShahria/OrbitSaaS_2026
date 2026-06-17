@@ -567,8 +567,7 @@ async function handleCategories(request: Request, env: Env): Promise<Response> {
     }
 
     if (request.method === 'POST') {
-        const authorEmail = await getFinanceIdentity(request, env.JWT_SECRET);
-        if (authorEmail === 'unknown') return jsonResponse({ error: 'Financial Authorization Token missing or expired.' }, request, 401);
+        const authorEmail = await getAdminIdentity(request, env.JWT_SECRET) || 'unknown';
 
         const body = await request.json() as any;
         const id = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
@@ -579,18 +578,42 @@ async function handleCategories(request: Request, env: Env): Promise<Response> {
             args: [id, body.name, body.name_bn || null, body.type, body.icon || '📦', body.color || '#78716C', body.sort_order || 0],
         });
 
+        // Audit log
+        const meta = getRequestMeta(request);
+        await logAudit(env, {
+            admin_email: authorEmail,
+            action: 'create',
+            entity_type: 'category',
+            entity_id: id,
+            entity_label: body.name,
+            changes_summary: `Created finance category: ${body.name} (${body.type})`,
+            ...meta,
+        });
+
         return jsonResponse({ success: true, id }, request);
     }
 
     if (request.method === 'DELETE') {
-        const authorEmail = await getFinanceIdentity(request, env.JWT_SECRET);
-        if (authorEmail === 'unknown') return jsonResponse({ error: 'Financial Authorization Token missing or expired.' }, request, 401);
+        const authorEmail = await getAdminIdentity(request, env.JWT_SECRET) || 'unknown';
 
         const url = new URL(request.url);
         const id = url.searchParams.get('id');
         if (!id) return jsonResponse({ error: 'ID required' }, request, 400);
 
         await db.execute({ sql: 'DELETE FROM finance_categories WHERE id = ?', args: [id] });
+
+        // Audit log
+        const meta = getRequestMeta(request);
+        await logAudit(env, {
+            admin_email: authorEmail,
+            action: 'delete',
+            entity_type: 'category',
+            entity_id: id,
+            entity_label: `Deleted category ${id}`,
+            changes_summary: `Deleted finance category ID: ${id}`,
+            ...meta,
+        });
+
         return jsonResponse({ success: true }, request);
     }
 
@@ -608,6 +631,7 @@ async function handleSavings(request: Request, env: Env): Promise<Response> {
     }
 
     if (request.method === 'POST') {
+        const authorEmail = await getAdminIdentity(request, env.JWT_SECRET) || 'unknown';
         const body = await request.json() as any;
         const id = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 
@@ -617,10 +641,23 @@ async function handleSavings(request: Request, env: Env): Promise<Response> {
             args: [id, body.name, body.target_amount, body.current_amount || 0, body.currency || 'BDT', body.deadline || null, body.status || 'active'],
         });
 
+        // Audit log
+        const meta = getRequestMeta(request);
+        await logAudit(env, {
+            admin_email: authorEmail,
+            action: 'create',
+            entity_type: 'savings_goal',
+            entity_id: id,
+            entity_label: body.name,
+            changes_summary: `Created savings goal: ${body.name} with target ${body.target_amount} ${body.currency || 'BDT'}`,
+            ...meta,
+        });
+
         return jsonResponse({ success: true, id }, request);
     }
 
     if (request.method === 'PUT') {
+        const authorEmail = await getAdminIdentity(request, env.JWT_SECRET) || 'unknown';
         const id = url.searchParams.get('id');
         if (!id) return jsonResponse({ error: 'ID required' }, request, 400);
 
@@ -630,14 +667,40 @@ async function handleSavings(request: Request, env: Env): Promise<Response> {
             args: [body.name, body.target_amount, body.current_amount || 0, body.currency || 'BDT', body.deadline || null, body.status || 'active', id],
         });
 
+        // Audit log
+        const meta = getRequestMeta(request);
+        await logAudit(env, {
+            admin_email: authorEmail,
+            action: 'update',
+            entity_type: 'savings_goal',
+            entity_id: id,
+            entity_label: body.name,
+            changes_summary: `Updated savings goal: ${body.name} (target: ${body.target_amount}, current: ${body.current_amount})`,
+            ...meta,
+        });
+
         return jsonResponse({ success: true }, request);
     }
 
     if (request.method === 'DELETE') {
+        const authorEmail = await getAdminIdentity(request, env.JWT_SECRET) || 'unknown';
         const id = url.searchParams.get('id');
         if (!id) return jsonResponse({ error: 'ID required' }, request, 400);
 
         await db.execute({ sql: 'DELETE FROM finance_savings_goals WHERE id = ?', args: [id] });
+
+        // Audit log
+        const meta = getRequestMeta(request);
+        await logAudit(env, {
+            admin_email: authorEmail,
+            action: 'delete',
+            entity_type: 'savings_goal',
+            entity_id: id,
+            entity_label: `Deleted savings goal ${id}`,
+            changes_summary: `Deleted savings goal ID: ${id}`,
+            ...meta,
+        });
+
         return jsonResponse({ success: true }, request);
     }
 
@@ -663,6 +726,7 @@ async function handleBudgets(request: Request, env: Env): Promise<Response> {
     }
 
     if (request.method === 'POST') {
+        const authorEmail = await getAdminIdentity(request, env.JWT_SECRET) || 'unknown';
         const body = await request.json() as any;
         const id = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 
@@ -671,6 +735,18 @@ async function handleBudgets(request: Request, env: Env): Promise<Response> {
                   VALUES (?, ?, ?, ?, ?)
                   ON CONFLICT(category, month) DO UPDATE SET budget_amount = ?, currency = ?`,
             args: [id, body.category, body.month, body.budget_amount, body.currency || 'BDT', body.budget_amount, body.currency || 'BDT'],
+        });
+
+        // Audit log
+        const meta = getRequestMeta(request);
+        await logAudit(env, {
+            admin_email: authorEmail,
+            action: 'update',
+            entity_type: 'budget',
+            entity_id: id,
+            entity_label: `${body.category} - ${body.month}`,
+            changes_summary: `Set budget for ${body.category} in ${body.month} to ${body.budget_amount} ${body.currency || 'BDT'}`,
+            ...meta,
         });
 
         return jsonResponse({ success: true }, request);

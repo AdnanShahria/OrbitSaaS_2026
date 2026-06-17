@@ -1,9 +1,10 @@
 import { getDb } from '../_lib/db';
 import { handleOptions, jsonResponse } from '../_lib/cors';
 import { isAuthorized, signToken } from '../_lib/auth';
+import { ensureAuditTable, logAudit, getRequestMeta } from '../_lib/audit';
 import type { Env } from '../_lib/types';
 
-const ALLOWED_MAILS = ['adnanshahria2019@gmail.com', 'abdurrafiu7@gmail.com', 'nisarfeni2015@gmail.com'];
+const ALLOWED_MAILS = ['adnanshahria2019@gmail.com', 'abdurrafiu7@gmail.com'];
 
 // Generate a random 6-digit OTP
 function generateOtp(): string {
@@ -143,6 +144,21 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
         sql: `DELETE FROM finance_otps WHERE id = ?`,
         args: [otpId],
     });
+
+    // Log finance OTP verification to audit trail
+    try {
+        await ensureAuditTable(env);
+        const meta = getRequestMeta(request);
+        await logAudit(env, {
+            admin_email: verifiedEmail,
+            action: 'finance_verify',
+            entity_type: 'auth',
+            entity_label: 'Finance admin identity verified via OTP',
+            ...meta,
+        });
+    } catch (err) {
+        console.error('Audit logging failed for finance OTP verification:', err);
+    }
 
     // Generate a secure finance token
     const financeToken = await signToken({ purpose: 'finance_auth', verified_email: verifiedEmail }, env.JWT_SECRET);

@@ -1,10 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Mail, Shield, ArrowRight, Loader2, X, ChevronDown } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+/** Decode the JWT exp claim without a library and return true if the token is still valid. */
+function isAdminTokenValid(token: string | null): boolean {
+    if (!token) return false;
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return !payload.exp || Date.now() / 1000 < payload.exp;
+    } catch {
+        return false;
+    }
+}
 
 const AUTHORIZED_EMAILS = [
     { label: 'Adnan Shahria (adnanshahria2019@gmail.com)', value: 'adnanshahria2019@gmail.com' },
@@ -20,6 +31,14 @@ export default function AdminLogin() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    // Hard cache: if admin_token exists and is not expired, skip login entirely
+    useEffect(() => {
+        const cached = localStorage.getItem('admin_token');
+        if (isAdminTokenValid(cached)) {
+            navigate('/admin', { replace: true });
+        }
+    }, [navigate]);
 
     const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault();

@@ -6,7 +6,7 @@ import type { Env } from './types';
  */
 export interface AuditEntry {
     admin_email: string;
-    action: 'create' | 'update' | 'delete' | 'login' | 'cache_publish' | 'cache_delete' | 'export' | 'seed' | 'logout';
+    action: 'create' | 'update' | 'delete' | 'login' | 'cache_publish' | 'cache_delete' | 'export' | 'seed' | 'logout' | 'finance_verify' | 'image_optimize';
     entity_type: string; // 'content', 'transaction', 'category', 'savings_goal', 'budget', 'cache', 'auth', etc.
     entity_id?: string | null;
     entity_label?: string | null;

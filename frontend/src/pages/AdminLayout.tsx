@@ -12,6 +12,17 @@ import {
 } from 'lucide-react';
 
 
+/** Decode the JWT exp claim without a library and return true if the token is still valid. */
+function isAdminTokenValid(token: string | null): boolean {
+    if (!token) return false;
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return !payload.exp || Date.now() / 1000 < payload.exp;
+    } catch {
+        return false;
+    }
+}
+
 
 const navItems = [
     { label: 'Hero', path: '/admin/hero', icon: Type },
@@ -213,11 +224,17 @@ export default function AdminLayout() {
         }
     };
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+    // Expiry-aware token guard: read once at render time
+    const rawToken = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+    const token = isAdminTokenValid(rawToken) ? rawToken : null;
 
     useEffect(() => {
-        if (!token) navigate('/admin/login');
-    }, [navigate, token]);
+        if (!token) {
+            // Evict a stale/expired token so the login page starts clean
+            if (rawToken) localStorage.removeItem('admin_token');
+            navigate('/admin/login');
+        }
+    }, [navigate, token, rawToken]);
 
     if (!token) return null;
 

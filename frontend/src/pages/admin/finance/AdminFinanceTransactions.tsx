@@ -84,26 +84,68 @@ export default function AdminFinanceTransactions() {
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
     const [selectedOtpEmail, setSelectedOtpEmail] = useState('adnanshahria2019@gmail.com');
-    const [financeToken, setFinanceToken] = useState<string | null>(null);
+    const [financeToken, setFinanceToken] = useState<string | null>(() => {
+        // Hard cache: only restore from localStorage if the JWT is still valid (not expired)
+        const cached = localStorage.getItem('finance_token');
+        if (!cached) return null;
+        try {
+            const payload = JSON.parse(atob(cached.split('.')[1]));
+            if (payload.exp && Date.now() / 1000 > payload.exp) {
+                // Token expired — evict from cache
+                localStorage.removeItem('finance_token');
+                return null;
+            }
+            return cached;
+        } catch {
+            localStorage.removeItem('finance_token');
+            return null;
+        }
+    });
     const [otpSent, setOtpSent] = useState(false);
     const [isOtpDropdownOpen, setIsOtpDropdownOpen] = useState(false);
-    const pendingActionRef = useRef<(() => Promise<void>) | null>(null);
+    const pendingActionRef = useRef<((token: string) => Promise<void>) | null>(null);
 
     const OTP_EMAILS = [
         { label: 'Adnan Shahria (adnanshahria2019@gmail.com)', value: 'adnanshahria2019@gmail.com' },
         { label: 'Abdur Rafiu (abdurrafiu7@gmail.com)', value: 'abdurrafiu7@gmail.com' },
-        { label: 'Nisar (nisarfeni2015@gmail.com)', value: 'nisarfeni2015@gmail.com' },
     ];
 
-    const triggerOtpAndExecute = async (actionFn: () => Promise<void>) => {
+    /** Clears the finance token from state + localStorage and re-opens the OTP modal. */
+    const invalidateFinanceToken = (actionFn: (token: string) => Promise<void>) => {
+        localStorage.removeItem('finance_token');
+        setFinanceToken(null);
+        pendingActionRef.current = actionFn;
+        setShowOtpModal(true);
+        setOtpSent(false);
+        setOtpInput('');
+        toast.error('Financial session expired. Please re-verify your identity.');
+    };
+
+    const triggerOtpAndExecute = async (actionFn: (token: string) => Promise<void>) => {
+        // Client-side expiry check before using the cached token
         if (financeToken) {
-            await actionFn();
+            try {
+                const payload = JSON.parse(atob(financeToken.split('.')[1]));
+                if (!payload.exp || Date.now() / 1000 > payload.exp) {
+                    invalidateFinanceToken(actionFn);
+                    return;
+                }
+            } catch {
+                invalidateFinanceToken(actionFn);
+                return;
+            }
+            await actionFn(financeToken);
             return;
         }
         pendingActionRef.current = actionFn;
         setShowOtpModal(true);
         setOtpSent(false);
         setOtpInput('');
+    };
+
+    const closeOtpModal = () => {
+        setShowOtpModal(false);
+        pendingActionRef.current = null;
     };
 
     const handleSendOtp = async () => {
@@ -153,11 +195,12 @@ export default function AdminFinanceTransactions() {
             if (res.ok && data.success) {
                 toast.success('Financial authorization verified!');
                 setFinanceToken(data.finance_token);
+                localStorage.setItem('finance_token', data.finance_token);
                 setShowOtpModal(false);
                 setOtpInput('');
                 setOtpSent(false);
                 if (pendingActionRef.current) {
-                    await pendingActionRef.current();
+                    await pendingActionRef.current(data.finance_token);
                     pendingActionRef.current = null;
                 }
             } else {
@@ -232,23 +275,19 @@ export default function AdminFinanceTransactions() {
     useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
 
     const openCreate = () => {
-        triggerOtpAndExecute(async () => {
-            setEditTx(null);
-            setForm({ ...emptyTx, subcategory: 'Pending' });
-            setMiscExpenseAmount(0);
-            setMiscExpenseDescription('Tea/coffee & bus fare');
-            setShowModal(true);
-        });
+        setEditTx(null);
+        setForm({ ...emptyTx, subcategory: 'Pending' });
+        setMiscExpenseAmount(0);
+        setMiscExpenseDescription('Tea/coffee & bus fare');
+        setShowModal(true);
     };
 
     const openEdit = (tx: Transaction) => {
-        triggerOtpAndExecute(async () => {
-            setEditTx(tx);
-            setForm({ ...tx });
-            setMiscExpenseAmount(0);
-            setMiscExpenseDescription('Tea/coffee & bus fare');
-            setShowModal(true);
-        });
+        setEditTx(tx);
+        setForm({ ...tx });
+        setMiscExpenseAmount(0);
+        setMiscExpenseDescription('Tea/coffee & bus fare');
+        setShowModal(true);
     };
 
     const handleSave = async () => {
@@ -256,56 +295,94 @@ export default function AdminFinanceTransactions() {
         if (form.type !== 'distribution' && !form.category) { toast.error('Please select a category'); return; }
         if (form.type === 'distribution' && !form.recipient) { toast.error('Please specify a recipient'); return; }
 
-        setSaving(true);
-        try {
-            const payload = { ...form };
+        triggerOtpAndExecute(async (fToken) => {
+            setSaving(true);
+            try {
+                const payload = { ...form };
 
-            // For Income type: Calculate & inject the automatic distributions
-            if (form.type === 'income' && !editTx) {
-                payload.misc_amount = miscExpenseAmount;
-                payload.misc_description = miscExpenseDescription;
+                // For Income type: Calculate & inject the automatic distributions
+                if (form.type === 'income' && !editTx) {
+                    payload.misc_amount = miscExpenseAmount;
+                    payload.misc_description = miscExpenseDescription;
 
-                // Subtract misc directly from the parent income amount
-                const netIncomeAmount = Math.max(0, form.amount - miscExpenseAmount);
-                payload.amount = netIncomeAmount;
+                    // Subtract misc directly from the parent income amount
+                    const netIncomeAmount = Math.max(0, form.amount - miscExpenseAmount);
+                    payload.amount = netIncomeAmount;
 
-                const companyAmt = Math.round((netIncomeAmount * companyFundingPercent) / 100);
-                const brokerAmt = Math.round((netIncomeAmount * brokerPercent) / 100);
-                const marketingAmt = Math.round((netIncomeAmount * marketingPercent) / 100);
-                const devAmt = Math.round((netIncomeAmount * devPercent) / 100);
+                    const companyAmt = Math.round((netIncomeAmount * companyFundingPercent) / 100);
+                    const brokerAmt = Math.round((netIncomeAmount * brokerPercent) / 100);
+                    const marketingAmt = Math.round((netIncomeAmount * marketingPercent) / 100);
+                    const devAmt = Math.round((netIncomeAmount * devPercent) / 100);
 
-                payload.distributions = [
-                    { recipient: 'Company Funding', amount: companyAmt },
-                    { recipient: 'Broker Allowance', amount: brokerAmt },
-                    { recipient: 'Marketing Team', amount: marketingAmt },
-                    { recipient: 'Development Team', amount: devAmt }
-                ];
-            }
+                    payload.distributions = [
+                        { recipient: 'Company Funding', amount: companyAmt },
+                        { recipient: 'Broker Allowance', amount: brokerAmt },
+                        { recipient: 'Marketing Team', amount: marketingAmt },
+                        { recipient: 'Development Team', amount: devAmt }
+                    ];
+                }
 
-            const method = editTx ? 'PUT' : 'POST';
-            const url = editTx ? `${API_BASE}/api/finance?action=transactions&id=${editTx.id}` : `${API_BASE}/api/finance?action=transactions`;
-            const res = await fetch(url, {
-                method,
-                headers: { ...headers, 'Finance-Token': financeToken || '' },
-                body: JSON.stringify(payload)
-            });
+                const method = editTx ? 'PUT' : 'POST';
+                const url = editTx ? `${API_BASE}/api/finance?action=transactions&id=${editTx.id}` : `${API_BASE}/api/finance?action=transactions`;
+                const res = await fetch(url, {
+                    method,
+                    headers: { ...headers, 'Finance-Token': fToken },
+                    body: JSON.stringify(payload)
+                });
 
-            if (!res.ok) throw new Error();
-            toast.success(editTx ? 'Transaction updated!' : 'Transaction saved!');
-            setShowModal(false);
-            fetchTransactions();
-        } catch { toast.error('Failed to save transaction'); }
-        finally { setSaving(false); }
+                // If the backend rejects the token, evict cache and re-prompt
+                if (res.status === 401) {
+                    setSaving(false);
+                    invalidateFinanceToken(async (newToken) => {
+                        setSaving(true);
+                        try {
+                            const retryRes = await fetch(url, {
+                                method,
+                                headers: { ...headers, 'Finance-Token': newToken },
+                                body: JSON.stringify(payload)
+                            });
+                            if (!retryRes.ok) throw new Error();
+                            toast.success(editTx ? 'Transaction updated!' : 'Transaction saved!');
+                            setShowModal(false);
+                            fetchTransactions();
+                        } catch { toast.error('Failed to save transaction'); }
+                        finally { setSaving(false); }
+                    });
+                    return;
+                }
+
+                if (!res.ok) throw new Error();
+                toast.success(editTx ? 'Transaction updated!' : 'Transaction saved!');
+                setShowModal(false);
+                fetchTransactions();
+            } catch { toast.error('Failed to save transaction'); }
+            finally { setSaving(false); }
+        });
     };
 
     const handleDelete = async (id: string) => {
         if (!confirm('Delete this transaction?')) return;
-        triggerOtpAndExecute(async () => {
+        triggerOtpAndExecute(async (fToken) => {
             try {
                 const res = await fetch(`${API_BASE}/api/finance?action=transactions&id=${id}`, { 
                     method: 'DELETE', 
-                    headers: { ...headers, 'Finance-Token': financeToken || '' } 
+                    headers: { ...headers, 'Finance-Token': fToken } 
                 });
+                // If the backend rejects the token, evict cache and re-prompt
+                if (res.status === 401) {
+                    invalidateFinanceToken(async (newToken) => {
+                        try {
+                            const retryRes = await fetch(`${API_BASE}/api/finance?action=transactions&id=${id}`, {
+                                method: 'DELETE',
+                                headers: { ...headers, 'Finance-Token': newToken }
+                            });
+                            if (!retryRes.ok) throw new Error();
+                            toast.success('Transaction deleted!');
+                            fetchTransactions();
+                        } catch { toast.error('Failed to delete transaction'); }
+                    });
+                    return;
+                }
                 if (!res.ok) throw new Error();
                 toast.success('Transaction deleted!');
                 fetchTransactions();
@@ -315,40 +392,36 @@ export default function AdminFinanceTransactions() {
 
     const handleCreateCategory = async () => {
         if (!newCatName) return;
-        triggerOtpAndExecute(async () => {
-            setCatSaving(true);
-            try {
-                const res = await fetch(`${API_BASE}/api/finance?action=categories`, {
-                    method: 'POST',
-                    headers: { ...headers, 'Finance-Token': financeToken || '' },
-                    body: JSON.stringify({
-                        name: newCatName,
-                        type: newCatType,
-                        icon: '📦',
-                        color: newCatColor
-                    })
-                });
-                if (res.ok) {
-                    toast.success('Category created successfully!');
-                    setNewCatName('');
-                    fetchCategories();
-                } else { toast.error('Failed to create category'); }
-            } catch { toast.error('Error'); }
-            finally { setCatSaving(false); }
-        });
+        setCatSaving(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/finance?action=categories`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    name: newCatName,
+                    type: newCatType,
+                    icon: '📦',
+                    color: newCatColor
+                })
+            });
+            if (res.ok) {
+                toast.success('Category created successfully!');
+                setNewCatName('');
+                fetchCategories();
+            } else { toast.error('Failed to create category'); }
+        } catch { toast.error('Error'); }
+        finally { setCatSaving(false); }
     };
 
     const handleDeleteCategory = async (id: string) => {
         if (!confirm('Delete this category? Transactions may lose mapping.')) return;
-        triggerOtpAndExecute(async () => {
-            try {
-                const res = await fetch(`${API_BASE}/api/finance?action=categories&id=${id}`, { method: 'DELETE', headers: { ...headers, 'Finance-Token': financeToken || '' } });
-                if (res.ok) {
-                    toast.success('Category deleted successfully');
-                    fetchCategories();
-                } else { toast.error('Delete failed'); }
-            } catch { toast.error('Error'); }
-        });
+        try {
+            const res = await fetch(`${API_BASE}/api/finance?action=categories&id=${id}`, { method: 'DELETE', headers });
+            if (res.ok) {
+                toast.success('Category deleted successfully');
+                fetchCategories();
+            } else { toast.error('Delete failed'); }
+        } catch { toast.error('Error'); }
     };
 
     // Typable Money Input Split Logic & Auto-balancer of 4th Field
@@ -551,8 +624,9 @@ export default function AdminFinanceTransactions() {
                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-indigo-500/10 blur-[50px] rounded-full pointer-events-none" />
 
                             <button 
-                                onClick={() => setShowOtpModal(false)}
-                                className="absolute top-5 right-5 text-muted-foreground/70 hover:text-foreground hover:bg-secondary/50 p-2 rounded-full transition-all"
+                                type="button"
+                                onClick={closeOtpModal}
+                                className="absolute top-5 right-5 text-muted-foreground/70 hover:text-foreground hover:bg-secondary/50 p-2 rounded-full transition-all z-20"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -633,7 +707,7 @@ export default function AdminFinanceTransactions() {
                                             placeholder="••••••"
                                             value={otpInput}
                                             onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
-                                            className="w-full text-center text-4xl tracking-[0.5em] font-mono py-4 bg-secondary/30 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-secondary/50 transition-all placeholder:text-muted-foreground/30"
+                                            className="w-full text-center text-4xl tracking-[0.5em] font-mono py-4 bg-white text-indigo-950 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white transition-all placeholder:text-indigo-950/30 font-bold"
                                             disabled={isVerifyingOtp}
                                             autoFocus
                                         />
