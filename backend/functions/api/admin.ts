@@ -54,72 +54,146 @@ async function purgeCloudflareCache(env: Env, baseUrl: string) {
     }
 }
 
-// ─── Action: Login ───
-async function handleLogin(request: Request, env: Env): Promise<Response> {
-    if (request.method !== 'POST') {
-        return jsonResponse({ error: 'Method not allowed' }, request, 405);
+// ─── OTP Email Helper ───
+import nodemailer from 'nodemailer';
+
+async function sendAdminLoginOtpEmail(env: Env, otp: string, targetEmail: string) {
+    if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
+        console.warn('Gmail credentials are missing, cannot send OTP email.');
+        return;
     }
 
-    const { signToken } = await import('../_lib/auth');
-    const bcrypt = await import('bcryptjs');
-    const { decryptPayload, timingSafeEqual } = await import('../_lib/crypto');
-    
-    const body = await request.json() as any;
-    let code: string | undefined;
-    let email: string | undefined;
+    try {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: env.GMAIL_USER,
+                pass: env.GMAIL_APP_PASSWORD
+            }
+        });
 
-    // Support both encrypted payload and raw unencrypted requests (for backward compatibility if needed)
-    if (body.payload) {
-        // Prefer PAYLOAD_SECRET if defined, fallback to JWT_SECRET, then a hardcoded stable key for reliability
-        const secret = env.PAYLOAD_SECRET || env.JWT_SECRET || 'orbit-admin-jwt-secret-2025'; 
-        const decrypted = await decryptPayload(body.payload, secret);
-        if (decrypted) {
-            code = decrypted.code;
-            email = decrypted.email;
-        }
-    } else {
-        code = body.code;
-        email = body.email;
+        await transporter.sendMail({
+            from: `"ORBIT SaaS Admin" <${env.GMAIL_USER}>`,
+            to: targetEmail,
+            subject: "Admin Access - Authorization Code",
+            text: `Your ORBIT SaaS admin login code is: ${otp}`,
+            html: `
+            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1a1a2e;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #6c5ce7; margin: 0; font-size: 28px; font-weight: 800;">ORBIT SaaS Admin</h1>
+              </div>
+              <div style="background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid #eef0f6;">
+                <h2 style="margin-top: 0; font-size: 22px; color: #1a1a2e;">Admin Login Authorization</h2>
+                <p style="font-size: 16px; line-height: 1.6; color: #64648a;">
+                  You requested to log into the ORBIT SaaS admin panel. Please use the following One-Time Password to proceed. This code expires in 10 minutes.
+                </p>
+                <div style="margin-top: 30px; margin-bottom: 30px; text-align: center;">
+                  <span style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #1a1a2e; background: #f3f4f6; padding: 10px 20px; border-radius: 8px;">${otp}</span>
+                </div>
+                <div style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #eef0f6; text-align: center;">
+                  <p style="font-size: 14px; color: #8888a0; margin: 0;">
+                    If you did not request this, please secure your admin panel immediately.<br>
+                    <strong>The ORBIT SaaS Team</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
+            `
+        });
+        
+        console.log(`Connected with Gmail and sent OTP to ${targetEmail}`);
+    } catch (err) {
+        console.error('Gmail OTP email error:', err);
     }
+}
 
-    if (!code) return jsonResponse({ error: 'Access code required' }, request, 400);
+// ─── Action: Login OTP Send ───
+async function handleLoginOtpSend(request: Request, env: Env): Promise<Response> {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, request, 405);
+
+    const body = await request.json() as { email?: string };
+    const { email } = body;
+
+    const AUTHORIZED_EMAILS = [
+        'adnanshahria2019@gmail.com',
+        'abdurrafiu7@gmail.com',
+        'nisarfeni2015@gmail.com'
+    ];
+
+    if (!email || !AUTHORIZED_EMAILS.includes(email)) {
+        return jsonResponse({ error: 'Unauthorized email address' }, request, 403);
+    }
 
     const db = getDb(env);
-    const adminEmail = email || env.ADMIN_EMAIL || 'admin@orbitsaas.com';
 
-    // 1. Try to find user in DB
-    const result = await db.execute({
-        sql: 'SELECT password_hash FROM admin_users WHERE email = ?',
-        args: [adminEmail],
+    await db.execute(`
+    CREATE TABLE IF NOT EXISTS login_otps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      code TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL
+    )
+    `);
+
+    // Clean up expired OTPs
+    await db.execute(`DELETE FROM login_otps WHERE datetime('now') > expires_at`);
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    await db.execute({
+        sql: `INSERT INTO login_otps (email, code, expires_at) VALUES (?, ?, datetime('now', '+10 minutes'))`,
+        args: [email, otp],
     });
 
-    let isValid = false;
-    if (result.rows.length > 0) {
-        const hash = result.rows[0].password_hash as string;
-        isValid = await bcrypt.compare(code, hash);
-    } else {
-        // 2. Fallback to static access code ONLY IF the email matches the authorized admin email 
-        // AND the user is not in the DB yet (e.g. before initial seeding).
-        const authorizedEmail = env.ADMIN_EMAIL || 'admin@orbitsaas.com';
-        if (adminEmail !== authorizedEmail) {
-            return jsonResponse({ error: 'Unauthorized email' }, request, 401);
-        }
+    await sendAdminLoginOtpEmail(env, otp, email);
 
-        if (!env.ADMIN_ACCESS_CODE) return jsonResponse({ error: 'ADMIN_ACCESS_CODE not configured' }, request, 500);
-        isValid = timingSafeEqual(code, env.ADMIN_ACCESS_CODE);
+    return jsonResponse({ success: true, message: 'OTP sent to email' }, request);
+}
+
+// ─── Action: Login OTP Verify ───
+async function handleLoginOtpVerify(request: Request, env: Env): Promise<Response> {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, request, 405);
+
+    const { signToken } = await import('../_lib/auth');
+    const body = await request.json() as { email?: string; code?: string };
+    const { email, code } = body;
+
+    if (!email || !code) {
+        return jsonResponse({ error: 'Email and code are required' }, request, 400);
     }
 
-    if (!isValid) return jsonResponse({ error: 'Invalid access code' }, request, 401);
+    const db = getDb(env);
 
-    const token = await signToken({ id: 'admin', email: adminEmail }, env.JWT_SECRET);
+    // Delete expired OTPs
+    await db.execute(`DELETE FROM login_otps WHERE datetime('now') > expires_at`);
 
-    // Log login to audit trail
+    const result = await db.execute({
+        sql: `SELECT id FROM login_otps WHERE email = ? AND code = ?`,
+        args: [email, code],
+    });
+
+    if (result.rows.length === 0) {
+        return jsonResponse({ error: 'Invalid or expired OTP' }, request, 401);
+    }
+
+    // Delete used OTP
+    const otpId = result.rows[0].id;
+    await db.execute({
+        sql: `DELETE FROM login_otps WHERE id = ?`,
+        args: [otpId],
+    });
+
+    // Generate token
+    const token = await signToken({ id: 'admin', email }, env.JWT_SECRET);
+
+    // Log to audit trail
     const meta = getRequestMeta(request);
     await logAudit(env, {
-        admin_email: adminEmail,
+        admin_email: email,
         action: 'login',
         entity_type: 'auth',
-        entity_label: 'Admin login',
+        entity_label: 'Admin login via OTP',
         ...meta,
     });
 
@@ -537,7 +611,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
     try {
         switch (action) {
-            case 'login': return await handleLogin(request, env);
+            case 'login-send': return await handleLoginOtpSend(request, env);
+            case 'login-verify': return await handleLoginOtpVerify(request, env);
             case 'cache': return await handleCache(request, env);
             case 'seed': return await handleSeed(request, env);
             case 'audit': {
@@ -546,7 +621,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
                 }
                 return await handleAuditLog(request, env);
             }
-            default: return jsonResponse({ error: 'Unknown action. Use ?action=login|cache|seed|audit' }, request, 400);
+            default: return jsonResponse({ error: 'Unknown action. Use ?action=login-send|login-verify|cache|seed|audit' }, request, 400);
         }
     } catch (error) {
         console.error('Admin API error:', error);

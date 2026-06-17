@@ -88,8 +88,12 @@ async function handleSend(request: Request, env: Env): Promise<Response> {
     });
 
     // Send email without blocking
-    const targetEmail = "adnanshahria2006@gmail.com";
-    await sendOtpEmail(env, otp, targetEmail);
+    const targetEmail = env.ADMIN_EMAIL || env.GMAIL_USER;
+    if (targetEmail) {
+        await sendOtpEmail(env, otp, targetEmail);
+    } else {
+        console.warn("No target email configured to receive OTP");
+    }
 
     return jsonResponse({ success: true, message: 'OTP sent successfully' }, request);
 }

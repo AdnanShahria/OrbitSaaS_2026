@@ -213,10 +213,13 @@ export default function AdminLayout() {
         }
     };
 
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+
     useEffect(() => {
-        const token = localStorage.getItem('admin_token');
         if (!token) navigate('/admin/login');
-    }, [navigate]);
+    }, [navigate, token]);
+
+    if (!token) return null;
 
     const handleLogout = () => {
         localStorage.removeItem('admin_token');

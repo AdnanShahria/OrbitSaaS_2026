@@ -15,6 +15,120 @@ function simpleHash(str: string): string {
     return Math.abs(hash).toString(36);
 }
 
+function generateChangesSummary(section: string, lang: string, oldData: any, newData: any): string {
+    const defaultSummary = `Updated ${section} content for ${lang === 'en' ? 'English' : 'বাংলা'}`;
+    if (!oldData || typeof oldData !== 'object' || !newData || typeof newData !== 'object') {
+        return defaultSummary;
+    }
+
+    const changes: string[] = [];
+
+    // 1. Check section-level 'visible' toggle (used in projects)
+    if ('visible' in oldData || 'visible' in newData) {
+        const oldVisible = oldData.visible !== false;
+        const newVisible = newData.visible !== false;
+        if (oldVisible !== newVisible) {
+            changes.push(newVisible ? "Enabled section visibility" : "Disabled section visibility");
+        }
+    }
+
+    // 2. Identify array-like properties to compare (items, members, steps)
+    let oldItems: any[] = [];
+    let newItems: any[] = [];
+    let itemType = 'item';
+
+    if (Array.isArray(oldData.items) || Array.isArray(newData.items)) {
+        oldItems = Array.isArray(oldData.items) ? oldData.items : [];
+        newItems = Array.isArray(newData.items) ? newData.items : [];
+        itemType = section === 'projects' ? 'project' : (section === 'reviews' ? 'review' : 'item');
+    } else if (Array.isArray(oldData.members) || Array.isArray(newData.members)) {
+        oldItems = Array.isArray(oldData.members) ? oldData.members : [];
+        newItems = Array.isArray(newData.members) ? newData.members : [];
+        itemType = 'member';
+    } else if (Array.isArray(oldData.steps) || Array.isArray(newData.steps)) {
+        oldItems = Array.isArray(oldData.steps) ? oldData.steps : [];
+        newItems = Array.isArray(newData.steps) ? newData.steps : [];
+        itemType = 'step';
+    }
+
+    if (oldItems.length > 0 || newItems.length > 0) {
+        const getItemKey = (item: any, idx: number) => {
+            return item.id || item.title || item.name || `index_${idx}`;
+        };
+
+        const getItemTitle = (item: any, idx: number) => {
+            return item.title || item.name || item.id || `${itemType} #${idx + 1}`;
+        };
+
+        const oldItemsMap = new Map<string, { item: any; idx: number }>();
+        oldItems.forEach((item, idx) => {
+            if (item) oldItemsMap.set(getItemKey(item, idx), { item, idx });
+        });
+
+        const newItemsKeys = new Set<string>();
+        newItems.forEach((item, idx) => {
+            if (!item) return;
+            const key = getItemKey(item, idx);
+            newItemsKeys.add(key);
+
+            const oldEntry = oldItemsMap.get(key);
+            const itemTitle = getItemTitle(item, idx);
+
+            if (!oldEntry) {
+                changes.push(`Added ${itemType} "${itemTitle}"`);
+            } else {
+                const oldItem = oldEntry.item;
+                const oldHidden = !!oldItem.hidden;
+                const newHidden = !!item.hidden;
+                if (oldHidden !== newHidden) {
+                    changes.push(newHidden ? `Disabled visibility for ${itemType} "${itemTitle}"` : `Enabled visibility for ${itemType} "${itemTitle}"`);
+                } else {
+                    const keysToCheck = ['title', 'name', 'desc', 'text', 'role', 'link', 'rating'];
+                    let itemChanged = false;
+                    for (const k of keysToCheck) {
+                        if (k in oldItem && k in item && oldItem[k] !== item[k]) {
+                            itemChanged = true;
+                            break;
+                        }
+                    }
+                    if (itemChanged) {
+                        changes.push(`Updated details for ${itemType} "${itemTitle}"`);
+                    }
+                }
+            }
+        });
+
+        // Check for deleted items
+        oldItems.forEach((item, idx) => {
+            if (!item) return;
+            const key = getItemKey(item, idx);
+            if (!newItemsKeys.has(key)) {
+                const itemTitle = getItemTitle(item, idx);
+                changes.push(`Deleted ${itemType} "${itemTitle}"`);
+            }
+        });
+    }
+
+    // 3. Check simple root-level changes if no item changes detected
+    if (changes.length === 0) {
+        const rootKeys = ['title', 'subtitle', 'badge', 'heading', 'showSocials'];
+        for (const k of rootKeys) {
+            if (oldData && newData && k in oldData && k in newData && oldData[k] !== newData[k]) {
+                changes.push(`Updated ${k}`);
+            }
+        }
+    }
+
+    if (changes.length > 0) {
+        if (changes.length > 4) {
+            return `Updated multiple elements in ${section} section: ${changes.slice(0, 3).join(', ')} and ${changes.length - 3} more changes`;
+        }
+        return changes.join(', ');
+    }
+
+    return defaultSummary;
+}
+
 export const onRequest: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
 
@@ -88,6 +202,20 @@ export const onRequest: PagesFunction<Env> = async (context) => {
                 return jsonResponse({ error: 'Missing section, lang, or data' }, request, 400);
             }
 
+            // Get existing data before update for audit log comparison
+            let oldData: any = null;
+            try {
+                const existing = await db.execute({
+                    sql: 'SELECT data FROM site_content WHERE section = ? AND lang = ?',
+                    args: [section, lang],
+                });
+                if (existing.rows.length > 0) {
+                    oldData = JSON.parse(existing.rows[0].data as string);
+                }
+            } catch {
+                // Ignore errors reading existing content
+            }
+
             await db.execute({
                 sql: `INSERT INTO site_content (section, lang, data, updated_at)
               VALUES (?, ?, ?, datetime('now'))
@@ -123,13 +251,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
                 await ensureAuditTable(env);
                 const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
                 const meta = getRequestMeta(request);
+                const summary = generateChangesSummary(section, lang, oldData, data);
                 await logAudit(env, {
                     admin_email: adminEmail || 'unknown',
                     action: 'update',
                     entity_type: 'content',
                     entity_id: `${section}:${lang}`,
                     entity_label: `${section.charAt(0).toUpperCase() + section.slice(1)} Section (${lang.toUpperCase()})`,
-                    changes_summary: `Updated ${section} content for ${lang === 'en' ? 'English' : 'বাংলা'}`,
+                    changes_summary: summary,
                     ...meta,
                 });
             } catch { /* audit is non-critical */ }

@@ -422,9 +422,9 @@ export default function App() {
                     } />
 
                     {/* Admin Area */}
+                    <Route path="/admin/login" element={<AdminLogin />} />
                     <Route path="/admin" element={<AdminLayout />}>
                       <Route index element={<Navigate to="/admin/hero" replace />} />
-                      <Route path="login" element={<AdminLogin />} />
                       <Route path="hero" element={<AdminHero />} />
                       <Route path="stats" element={<AdminStats />} />
                       <Route path="services" element={<AdminServices />} />
