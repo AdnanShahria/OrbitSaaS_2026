@@ -24,6 +24,10 @@ export interface Env {
   GMAIL_USER?: string;
   GMAIL_APP_PASSWORD?: string;
 
+  // Email (SendPulse)
+  SENDPULSE_API_USER_ID?: string;
+  SENDPULSE_API_SECRET?: string;
+
   // Cloudflare Cache Purge
   CLOUDFLARE_API_TOKEN: string;
   CLOUDFLARE_ZONE_ID: string;

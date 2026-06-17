@@ -2,56 +2,42 @@ import { getDb } from '../_lib/db';
 import { handleOptions, jsonResponse } from '../_lib/cors';
 import { isAuthorized } from '../_lib/auth';
 import type { Env } from '../_lib/types';
+import { sendMail } from '../_lib/mail';
 
-import nodemailer from 'nodemailer';
-
-// ─── Gmail SMTP API (replaces SendPulse) ───
+// ─── Welcome Email Helper ───
 async function sendWelcomeEmail(env: Env, email: string, name: string) {
-    if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
-        console.warn('Gmail credentials missing, cannot send welcome email.');
-        return;
-    }
+    const subject = "Welcome to the ORBIT SaaS Waitlist! 🚀";
+    const text = "Thank you for joining the ORBIT SaaS waitlist! We'll keep you updated.";
+    const html = `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1a1a2e;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #6c5ce7; margin: 0; font-size: 28px; font-weight: 800;">ORBIT SaaS</h1>
+      </div>
+      <div style="background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid #eef0f6;">
+        <h2 style="margin-top: 0; font-size: 22px; color: #1a1a2e;">You're on the list! 🎉</h2>
+        <p style="font-size: 16px; line-height: 1.6; color: #64648a;">
+          Thank you for joining the ORBIT SaaS waitlist. We are thrilled to have you onboard as we build the next generation of digital experiences.
+        </p>
+        <p style="font-size: 16px; line-height: 1.6; color: #64648a;">
+          We'll keep you updated with our latest launches, exclusive tools, and early-access features before anyone else.
+        </p>
+        <div style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #eef0f6; text-align: center;">
+          <p style="font-size: 14px; color: #8888a0; margin: 0;">
+            Stay awesome,<br>
+            <strong>The ORBIT SaaS Team</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+    `;
 
-    try {
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: env.GMAIL_USER,
-                pass: env.GMAIL_APP_PASSWORD
-            }
-        });
-
-        await transporter.sendMail({
-            from: `"ORBIT SaaS" <${env.GMAIL_USER}>`,
-            to: email,
-            subject: "Welcome to the ORBIT SaaS Waitlist! 🚀",
-            text: "Thank you for joining the ORBIT SaaS waitlist! We'll keep you updated.",
-            html: `
-            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1a1a2e;">
-              <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #6c5ce7; margin: 0; font-size: 28px; font-weight: 800;">ORBIT SaaS</h1>
-              </div>
-              <div style="background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid #eef0f6;">
-                <h2 style="margin-top: 0; font-size: 22px; color: #1a1a2e;">You're on the list! 🎉</h2>
-                <p style="font-size: 16px; line-height: 1.6; color: #64648a;">
-                  Thank you for joining the ORBIT SaaS waitlist. We are thrilled to have you onboard as we build the next generation of digital experiences.
-                </p>
-                <p style="font-size: 16px; line-height: 1.6; color: #64648a;">
-                  We'll keep you updated with our latest launches, exclusive tools, and early-access features before anyone else.
-                </p>
-                <div style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #eef0f6; text-align: center;">
-                  <p style="font-size: 14px; color: #8888a0; margin: 0;">
-                    Stay awesome,<br>
-                    <strong>The ORBIT SaaS Team</strong>
-                  </p>
-                </div>
-              </div>
-            </div>
-            `
-        });
-    } catch (err) {
-        console.error('Gmail email error:', err);
-    }
+    await sendMail(env, {
+        to: email,
+        subject,
+        text,
+        html,
+        fromName: "ORBIT SaaS"
+    });
 }
 
 // ─── Action: Submit Lead (public) ───
