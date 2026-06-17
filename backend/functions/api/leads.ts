@@ -3,34 +3,30 @@ import { handleOptions, jsonResponse } from '../_lib/cors';
 import { isAuthorized } from '../_lib/auth';
 import type { Env } from '../_lib/types';
 
-// ─── SendPulse REST API (replaces Node.js SDK) ───
+import nodemailer from 'nodemailer';
+
+// ─── Gmail SMTP API (replaces SendPulse) ───
 async function sendWelcomeEmail(env: Env, email: string, name: string) {
-    if (!env.SENDPULSE_API_USER_ID || !env.SENDPULSE_API_SECRET) return;
+    if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
+        console.warn('Gmail credentials missing, cannot send welcome email.');
+        return;
+    }
 
     try {
-        // 1. Get access token
-        const tokenResp = await fetch('https://api.sendpulse.com/oauth/access_token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                grant_type: 'client_credentials',
-                client_id: env.SENDPULSE_API_USER_ID,
-                client_secret: env.SENDPULSE_API_SECRET,
-            }),
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: env.GMAIL_USER,
+                pass: env.GMAIL_APP_PASSWORD
+            }
         });
-        if (!tokenResp.ok) return;
-        const tokenData = await tokenResp.json() as { access_token: string };
 
-        // 2. Send email
-        await fetch('https://api.sendpulse.com/smtp/emails', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${tokenData.access_token}`,
-            },
-            body: JSON.stringify({
-                email: {
-                    html: `
+        await transporter.sendMail({
+            from: `"ORBIT SaaS" <${env.GMAIL_USER}>`,
+            to: email,
+            subject: "Welcome to the ORBIT SaaS Waitlist! 🚀",
+            text: "Thank you for joining the ORBIT SaaS waitlist! We'll keep you updated.",
+            html: `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1a1a2e;">
               <div style="text-align: center; margin-bottom: 30px;">
                 <h1 style="color: #6c5ce7; margin: 0; font-size: 28px; font-weight: 800;">ORBIT SaaS</h1>
@@ -51,16 +47,10 @@ async function sendWelcomeEmail(env: Env, email: string, name: string) {
                 </div>
               </div>
             </div>
-          `,
-                    text: "Thank you for joining the ORBIT SaaS waitlist! We'll keep you updated.",
-                    subject: "Welcome to the ORBIT SaaS Waitlist! 🚀",
-                    from: { name: "ORBIT SaaS", email: "contact@orbitsaas.cloud" },
-                    to: [{ name: name || "Subscriber", email }],
-                },
-            }),
+            `
         });
     } catch (err) {
-        console.error('SendPulse email error:', err);
+        console.error('Gmail email error:', err);
     }
 }
 

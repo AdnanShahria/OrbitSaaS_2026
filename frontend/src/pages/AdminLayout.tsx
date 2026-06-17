@@ -225,7 +225,6 @@ export default function AdminLayout() {
 
     return (
         <div className="min-h-[100dvh] bg-[#09090b] flex overflow-hidden relative">
-            <Toaster position="top-right" theme="dark" richColors closeButton />
             <Helmet>
                 <title>Admin Panel | Orbit SaaS</title>
                 <meta name="robots" content="noindex, nofollow" />

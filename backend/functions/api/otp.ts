@@ -8,36 +8,29 @@ function generateOtp(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+import nodemailer from 'nodemailer';
+
 async function sendOtpEmail(env: Env, otp: string, targetEmail: string) {
-    if (!env.SENDPULSE_API_USER_ID || !env.SENDPULSE_API_SECRET) {
-        console.warn('SendPulse API credentials are missing, cannot send OTP email.');
+    if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
+        console.warn('Gmail credentials are missing, cannot send OTP email.');
         return;
     }
 
     try {
-        // 1. Get access token
-        const tokenResp = await fetch('https://api.sendpulse.com/oauth/access_token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                grant_type: 'client_credentials',
-                client_id: env.SENDPULSE_API_USER_ID,
-                client_secret: env.SENDPULSE_API_SECRET,
-            }),
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: env.GMAIL_USER,
+                pass: env.GMAIL_APP_PASSWORD
+            }
         });
-        if (!tokenResp.ok) throw new Error('Failed to fetch SendPulse access token');
-        const tokenData = await tokenResp.json() as { access_token: string };
 
-        // 2. Send email
-        await fetch('https://api.sendpulse.com/smtp/emails', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${tokenData.access_token}`,
-            },
-            body: JSON.stringify({
-                email: {
-                    html: `
+        await transporter.sendMail({
+            from: `"ORBIT SaaS Admin" <${env.GMAIL_USER}>`,
+            to: targetEmail,
+            subject: "Admin OTP - Image Compression Authorization",
+            text: `Your ORBIT SaaS admin OTP for image compression is: ${otp}`,
+            html: `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1a1a2e;">
               <div style="text-align: center; margin-bottom: 30px;">
                 <h1 style="color: #6c5ce7; margin: 0; font-size: 28px; font-weight: 800;">ORBIT SaaS Admin</h1>
@@ -58,18 +51,12 @@ async function sendOtpEmail(env: Env, otp: string, targetEmail: string) {
                 </div>
               </div>
             </div>
-          `,
-                    text: `Your ORBIT SaaS admin OTP for image compression is: ${otp}`,
-                    subject: "Admin OTP - Image Compression Authorization",
-                    from: { name: "ORBIT SaaS Admin", email: "contact@orbitsaas.cloud" },
-                    to: [{ name: "Adnan Shahria", email: targetEmail }],
-                },
-            }),
+            `
         });
         
-        console.log(`Connected with sendpulse and sent to the ${targetEmail} address`);
+        console.log(`Connected with Gmail and sent to the ${targetEmail} address`);
     } catch (err) {
-        console.error('SendPulse OTP email error:', err);
+        console.error('Gmail OTP email error:', err);
     }
 }
 

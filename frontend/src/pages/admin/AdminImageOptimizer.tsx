@@ -169,6 +169,9 @@ export default function AdminImageOptimizer() {
                     console.error('Failed to fetch size for', img.url);
                 }
             }));
+            
+            // Add a small delay between batches to avoid spamming the server
+            await new Promise(r => setTimeout(r, 200));
         }
         setFetchingSizes(false);
     };

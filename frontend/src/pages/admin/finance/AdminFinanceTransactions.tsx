@@ -86,7 +86,14 @@ export default function AdminFinanceTransactions() {
     const [selectedOtpEmail, setSelectedOtpEmail] = useState('adnanshahria2019@gmail.com');
     const [financeToken, setFinanceToken] = useState<string | null>(null);
     const [otpSent, setOtpSent] = useState(false);
+    const [isOtpDropdownOpen, setIsOtpDropdownOpen] = useState(false);
     const pendingActionRef = useRef<(() => Promise<void>) | null>(null);
+
+    const OTP_EMAILS = [
+        { label: 'Adnan Shahria (adnanshahria2019@gmail.com)', value: 'adnanshahria2019@gmail.com' },
+        { label: 'Abdur Rafiu (abdurrafiu7@gmail.com)', value: 'abdurrafiu7@gmail.com' },
+        { label: 'Nisar (nisarfeni2015@gmail.com)', value: 'nisarfeni2015@gmail.com' },
+    ];
 
     const triggerOtpAndExecute = async (actionFn: () => Promise<void>) => {
         if (financeToken) {
@@ -531,69 +538,119 @@ export default function AdminFinanceTransactions() {
     return (
         <div className="space-y-6 relative">
             {/* Financial OTP Modal */}
-            {showOtpModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
-                    <div className="bg-card border-2 border-indigo-500/30 p-6 rounded-2xl shadow-2xl w-full max-w-sm relative">
-                        <button 
-                            onClick={() => setShowOtpModal(false)}
-                            className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            <AnimatePresence>
+                {showOtpModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md">
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="bg-card/95 border border-indigo-500/20 p-8 rounded-3xl shadow-[0_0_40px_-15px_rgba(99,102,241,0.3)] w-full max-w-md relative"
                         >
-                            <X className="w-5 h-5" />
-                        </button>
-                        <div className="flex flex-col items-center text-center space-y-4">
-                            <div className="w-14 h-14 bg-indigo-500/10 rounded-full flex items-center justify-center border border-indigo-500/20">
-                                <Shield className="w-7 h-7 text-indigo-500" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-foreground">Financial Identity</h3>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    {!otpSent ? 'Select your email to receive an authorization code.' : 'Enter the 6-digit OTP sent to your email.'}
-                                </p>
-                            </div>
+                            {/* Decorative background glow */}
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-indigo-500/10 blur-[50px] rounded-full pointer-events-none" />
+
+                            <button 
+                                onClick={() => setShowOtpModal(false)}
+                                className="absolute top-5 right-5 text-muted-foreground/70 hover:text-foreground hover:bg-secondary/50 p-2 rounded-full transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                             
-                            {!otpSent ? (
-                                <>
-                                    <select 
-                                        value={selectedOtpEmail} 
-                                        onChange={(e) => setSelectedOtpEmail(e.target.value)}
-                                        className="w-full bg-secondary border border-border rounded-lg px-3 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
-                                    >
-                                        <option value="adnanshahria2019@gmail.com">Adnan Shahria (adnanshahria2019@gmail.com)</option>
-                                        <option value="abdurrafiu7@gmail.com">Abdur Rafiu (abdurrafiu7@gmail.com)</option>
-                                        <option value="nisarfeni2015@gmail.com">Nisar (nisarfeni2015@gmail.com)</option>
-                                    </select>
-                                    <button
-                                        onClick={handleSendOtp}
-                                        disabled={isSendingOtp}
-                                        className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-2 transition-colors"
-                                    >
-                                        {isSendingOtp ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : 'Send OTP'}
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <input 
-                                        type="text"
-                                        maxLength={6}
-                                        placeholder="000000"
-                                        value={otpInput}
-                                        onChange={(e) => setOtpInput(e.target.value)}
-                                        className="w-full text-center text-3xl tracking-widest font-mono p-4 bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        disabled={isVerifyingOtp}
-                                    />
-                                    <button
-                                        onClick={handleVerifyOtp}
-                                        disabled={isVerifyingOtp || otpInput.length < 6}
-                                        className="w-full py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 disabled:opacity-50 flex justify-center items-center gap-2 transition-colors"
-                                    >
-                                        {isVerifyingOtp ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</> : 'Verify & Continue'}
-                                    </button>
-                                </>
-                            )}
-                        </div>
+                            <div className="flex flex-col items-center text-center space-y-6 relative z-10">
+                                <motion.div 
+                                    initial={{ scale: 0.5, rotate: -10 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                                    className="w-16 h-16 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/30 shadow-inner"
+                                >
+                                    <Shield className="w-8 h-8 text-indigo-400" />
+                                </motion.div>
+                                
+                                <div className="space-y-2">
+                                    <h3 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Financial Identity</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        {!otpSent ? 'Select your email to receive an authorization code.' : 'Enter the 6-digit OTP sent to your email.'}
+                                    </p>
+                                </div>
+                                
+                                {!otpSent ? (
+                                    <div className="w-full space-y-4 mt-2">
+                                        <div className="relative group text-left">
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsOtpDropdownOpen(!isOtpDropdownOpen)}
+                                                className="w-full flex items-center justify-between bg-secondary/50 hover:bg-secondary/80 transition-colors border border-border/50 rounded-xl px-4 py-3.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-indigo-500/50 font-medium cursor-pointer"
+                                            >
+                                                <span className="truncate pr-4">{OTP_EMAILS.find(e => e.value === selectedOtpEmail)?.label || selectedOtpEmail}</span>
+                                                <div className={`text-muted-foreground transition-transform duration-200 shrink-0 ${isOtpDropdownOpen ? 'rotate-180' : ''}`}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                                </div>
+                                            </button>
+                                            <AnimatePresence>
+                                                {isOtpDropdownOpen && (
+                                                    <motion.div 
+                                                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                        transition={{ duration: 0.15 }}
+                                                        className="absolute top-full left-0 w-full mt-2 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden z-50 flex flex-col"
+                                                    >
+                                                        {OTP_EMAILS.map((emailObj) => (
+                                                            <button
+                                                                key={emailObj.value}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setSelectedOtpEmail(emailObj.value);
+                                                                    setIsOtpDropdownOpen(false);
+                                                                }}
+                                                                className={`w-full text-left px-4 py-3.5 text-sm transition-colors ${
+                                                                    selectedOtpEmail === emailObj.value 
+                                                                        ? 'bg-indigo-500/10 text-indigo-400 font-semibold border-l-2 border-indigo-500' 
+                                                                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground border-l-2 border-transparent'
+                                                                }`}
+                                                            >
+                                                                {emailObj.label}
+                                                            </button>
+                                                        ))}
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                        <button
+                                            onClick={handleSendOtp}
+                                            disabled={isSendingOtp}
+                                            className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-xl font-semibold hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-50 flex justify-center items-center gap-2 transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
+                                        >
+                                            {isSendingOtp ? <><Loader2 className="w-5 h-5 animate-spin" /> Sending Secure OTP...</> : 'Send Authorization Code'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="w-full space-y-5 mt-2">
+                                        <input 
+                                            type="text"
+                                            maxLength={6}
+                                            placeholder="••••••"
+                                            value={otpInput}
+                                            onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                                            className="w-full text-center text-4xl tracking-[0.5em] font-mono py-4 bg-secondary/30 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-secondary/50 transition-all placeholder:text-muted-foreground/30"
+                                            disabled={isVerifyingOtp}
+                                            autoFocus
+                                        />
+                                        <button
+                                            onClick={handleVerifyOtp}
+                                            disabled={isVerifyingOtp || otpInput.length < 6}
+                                            className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-xl font-semibold hover:from-emerald-500 hover:to-emerald-400 disabled:opacity-50 flex justify-center items-center gap-2 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
+                                        >
+                                            {isVerifyingOtp ? <><Loader2 className="w-5 h-5 animate-spin" /> Verifying Identity...</> : 'Verify & Authorize'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
 
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

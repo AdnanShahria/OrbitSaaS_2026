@@ -20,9 +20,9 @@ export interface Env {
   // Image upload
   VITE_IMGBB_API_KEY: string;
 
-  // Email (SendPulse)
-  SENDPULSE_API_USER_ID: string;
-  SENDPULSE_API_SECRET: string;
+  // Email (Gmail)
+  GMAIL_USER?: string;
+  GMAIL_APP_PASSWORD?: string;
 
   // Cloudflare Cache Purge
   CLOUDFLARE_API_TOKEN: string;
