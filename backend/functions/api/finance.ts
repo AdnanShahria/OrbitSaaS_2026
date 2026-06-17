@@ -526,6 +526,9 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
         const id = url.searchParams.get('id');
         if (!id) return jsonResponse({ error: 'ID required' }, request, 400);
 
+        const authorEmail = await getFinanceIdentity(request, env.JWT_SECRET);
+        if (authorEmail === 'unknown') return jsonResponse({ error: 'Financial Authorization Token missing or expired.' }, request, 401);
+
         // Also delete any linked distribution transactions automatically!
         const linkedRes = await db.execute({
             sql: `SELECT COUNT(*) as count FROM finance_transactions WHERE parent_id = ?`,
@@ -539,11 +542,9 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
         await db.execute({ sql: 'DELETE FROM finance_transactions WHERE id = ?', args: [id] });
 
         // Audit log
-        const authorEmail = await getFinanceIdentity(request, env.JWT_SECRET);
-        if (authorEmail === 'unknown') return jsonResponse({ error: 'Financial Authorization Token missing or expired.' }, request, 401);
         const meta = getRequestMeta(request);
         await logAudit(env, {
-            admin_email: authorEmail || 'unknown',
+            admin_email: authorEmail,
             action: 'delete',
             entity_type: 'transaction',
             entity_id: id,

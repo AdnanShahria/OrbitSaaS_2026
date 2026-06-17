@@ -122,19 +122,22 @@ export default function AdminFinanceTransactions() {
     };
 
     const triggerOtpAndExecute = async (actionFn: (token: string) => Promise<void>) => {
-        // Client-side expiry check before using the cached token
-        if (financeToken) {
+        const currentToken = financeToken || localStorage.getItem('finance_token');
+        if (currentToken) {
             try {
-                const payload = JSON.parse(atob(financeToken.split('.')[1]));
+                const payload = JSON.parse(atob(currentToken.split('.')[1]));
                 if (!payload.exp || Date.now() / 1000 > payload.exp) {
                     invalidateFinanceToken(actionFn);
                     return;
+                }
+                if (!financeToken) {
+                    setFinanceToken(currentToken);
                 }
             } catch {
                 invalidateFinanceToken(actionFn);
                 return;
             }
-            await actionFn(financeToken);
+            await actionFn(currentToken);
             return;
         }
         pendingActionRef.current = actionFn;
