@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { SectionHeader } from '@/components/admin/EditorComponents';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Trash2, Edit3, Search, Download, X, Save,
-    Calendar, CreditCard, Loader2, ChevronLeft, ChevronRight, Settings, PlusCircle, Users, Share2, Shield, TrendingUp, TrendingDown, Landmark, HelpCircle
+    Calendar, CreditCard, Loader2, ChevronLeft, ChevronRight, Settings, PlusCircle, Users, Share2, Shield, TrendingUp, TrendingDown, Landmark, HelpCircle, LayoutDashboard
 } from 'lucide-react';
 
 interface Transaction {
@@ -37,6 +38,7 @@ const emptyTx: Omit<Transaction, 'id'> = {
 };
 
 export default function AdminFinanceTransactions() {
+    const navigate = useNavigate();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
@@ -733,6 +735,9 @@ export default function AdminFinanceTransactions() {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <SectionHeader title="📊 Corporate Transactions" description="Track and partition SaaS income, operational funding expenses, and distribution splits." />
                 <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+                    <button onClick={() => navigate('/admin/finance')} className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-foreground rounded-lg hover:bg-secondary/80 text-sm font-medium transition-all">
+                        <LayoutDashboard className="w-4 h-4" /> Dashboard
+                    </button>
                     <button onClick={loadCompanyReport} className="flex items-center gap-2 px-3 py-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg hover:bg-indigo-500/20 text-sm font-medium transition-all">
                         <Landmark className="w-4 h-4" /> Company Funding Ledger
                     </button>

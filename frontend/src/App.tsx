@@ -15,6 +15,24 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CustomCursor } from './components/orbit/CustomCursor';
 import { CustomScrollbar } from './components/ui/CustomScrollbar';
 
+// Helper to handle dynamic chunk import failures gracefully by forcing a browser reload
+const lazyWithRetry = (importFunc: () => Promise<any>) => {
+  return lazy(async () => {
+    try {
+      return await importFunc();
+    } catch (error) {
+      console.error("Chunk load failed, reloading...", error);
+      const hasReloaded = sessionStorage.getItem('chunk-reload-occurred');
+      if (!hasReloaded) {
+        sessionStorage.setItem('chunk-reload-occurred', 'true');
+        window.location.reload();
+        return new Promise(() => {}); // Keep in loading state
+      }
+      throw error;
+    }
+  });
+};
+
 /* ═══════════════════════════════════════════════════════════
    APP ORCHESTRATION — Coordinates sequential reveal:
    Phase 0: Nothing visible (preloader)
@@ -111,32 +129,33 @@ const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
 const AchievementDetail = lazy(() => import('./pages/AchievementDetail'));
 
 // Lazy load admin pages
-const AdminLogin = lazy(() => import('./pages/AdminLogin'));
-const AdminLayout = lazy(() => import('./pages/AdminLayout'));
-const AdminHero = lazy(() => import('./pages/admin/AdminHero'));
-const AdminStats = lazy(() => import('./pages/admin/AdminStats'));
-const AdminServices = lazy(() => import('./pages/admin/AdminServices'));
-const AdminProcess = lazy(() => import('./pages/admin/AdminProcess'));
-const AdminTechStack = lazy(() => import('./pages/admin/AdminTechStack'));
-const AdminWhyUs = lazy(() => import('./pages/admin/AdminWhyUs'));
-const AdminProjects = lazy(() => import('./pages/admin/AdminProjects'));
-const AdminLeadership = lazy(() => import('./pages/admin/AdminLeadership'));
-const AdminReviews = lazy(() => import('./pages/admin/AdminReviews'));
-const AdminAchievements = lazy(() => import('./pages/admin/AdminAchievements'));
-const AdminContact = lazy(() => import('./pages/admin/AdminContact'));
-const AdminFooter = lazy(() => import('./pages/admin/AdminFooter'));
-const AdminChatbot = lazy(() => import('./pages/admin/AdminChatbot'));
-const AdminLeads = lazy(() => import('./pages/admin/AdminLeads'));
-const AdminLinks = lazy(() => import('./pages/admin/AdminLinks'));
-const AdminNavbar = lazy(() => import('./pages/admin/AdminNavbar'));
-const AdminSEO = lazy(() => import('./pages/admin/AdminSEO'));
-const AdminBackup = lazy(() => import('./pages/admin/AdminBackup'));
-const AdminLegal = lazy(() => import('./pages/admin/AdminLegal'));
-const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'));
-const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
-const AdminFinanceTransactions = lazy(() => import('./pages/admin/finance/AdminFinanceTransactions'));
-const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
-const AdminImageOptimizer = lazy(() => import('./pages/admin/AdminImageOptimizer'));
+const AdminLogin = lazyWithRetry(() => import('./pages/AdminLogin'));
+const AdminLayout = lazyWithRetry(() => import('./pages/AdminLayout'));
+const AdminHero = lazyWithRetry(() => import('./pages/admin/AdminHero'));
+const AdminStats = lazyWithRetry(() => import('./pages/admin/AdminStats'));
+const AdminServices = lazyWithRetry(() => import('./pages/admin/AdminServices'));
+const AdminProcess = lazyWithRetry(() => import('./pages/admin/AdminProcess'));
+const AdminTechStack = lazyWithRetry(() => import('./pages/admin/AdminTechStack'));
+const AdminWhyUs = lazyWithRetry(() => import('./pages/admin/AdminWhyUs'));
+const AdminProjects = lazyWithRetry(() => import('./pages/admin/AdminProjects'));
+const AdminLeadership = lazyWithRetry(() => import('./pages/admin/AdminLeadership'));
+const AdminReviews = lazyWithRetry(() => import('./pages/admin/AdminReviews'));
+const AdminAchievements = lazyWithRetry(() => import('./pages/admin/AdminAchievements'));
+const AdminContact = lazyWithRetry(() => import('./pages/admin/AdminContact'));
+const AdminFooter = lazyWithRetry(() => import('./pages/admin/AdminFooter'));
+const AdminChatbot = lazyWithRetry(() => import('./pages/admin/AdminChatbot'));
+const AdminLeads = lazyWithRetry(() => import('./pages/admin/AdminLeads'));
+const AdminLinks = lazyWithRetry(() => import('./pages/admin/AdminLinks'));
+const AdminNavbar = lazyWithRetry(() => import('./pages/admin/AdminNavbar'));
+const AdminSEO = lazyWithRetry(() => import('./pages/admin/AdminSEO'));
+const AdminBackup = lazyWithRetry(() => import('./pages/admin/AdminBackup'));
+const AdminLegal = lazyWithRetry(() => import('./pages/admin/AdminLegal'));
+const AdminNotifications = lazyWithRetry(() => import('./pages/admin/AdminNotifications'));
+const AdminProfile = lazyWithRetry(() => import('./pages/admin/AdminProfile'));
+const AdminFinanceDashboard = lazyWithRetry(() => import('./pages/admin/finance/AdminFinanceDashboard'));
+const AdminFinanceTransactions = lazyWithRetry(() => import('./pages/admin/finance/AdminFinanceTransactions'));
+const AdminAuditLog = lazyWithRetry(() => import('./pages/admin/AdminAuditLog'));
+const AdminImageOptimizer = lazyWithRetry(() => import('./pages/admin/AdminImageOptimizer'));
 
 function SitePreloader() {
   return (
@@ -369,6 +388,10 @@ function NavbarVisibilityWrapper() {
 }
 
 export default function App() {
+  useEffect(() => {
+    sessionStorage.removeItem('chunk-reload-occurred');
+  }, []);
+
   return (
     <>
       <QueryClientProvider client={queryClient}>
@@ -446,8 +469,8 @@ export default function App() {
                       <Route path="legal" element={<AdminLegal />} />
                       <Route path="notifications" element={<AdminNotifications />} />
                       <Route path="profile" element={<AdminProfile />} />
-                      <Route path="finance" element={<AdminFinanceTransactions />} />
-                      <Route path="finance/transactions" element={<Navigate to="/admin/finance" replace />} />
+                      <Route path="finance" element={<AdminFinanceDashboard />} />
+                      <Route path="finance/transactions" element={<AdminFinanceTransactions />} />
                       <Route path="audit" element={<AdminAuditLog />} />
                       <Route path="optimizer" element={<AdminImageOptimizer />} />
                     </Route>
