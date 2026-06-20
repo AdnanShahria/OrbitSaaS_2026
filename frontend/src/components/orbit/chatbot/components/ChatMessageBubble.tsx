@@ -26,12 +26,7 @@ export function ChatMessageBubble({ msg, index }: ChatMessageBubbleProps) {
       transition={{ duration: 0.3, ease: 'easeOut' }}
     >
       <div className={`flex gap-2 ${isUser ? 'justify-end' : ''}`}>
-        {isAssistant && (
-          <div className="w-8 h-8 rounded-full bg-border flex items-center justify-center shrink-0">
-            <Zap className="w-4 h-4 text-foreground" />
-          </div>
-        )}
-        <div className={`rounded-xl px-3 py-2 text-[15px] md:text-sm max-w-[85%] border ${isUser
+        <div className={`rounded-xl px-3 py-2 text-[15px] md:text-sm max-w-[95%] border ${isUser
           ? 'bg-emerald-600 text-white border-emerald-600 rounded-tr-none'
           : 'bg-muted border-border text-foreground rounded-tl-none'
           }`}>
@@ -40,7 +35,7 @@ export function ChatMessageBubble({ msg, index }: ChatMessageBubbleProps) {
       </div>
       {hasSwitchSuggestion && (
         <motion.div
-          className="flex justify-start ml-9 pb-1"
+          className="flex justify-start pb-1"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.3 }}

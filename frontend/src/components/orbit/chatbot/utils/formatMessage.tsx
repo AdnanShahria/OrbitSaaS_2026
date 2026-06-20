@@ -166,17 +166,17 @@ export function formatMessage(content: string): React.ReactNode {
         {preLines.filter(l => l.trim()).length > 0 && renderTextLines(preLines)}
 
         {/* Steps container */}
-        <div className="relative mt-3.5 mb-2 ml-0.5">
+        <div className="relative mt-2 mb-2 ml-0.5">
           {steps.map((step, idx) => (
             <div
               key={`step-${idx}`}
-              className={`relative flex gap-3.5 ${isSequential ? 'pb-3' : 'pb-2.5'} last:pb-0 animate-in fade-in slide-in-from-bottom-3 duration-500`}
+              className={`relative flex gap-2.5 ${isSequential ? 'pb-1.5' : 'pb-1.5'} last:pb-0 animate-in fade-in slide-in-from-bottom-3 duration-500`}
               style={{ animationDelay: `${idx * 150}ms`, animationFillMode: 'both' }}
             >
               {/* Connector line — only for sequential steps */}
               {isSequential && idx < steps.length - 1 && (
                 <div
-                  className="absolute left-[15px] top-[36px] bottom-0 w-[2px] animate-in fade-in duration-700"
+                  className="absolute left-[11px] top-[26px] bottom-0 w-[2px] animate-in fade-in duration-700"
                   style={{
                     background: 'linear-gradient(to bottom, rgba(16,185,129,0.5), rgba(16,185,129,0.08))',
                     animationDelay: `${idx * 150 + 200}ms`,
@@ -187,7 +187,7 @@ export function formatMessage(content: string): React.ReactNode {
 
               {/* Step number circle — glowing badge */}
               <div
-                className="relative z-10 shrink-0 w-[32px] h-[32px] rounded-full flex items-center justify-center"
+                className="relative z-10 shrink-0 w-[24px] h-[24px] rounded-full flex items-center justify-center"
                 style={{
                   background: 'linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0.08) 100%)',
                   border: '2px solid rgba(16,185,129,0.6)',
@@ -208,7 +208,7 @@ export function formatMessage(content: string): React.ReactNode {
                   href={step.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-w-0 rounded-xl px-3.5 py-2.5 transition-all duration-300 block hover:-translate-y-0.5 group/card"
+                  className="flex-1 min-w-0 rounded-lg px-3 py-1.5 transition-all duration-300 block hover:-translate-y-0.5 group/card"
                   style={{
                     background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
                     border: '1px solid rgba(16,185,129,0.3)',
@@ -232,7 +232,7 @@ export function formatMessage(content: string): React.ReactNode {
                 </a>
               ) : (
                 <div
-                  className="flex-1 min-w-0 rounded-xl px-3.5 py-2.5 transition-all duration-300"
+                  className="flex-1 min-w-0 rounded-lg px-3 py-1.5 transition-all duration-300"
                   style={{
                     background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)',
                     border: '1px solid rgba(255,255,255,0.08)',

@@ -7,8 +7,16 @@ export interface LeadershipMember {
   image?: string;
   order: number;
   socials?: {
-    linkedin?: { enabled: boolean; url: string };
+    google?: { enabled: boolean; url: string };
+    whatsapp?: { enabled: boolean; url: string };
+    instagram?: { enabled: boolean; url: string };
+    facebook?: { enabled: boolean; url: string };
+    threads?: { enabled: boolean; url: string };
     twitter?: { enabled: boolean; url: string };
+    fiverr?: { enabled: boolean; url: string };
+    upwork?: { enabled: boolean; url: string };
+    linkedin?: { enabled: boolean; url: string };
+    github?: { enabled: boolean; url: string };
     email?: { enabled: boolean; url: string };
   };
 }
