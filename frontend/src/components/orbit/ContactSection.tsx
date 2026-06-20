@@ -5,6 +5,7 @@ import { useLang } from '@/contexts/LanguageContext';
 import { ArrowRight, Mail, MapPin, ExternalLink, Globe2, Facebook, Instagram, Linkedin, Send, Twitter, Youtube, Github, MessageCircle } from 'lucide-react';
 
 import DOMPurify from 'dompurify';
+import { ensureAbsoluteUrl } from '@/lib/utils';
 
 const RichText = ({ text }: { text: string }) => (
   <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(text) }} />
@@ -713,7 +714,7 @@ export function ContactSection() {
                     return (
                       <motion.a
                         key={idx}
-                        href={social.url}
+                        href={ensureAbsoluteUrl(social.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         whileHover={{ y: -5, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.4)' }}

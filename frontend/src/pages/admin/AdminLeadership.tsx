@@ -9,7 +9,7 @@ import {
     JsonPanel,
     ToggleField,
 } from '@/components/admin/EditorComponents';
-import { Upload, Trash2, User, Mail, Instagram, Facebook, Twitter, Linkedin, Github, Globe, Briefcase, AtSign } from 'lucide-react';
+import { Upload, Trash2, User, Mail, Instagram, Facebook, Twitter, Linkedin, Github, Globe, Briefcase, AtSign, Send } from 'lucide-react';
 import { uploadToImgBB } from '@/lib/imgbb';
 import { useContent } from '@/contexts/ContentContext';
 
@@ -34,7 +34,7 @@ const GoogleIcon = ({ className }: { className?: string }) => (
 
 const ALL_SOCIAL_PLATFORMS = [
     'google', 'whatsapp', 'instagram', 'facebook', 'threads',
-    'twitter', 'fiverr', 'upwork', 'linkedin', 'github', 'email'
+    'twitter', 'fiverr', 'upwork', 'telegram', 'linkedin', 'github', 'email'
 ] as const;
 
 type SocialPlatform = typeof ALL_SOCIAL_PLATFORMS[number];
@@ -52,6 +52,7 @@ interface LocalizedMember {
 interface UnifiedMember {
     image: string;
     order: number;
+    hidden?: boolean;
     en: LocalizedMember;
     bn: LocalizedMember;
     socials: SocialsMap;
@@ -69,6 +70,7 @@ const makeDefaultSocials = (): SocialsMap => {
 const DEFAULT_MEMBER: UnifiedMember = {
     image: '',
     order: 0,
+    hidden: false,
     en: { name: '', role: '', bio: '' },
     bn: { name: '', role: '', bio: '' },
     socials: makeDefaultSocials(),
@@ -87,6 +89,7 @@ const SOCIAL_CONFIG: { key: SocialPlatform; label: string; icon: any }[] = [
     { key: 'twitter', label: 'Twitter', icon: Twitter },
     { key: 'fiverr', label: 'Fiverr', icon: Briefcase },
     { key: 'upwork', label: 'Upwork', icon: Globe },
+    { key: 'telegram', label: 'Telegram', icon: Send },
     { key: 'linkedin', label: 'LinkedIn', icon: Linkedin },
     { key: 'github', label: 'GitHub', icon: Github },
     { key: 'email', label: 'Email', icon: Mail },
@@ -293,6 +296,12 @@ function MemberEditor({
                         className="w-full bg-secondary rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border"
                     />
                 </div>
+                
+                <ToggleField
+                    label="Hide Card from Visitors"
+                    checked={!!item.hidden}
+                    onChange={(v) => update({ ...item, hidden: v })}
+                />
 
                 {/* Social Links Section — 10 platforms with max 4 enforcement */}
                 <div className="space-y-4 pt-4 border-t border-border/30">
@@ -421,6 +430,7 @@ export default function AdminLeadership() {
             merged.push({
                 image: en.image || bn.image || '',
                 order: en.order ?? bn.order ?? i + 1,
+                hidden: en.hidden ?? bn.hidden ?? false,
                 en: { name: en.name || '', role: en.role || '', bio: en.bio || '' },
                 bn: { name: bn.name || '', role: bn.role || '', bio: bn.bio || '' },
                 socials: mergedSocials,
@@ -448,6 +458,7 @@ export default function AdminLeadership() {
                 bio: m.en.bio,
                 image: m.image,
                 order: m.order,
+                hidden: m.hidden,
                 socials: m.socials,
             }));
 
@@ -457,6 +468,7 @@ export default function AdminLeadership() {
                 bio: m.bn.bio,
                 image: m.image,
                 order: m.order,
+                hidden: m.hidden,
                 socials: m.socials,
             }));
 
@@ -629,6 +641,7 @@ export default function AdminLeadership() {
                             bio: m.en.bio,
                             image: m.image,
                             order: m.order,
+                            hidden: m.hidden,
                             socials: m.socials,
                         })),
                     },
@@ -642,6 +655,7 @@ export default function AdminLeadership() {
                             bio: m.bn.bio,
                             image: m.image,
                             order: m.order,
+                            hidden: m.hidden,
                             socials: m.socials,
                         })),
                     },
@@ -672,6 +686,7 @@ export default function AdminLeadership() {
                         merged.push({
                             image: en.image || bn.image || '',
                             order: en.order ?? bn.order ?? i + 1,
+                            hidden: en.hidden ?? bn.hidden ?? false,
                             en: { name: en.name || '', role: en.role || '', bio: en.bio || '' },
                             bn: { name: bn.name || '', role: bn.role || '', bio: bn.bio || '' },
                             socials: mergedSocials,

@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
 import { useContent } from '@/contexts/ContentContext';
 import { useLang } from '@/contexts/LanguageContext';
-import { Users, Linkedin, Twitter, Mail, Instagram, Facebook, Github } from 'lucide-react';
+import { Users, Linkedin, Twitter, Mail, Instagram, Facebook, Github, Send } from 'lucide-react';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { WaveDivider } from '@/components/ui/WaveDivider';
+import { ensureAbsoluteUrl } from '@/lib/utils';
 
 // ─── Custom SVG Icons for platforms not in lucide ───
 
@@ -52,6 +53,7 @@ const SOCIAL_PLATFORMS: { key: string; icon: any; label: string; isMailto?: bool
   { key: 'twitter', icon: Twitter, label: 'Twitter' },
   { key: 'fiverr', icon: FiverrIcon, label: 'Fiverr' },
   { key: 'upwork', icon: UpworkIcon, label: 'Upwork' },
+  { key: 'telegram', icon: Send, label: 'Telegram' },
   { key: 'linkedin', icon: Linkedin, label: 'LinkedIn' },
   { key: 'github', icon: Github, label: 'GitHub' },
   { key: 'email', icon: Mail, label: 'Email', isMailto: true },
@@ -61,7 +63,7 @@ export function LeadershipSection() {
   const { content } = useContent();
   const { lang } = useLang();
   const t = (content[lang] as any)?.leadership;
-  const members = t?.members || [];
+  const members = (t?.members || []).filter((m: any) => !m.hidden);
 
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isMobile, setIsMobile] = useState(false);
@@ -270,7 +272,8 @@ export function LeadershipSection() {
                   <div className="flex justify-center gap-3 mt-auto flex-wrap">
                     {enabledSocials.map((platform) => {
                       const social = member.socials[platform.key];
-                      const href = platform.isMailto ? `mailto:${social.url}` : social.url;
+                      const url = ensureAbsoluteUrl(social.url);
+                      const href = platform.isMailto ? `mailto:${social.url}` : url;
                       const IconComponent = platform.icon;
                       // Check if icon is a lucide component (function) or custom SVG component
                       const isLucide = IconComponent.render || IconComponent.$$typeof;

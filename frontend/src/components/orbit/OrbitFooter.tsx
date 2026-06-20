@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import orbitLogo from '@/assets/OrbitLogo.png';
+import { ensureAbsoluteUrl } from '@/lib/utils';
 
 // Social icons map using Lucide components
 const socialIconComponents: Record<string, any> = {
@@ -199,7 +200,7 @@ export function OrbitFooter() {
                   return (
                     <a
                       key={i}
-                      href={social.url}
+                      href={ensureAbsoluteUrl(social.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-8.5 h-8.5 rounded-lg flex items-center justify-center transition-all duration-300 cursor-pointer hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-500"

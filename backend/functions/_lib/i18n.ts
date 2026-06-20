@@ -6,6 +6,7 @@ export interface LeadershipMember {
   bio?: string;
   image?: string;
   order: number;
+  hidden?: boolean;
   socials?: {
     google?: { enabled: boolean; url: string };
     whatsapp?: { enabled: boolean; url: string };
@@ -15,6 +16,7 @@ export interface LeadershipMember {
     twitter?: { enabled: boolean; url: string };
     fiverr?: { enabled: boolean; url: string };
     upwork?: { enabled: boolean; url: string };
+    telegram?: { enabled: boolean; url: string };
     linkedin?: { enabled: boolean; url: string };
     github?: { enabled: boolean; url: string };
     email?: { enabled: boolean; url: string };
