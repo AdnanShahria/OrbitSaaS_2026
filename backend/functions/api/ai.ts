@@ -66,7 +66,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
 
     try {
         const result = await executeAiRequest(messages, env, {
-            model: 'llama-4-scout-17b-16e-instruct',
+            model: 'llama-3.3-70b-versatile',
             temperature: 0.7,
             max_tokens: 500,
         });
@@ -135,7 +135,7 @@ async function generateGist(knowledgeBase: string, env: Env): Promise<string | n
             ], 
             env, 
             {
-                model: 'llama-4-scout-17b-16e-instruct',
+                model: 'llama-3.3-70b-versatile',
                 temperature: 0.2,
                 max_tokens: 400,
             }
@@ -255,7 +255,7 @@ async function handleEnhance(request: Request, env: Env): Promise<Response> {
             ],
             env,
             {
-                model: 'llama-4-scout-17b-16e-instruct',
+                model: 'llama-3.3-70b-versatile',
                 temperature: 0.5,
                 max_tokens: 512,
             }

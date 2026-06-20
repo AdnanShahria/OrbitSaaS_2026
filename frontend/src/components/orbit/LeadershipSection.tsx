@@ -14,6 +14,7 @@ export function LeadershipSection() {
 
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isMobile, setIsMobile] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const memberRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Detect mobile
@@ -26,17 +27,17 @@ export function LeadershipSection() {
 
   // Desktop outline rotational animation
   useEffect(() => {
-    if (isMobile || members.length === 0) return;
+    if (isMobile || members.length === 0 || isHovered) return;
     
-    let i = 0;
-    setActiveIndex(i);
+    // Set initial active index if none is set
+    setActiveIndex(prev => prev === -1 ? 0 : prev);
+
     const interval = setInterval(() => {
-      i = (i + 1) % members.length;
-      setActiveIndex(i);
-    }, 2000);
+      setActiveIndex(prev => (prev + 1) % members.length);
+    }, 2500);
     
     return () => clearInterval(interval);
-  }, [isMobile, members.length]);
+  }, [isMobile, members.length, isHovered]);
 
   // Mobile focused glow logic
   useEffect(() => {
@@ -124,19 +125,40 @@ export function LeadershipSection() {
 
         {/* Members grid */}
         {members.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-8">
             {members.map((member: any, i: number) => {
               const isActive = activeIndex === i;
-              return (
+              
+              const isDesktopBreak = () => {
+                const total = members.length;
+                if (total === 5 && i === 2) return true;
+                if (total === 7 && i === 3) return true;
+                if (total === 8 && i === 3) return true;
+                if (total === 9 && (i === 2 || i === 5)) return true; // 3+3+3
+                if (total > 9 && (i + 1) % 4 === 0 && i !== total - 1) return true;
+                return false;
+              };
+
+              const card = (
                 <motion.div
-                  key={i}
+                  key={`card-${i}`}
                   ref={(el) => { memberRefs.current[i] = el; }}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-50px' }}
                   transition={{ duration: 0.6, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-                  className={`group relative flex flex-col items-center p-4 sm:p-8 rounded-3xl backdrop-blur-md border border-amber-900/5 transition-all duration-500 hover:bg-white/60 hover:shadow-2xl hover:shadow-amber-900/5 hover:-translate-y-2 ${isActive ? 'bg-white/60 shadow-2xl shadow-amber-900/5 -translate-y-2' : 'bg-white/40'}`}
-                  onMouseEnter={() => !isMobile && setActiveIndex(i)}
+                  className={`w-[calc(50%-0.5rem)] sm:w-[calc(50%-1rem)] lg:w-[calc(25%-1.5rem)] group relative flex flex-col items-center p-4 sm:p-8 rounded-3xl backdrop-blur-md border border-amber-900/5 transition-all duration-500 hover:bg-white/60 hover:shadow-2xl hover:shadow-amber-900/5 hover:-translate-y-2 ${isActive ? 'bg-white/60 shadow-2xl shadow-amber-900/5 -translate-y-2' : 'bg-white/40'}`}
+                  onMouseEnter={() => {
+                    if (!isMobile) {
+                      setActiveIndex(i);
+                      setIsHovered(true);
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (!isMobile) {
+                      setIsHovered(false);
+                    }
+                  }}
                 >
                   {/* Rising Aura Effect */}
                   <div className={`absolute inset-0 rounded-3xl transition-opacity duration-700 pointer-events-none ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
@@ -212,10 +234,29 @@ export function LeadershipSection() {
                 </div>
               </motion.div>
             );
+            
+            return isDesktopBreak() ? [card, <div key={`break-${i}`} className="hidden lg:block w-full" />] : card;
           })}
           </div>
         )}
 
+        {/* Tagline */}
+        {t?.tagline && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, delay: 0.3 }}
+            className="mt-16 sm:mt-24 text-center max-w-4xl mx-auto px-4 relative z-10"
+          >
+            <p 
+              className="text-xl md:text-3xl font-medium text-amber-900/80 leading-relaxed italic" 
+              style={{ fontFamily: "'Outfit', sans-serif" }}
+            >
+              "{t.tagline}"
+            </p>
+          </motion.div>
+        )}
 
       </div>
       <WaveDivider fill="#050505" />
