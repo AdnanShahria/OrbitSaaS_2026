@@ -49,8 +49,22 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
 
     const results = useQueries({
         queries: [
-            { queryKey: ['content', 'en'], queryFn: () => fetchContentData('en'), staleTime: 30_000, gcTime: 300_000 },
-            { queryKey: ['content', 'bn'], queryFn: () => fetchContentData('bn'), staleTime: 30_000, gcTime: 300_000 },
+            {
+                queryKey: ['content', 'en'],
+                queryFn: () => fetchContentData('en'),
+                // Pre-seed with translation fallbacks so page renders immediately
+                // without waiting for the API. Data will update silently when API responds.
+                initialData: translations.en,
+                staleTime: 0,        // Immediately stale → always refetches in background
+                gcTime: 300_000,
+            },
+            {
+                queryKey: ['content', 'bn'],
+                queryFn: () => fetchContentData('bn'),
+                initialData: translations.bn,
+                staleTime: 0,
+                gcTime: 300_000,
+            },
         ],
     });
 
