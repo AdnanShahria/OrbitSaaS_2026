@@ -22,11 +22,13 @@ function MultiImageUpload({ images, onChange, title }: { images: string[]; onCha
         const toastId = toast.loading(`Uploading ${imageFiles.length} images...`);
 
         try {
-            // Upload sequentially to avoid aggressive rate limiting
+            // Upload in concurrent batches to balance speed and rate limits
             const newUrls: string[] = [];
-            for (const file of imageFiles) {
-                const url = await uploadToImgBB(file);
-                newUrls.push(url);
+            const CONCURRENCY = 3;
+            for (let i = 0; i < imageFiles.length; i += CONCURRENCY) {
+                const batch = imageFiles.slice(i, i + CONCURRENCY);
+                const urls = await Promise.all(batch.map(file => uploadToImgBB(file)));
+                newUrls.push(...urls);
             }
 
             onChange([...images, ...newUrls]);
@@ -83,9 +85,11 @@ function MultiImageUpload({ images, onChange, title }: { images: string[]; onCha
             const toastId = toast.loading(`Uploading pasted image...`);
             try {
                 const newUrls: string[] = [];
-                for (const file of imageFiles) {
-                    const url = await uploadToImgBB(file);
-                    newUrls.push(url);
+                const CONCURRENCY = 3;
+                for (let i = 0; i < imageFiles.length; i += CONCURRENCY) {
+                    const batch = imageFiles.slice(i, i + CONCURRENCY);
+                    const urls = await Promise.all(batch.map(file => uploadToImgBB(file)));
+                    newUrls.push(...urls);
                 }
                 onChange([...images, ...newUrls]);
                 toast.success('Image uploaded!', { id: toastId });

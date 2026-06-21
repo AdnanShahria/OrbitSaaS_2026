@@ -106,7 +106,8 @@ export function ProjectCard({ item, routeId, isHovered, onMouseEnter, onMouseLea
                     <img
                         src={currentImage}
                         alt={item.title}
-                        loading="lazy"
+                        loading="eager"
+                        fetchPriority="high"
                         draggable="false"
                         className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-in-out no-browser-trigger ${isHovered ? 'scale-105 brightness-110' : ''
                             } ${isTransitioning ? 'opacity-0 scale-110' : 'opacity-100'}`}

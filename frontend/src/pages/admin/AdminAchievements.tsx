@@ -18,7 +18,11 @@ function MultiImageUpload({ images, onChange, title }: { images: string[]; onCha
         const toastId = toast.loading(`Uploading ${imageFiles.length} images...`);
         try {
             const newUrls: string[] = [];
-            for (const file of imageFiles) { newUrls.push(await uploadToImgBB(file)); }
+            for (let i = 0; i < imageFiles.length; i += 3) {
+                const batch = imageFiles.slice(i, i + 3);
+                const urls = await Promise.all(batch.map(file => uploadToImgBB(file)));
+                newUrls.push(...urls);
+            }
             onChange([...images, ...newUrls]);
             toast.success('Images uploaded!', { id: toastId });
         } catch { toast.error('Upload failed', { id: toastId }); }
@@ -44,7 +48,16 @@ function MultiImageUpload({ images, onChange, title }: { images: string[]; onCha
         if (imageFiles.length > 0) {
             e.preventDefault(); e.stopPropagation(); setUploading(true);
             const toastId = toast.loading('Uploading pasted image...');
-            try { const urls: string[] = []; for (const f of imageFiles) urls.push(await uploadToImgBB(f)); onChange([...images, ...urls]); toast.success('Uploaded!', { id: toastId }); }
+            try { 
+                const urls: string[] = []; 
+                for (let i = 0; i < imageFiles.length; i += 3) {
+                    const batch = imageFiles.slice(i, i + 3);
+                    const batchUrls = await Promise.all(batch.map(f => uploadToImgBB(f)));
+                    urls.push(...batchUrls);
+                }
+                onChange([...images, ...urls]); 
+                toast.success('Uploaded!', { id: toastId }); 
+            }
             catch { toast.error('Upload failed', { id: toastId }); }
             finally { setUploading(false); }
         }

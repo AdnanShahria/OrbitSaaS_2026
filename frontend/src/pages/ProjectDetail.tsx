@@ -148,6 +148,8 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                                     dragElastic={1}
                                     onDragEnd={handleDragEnd}
                                     draggable="false"
+                                    loading="eager"
+                                    fetchPriority="high"
                                     className="absolute inset-0 w-full h-full object-contain bg-black/5 touch-pan-y no-browser-trigger"
                                     alt={`${title} - slide ${currentIndex + 1}`}
                                 />
