@@ -364,13 +364,7 @@ function MemberEditor({
                         onChange={(v) => updateLoc(tab, 'role', v)}
                         lang={tab}
                     />
-                    <TextField
-                        label={tab === 'en' ? 'Bio (optional)' : 'সংক্ষিপ্ত পরিচিতি (ঐচ্ছিক)'}
-                        value={item[tab].bio || ''}
-                        onChange={(v) => updateLoc(tab, 'bio', v)}
-                        multiline
-                        lang={tab}
-                    />
+
                 </div>
             </div>
         </div>

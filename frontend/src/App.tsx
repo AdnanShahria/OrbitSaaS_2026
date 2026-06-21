@@ -79,18 +79,18 @@ function OrchestrationProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isReady, phase]);
 
-  // Auto-advance the cascade: 1→2→3→4 with staggered timing
+  // Auto-advance the cascade: 1→2→3→4 with faster staggered timing
   useEffect(() => {
     if (phase === 1) {
-      const t = setTimeout(() => setPhase(2), 600);  // subtitle after title words
+      const t = setTimeout(() => setPhase(2), 200);  // subtitle after title words
       return () => clearTimeout(t);
     }
     if (phase === 2) {
-      const t = setTimeout(() => setPhase(3), 400);  // navbar after subtitle
+      const t = setTimeout(() => setPhase(3), 150);  // navbar after subtitle
       return () => clearTimeout(t);
     }
     if (phase === 3) {
-      const t = setTimeout(() => setPhase(4), 300);  // rest
+      const t = setTimeout(() => setPhase(4), 150);  // rest
       return () => clearTimeout(t);
     }
   }, [phase]);
