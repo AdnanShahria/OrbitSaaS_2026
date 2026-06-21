@@ -101,7 +101,8 @@ async function handleLoginOtpSend(request: Request, env: Env): Promise<Response>
     const AUTHORIZED_EMAILS = [
         'adnanshahria2019@gmail.com',
         'abdurrafiu7@gmail.com',
-        'nisarfeni2015@gmail.com'
+        'nisarfeni2015@gmail.com',
+        'artalha100@gmail.com'
     ];
 
     if (!email || !AUTHORIZED_EMAILS.includes(email)) {

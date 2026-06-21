@@ -21,6 +21,7 @@ const AUTHORIZED_EMAILS = [
     { label: 'Adnan Shahria (adnanshahria2019@gmail.com)', value: 'adnanshahria2019@gmail.com' },
     { label: 'Abdur Rafiu (abdurrafiu7@gmail.com)', value: 'abdurrafiu7@gmail.com' },
     { label: 'Nisar (nisarfeni2015@gmail.com)', value: 'nisarfeni2015@gmail.com' },
+    { label: 'Talha (artalha100@gmail.com)', value: 'artalha100@gmail.com' },
 ];
 
 export default function AdminLogin() {
