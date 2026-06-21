@@ -127,12 +127,12 @@ export default function AdminLogin() {
 
                     <AnimatePresence mode="wait">
                         {step === 1 ? (
-                            <motion.form 
+                            <motion.form
                                 key="step1"
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 20 }}
-                                onSubmit={handleSendOtp} 
+                                onSubmit={handleSendOtp}
                                 className="space-y-5"
                             >
                                 <div>
@@ -151,7 +151,7 @@ export default function AdminLogin() {
                                         </button>
                                         <AnimatePresence>
                                             {isDropdownOpen && (
-                                                <motion.div 
+                                                <motion.div
                                                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -166,11 +166,10 @@ export default function AdminLogin() {
                                                                 setEmail(emailObj.value);
                                                                 setIsDropdownOpen(false);
                                                             }}
-                                                            className={`w-full text-left px-4 py-3.5 text-sm transition-colors ${
-                                                                email === emailObj.value 
-                                                                    ? 'bg-primary/10 text-primary font-semibold border-l-2 border-primary' 
+                                                            className={`w-full text-left px-4 py-3.5 text-sm transition-colors ${email === emailObj.value
+                                                                    ? 'bg-primary/10 text-primary font-semibold border-l-2 border-primary'
                                                                     : 'text-muted-foreground hover:bg-secondary hover:text-foreground border-l-2 border-transparent'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {emailObj.label}
                                                         </button>
@@ -197,12 +196,12 @@ export default function AdminLogin() {
                                 </button>
                             </motion.form>
                         ) : (
-                            <motion.form 
+                            <motion.form
                                 key="step2"
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 20 }}
-                                onSubmit={handleVerifyOtp} 
+                                onSubmit={handleVerifyOtp}
                                 className="space-y-6"
                             >
                                 <div className="text-center">
@@ -239,7 +238,7 @@ export default function AdminLogin() {
                                     >
                                         {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</> : 'Verify & Sign In'}
                                     </button>
-                                    
+
                                     <button
                                         type="button"
                                         onClick={handleSendOtp}
