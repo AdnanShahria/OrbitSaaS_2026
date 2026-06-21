@@ -258,7 +258,10 @@ export function LeadershipSection() {
                 <h3 className="text-lg sm:text-2xl text-[#1A1A1A] mb-1 sm:mb-2 text-center leading-tight" style={{ fontFamily: "'Abril Fatface', serif" }}>
                   {member.name}
                 </h3>
-                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] text-emerald-700 font-bold mb-2 sm:mb-3 text-center">
+                <p 
+                  className="text-[9px] sm:text-[10px] uppercase tracking-wider text-emerald-700 font-bold mb-2 sm:mb-3 text-center"
+                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                >
                   {member.role || member.position}
                 </p>
                 {member.bio && (
@@ -269,7 +272,7 @@ export function LeadershipSection() {
 
                 {/* Social links — only show admin-enabled contacts, centered */}
                 {enabledSocials.length > 0 && (
-                  <div className="flex justify-center gap-3 mt-auto flex-wrap">
+                  <div className="flex justify-center gap-1.5 sm:gap-3 mt-auto flex-nowrap">
                     {enabledSocials.map((platform) => {
                       const social = member.socials[platform.key];
                       const url = ensureAbsoluteUrl(social.url);
@@ -283,7 +286,7 @@ export function LeadershipSection() {
                           href={href}
                           target={platform.isMailto ? undefined : '_blank'}
                           rel={platform.isMailto ? undefined : 'noopener noreferrer'}
-                          className="p-2 rounded-full bg-slate-100 text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all duration-300"
+                          className="p-1.5 sm:p-2 rounded-full bg-slate-100 text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all duration-300 shrink-0"
                           title={platform.label}
                         >
                           {isLucide ? <IconComponent size={16} /> : <IconComponent size={16} />}

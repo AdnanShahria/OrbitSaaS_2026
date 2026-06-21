@@ -22,12 +22,27 @@ async function getProjectBySlug(slug: string, env: Env) {
             if (result.rows.length > 0) {
                 content = { projects: JSON.parse(result.rows[0].data as string) };
             }
+            
+            const aResult = await db.execute({
+                sql: "SELECT data FROM site_content WHERE section = 'achievements' AND lang = 'en'",
+                args: [],
+            });
+            if (aResult.rows.length > 0) {
+                content.achievements = JSON.parse(aResult.rows[0].data as string);
+            }
         }
-        const items: any[] = content.projects?.items || [];
-        const project = items.find((item: any) => item.id === slug);
-        if (project) return project;
+        
+        const pItems: any[] = content.projects?.items || [];
+        const aItems: any[] = content.achievements?.items || [];
+        
+        let item = pItems.find((i: any) => i.id === slug) || aItems.find((i: any) => i.id === slug);
+        if (item) return item;
+        
         const idx = parseInt(slug, 10);
-        if (!isNaN(idx) && idx >= 0 && idx < items.length) return items[idx];
+        if (!isNaN(idx)) {
+            if (pItems[idx]) return pItems[idx];
+            if (aItems[idx]) return aItems[idx];
+        }
         return null;
     } catch (e) {
         console.error('OG: DB fetch error', e);
@@ -36,13 +51,12 @@ async function getProjectBySlug(slug: string, env: Env) {
 }
 
 /**
- * /api/og?project=slug — Returns the project cover image (redirect).
- * Used as the og:image URL in meta tags.
+ * /api/og?project=slug — Returns the project cover image overlaid with a watermark (via Cloudflare Image Resizing).
  */
 export const onRequest: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
     const url = new URL(request.url);
-    const slug = url.searchParams.get('project') || '';
+    const slug = url.searchParams.get('project') || url.searchParams.get('achievement') || '';
 
     if (!slug) {
         return new Response('Missing project parameter', { status: 400 });
@@ -56,6 +70,13 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
 
     const absoluteUrl = coverUrl.startsWith('http') ? coverUrl : `https://${coverUrl}`;
+    
+    // Cloudflare Image Resizing to overlay the watermark natively
+    // We use the 'draw' option to put the OrbitSaaS logo in the bottom right corner
+    const drawOptions = `bottom:40;right:40;opacity:0.9;fit:contain;width:250;url:${SITE_URL}/orbit-logo.png`;
+    const cfOptions = `width=1200,height=630,fit=crop,format=auto,draw=${drawOptions}`;
+    
+    const cfImageUrl = `${SITE_URL}/cdn-cgi/image/${cfOptions}/${absoluteUrl}`;
 
-    return Response.redirect(absoluteUrl, 302);
+    return Response.redirect(cfImageUrl, 302);
 };

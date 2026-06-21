@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ExternalLink, ChevronLeft, ChevronRight, ChevronDown, X, ArrowRight, Star, ArrowUpRight } from 'lucide-react';
+import { ArrowLeft, ExternalLink, ChevronLeft, ChevronRight, ChevronDown, X, ArrowRight, Star, ArrowUpRight, Share2, Check } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { useContent } from '@/contexts/ContentContext';
 import { Navbar } from '@/components/orbit/Navbar';
@@ -13,6 +13,7 @@ import { ensureAbsoluteUrl } from '@/lib/utils';
 import DOMPurify from 'dompurify';
 import { ImageWithSkeleton } from '@/components/orbit/ImageWithSkeleton';
 import { RichText } from '@/components/ui/RichText';
+import { toast } from 'sonner';
 
 type MediaItem = { type: 'image'; url: string } | { type: 'video'; url: string };
 
@@ -509,6 +510,7 @@ export default function ProjectDetail() {
     const { lang } = useLang();
     const { content } = useContent();
     const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
 
     // Data with Fallback Logic
     const enData = (content.en as any).projects || {};
@@ -617,19 +619,19 @@ export default function ProjectDetail() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.05 }}
-                            className="rounded-2xl border border-border bg-card px-6 sm:px-10 py-8 sm:py-10 mb-6 relative overflow-hidden"
+                            className="rounded-2xl border border-border bg-card px-6 sm:px-10 py-6 sm:py-8 mb-6 relative overflow-hidden group/title"
                         >
                             {/* Title — Centered */}
-                            <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-foreground mb-6 relative z-10 text-center">
+                            <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight leading-snug text-foreground mb-5 relative z-10 text-center max-w-4xl mx-auto">
                                 {project.title}
                             </h1>
 
                             {/* Tags + Categories combined */}
-                            <div className="flex flex-wrap justify-center gap-2 relative z-10">
+                            <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
                                 {(project.categories || (project.category ? [project.category] : [])).map((cat: string, ci: number) => (
                                     <span
                                         key={`cat-${ci}`}
-                                        className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-bold uppercase tracking-wider border border-primary/20"
+                                        className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-[11px] sm:text-xs font-bold uppercase tracking-wider border border-primary/20"
                                     >
                                         {cat}
                                     </span>
@@ -637,11 +639,32 @@ export default function ProjectDetail() {
                                 {project.tags && project.tags.map((tag: string, j: number) => (
                                     <span
                                         key={`tag-${j}`}
-                                        className="px-3 py-1.5 rounded-full bg-secondary text-muted-foreground text-sm font-medium border border-border"
+                                        className="px-3 py-1.5 rounded-full bg-secondary text-muted-foreground text-[11px] sm:text-xs font-medium border border-border"
                                     >
                                         {tag}
                                     </span>
                                 ))}
+                            </div>
+                            
+                            <div className="absolute bottom-4 right-4 z-20">
+                                <button 
+                                    onClick={async () => {
+                                        const url = currentUrl;
+                                        if (navigator.share) {
+                                            try { await navigator.share({ title: seoTitle, url }); }
+                                            catch (e) { console.error('Share error:', e); }
+                                        } else {
+                                            await navigator.clipboard.writeText(url);
+                                            setIsCopied(true);
+                                            toast.success("Link copied to clipboard");
+                                            setTimeout(() => setIsCopied(false), 2000);
+                                        }
+                                    }}
+                                    title={isCopied ? 'Copied!' : 'Share'}
+                                    className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500/20 transition-all duration-300 shadow-sm"
+                                >
+                                    {isCopied ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />}
+                                </button>
                             </div>
                         </motion.div>
 

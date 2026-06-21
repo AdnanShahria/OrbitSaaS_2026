@@ -298,13 +298,19 @@ function PublicSite() {
       '/techstack': 'techstack',
       '/why-us': 'why-us',
       '/proj': 'projects',
+      '/project': 'projects',
       '/achievements': 'achievements',
       '/reviews': 'reviews',
       '/leadership': 'leadership',
       '/contact': 'contact'
     };
 
-    const targetId = routeToId[location.pathname];
+    // Handle trailing slashes gracefully
+    const normalizedPath = location.pathname.endsWith('/') && location.pathname.length > 1 
+      ? location.pathname.slice(0, -1) 
+      : location.pathname;
+
+    const targetId = routeToId[normalizedPath];
     if (targetId) {
       // Use polling to wait until the Suspense component actually renders its children
       let attempts = 0;
@@ -312,15 +318,19 @@ function PublicSite() {
         const el = document.getElementById(targetId);
         // Ensure the element has actually rendered the lazy-loaded content
         if (el && el.children.length > 0 && el.offsetHeight > 50) {
-          el.scrollIntoView({ behavior: 'smooth' });
-          clearInterval(interval);
+          // Check if all previous sections have loaded by looking for empty sibling divs
+          const previousEmptySections = Array.from(document.querySelectorAll('div.section-wrapper:empty'));
+          if (previousEmptySections.length === 0 || attempts > 20) {
+            el.scrollIntoView({ behavior: 'smooth' });
+            clearInterval(interval);
+          }
         }
         attempts++;
-        if (attempts > 50) clearInterval(interval); // Give up after 5 seconds to prevent infinite loops
+        if (attempts > 100) clearInterval(interval); // Give up after 10 seconds
       }, 100);
 
       return () => clearInterval(interval);
-    } else if (location.pathname === '/') {
+    } else if (normalizedPath === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [location.pathname, isLoaded]);
@@ -333,16 +343,16 @@ function PublicSite() {
 
   return (
     <div className="flex flex-col w-full min-h-screen">
-      <div id="hero" className="w-full !border-none"><Home /></div>
-      <div id="services" className="w-full !border-none"><Suspense fallback={null}><ServicesSection /></Suspense></div>
-      <div id="process" className="w-full"><Suspense fallback={null}><ProcessSection /></Suspense></div>
-      <div id="techstack" className="w-full"><Suspense fallback={null}><TechStackSection /></Suspense></div>
-      <div id="why-us" className="w-full"><Suspense fallback={null}><WhyUsSection /></Suspense></div>
-      <div id="projects" className="w-full"><Suspense fallback={null}><ProjectsSection /></Suspense></div>
-      <div id="achievements" className="w-full"><Suspense fallback={null}><AchievementsSection /></Suspense></div>
-      <div id="reviews" className="w-full"><Suspense fallback={null}><ReviewsSection /></Suspense></div>
-      <div id="leadership" className="w-full"><Suspense fallback={null}><LeadershipSection /></Suspense></div>
-      <div id="contact" className="w-full"><Suspense fallback={null}><ContactSection /><div className="block md:hidden"><MobileFooter /></div><div className="hidden md:block"><OrbitFooter /></div></Suspense></div>
+      <div id="hero" className="w-full !border-none section-wrapper"><Home /></div>
+      <div id="services" className="w-full !border-none section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ServicesSection /></Suspense></div>
+      <div id="process" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ProcessSection /></Suspense></div>
+      <div id="techstack" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><TechStackSection /></Suspense></div>
+      <div id="why-us" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><WhyUsSection /></Suspense></div>
+      <div id="projects" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ProjectsSection /></Suspense></div>
+      <div id="achievements" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><AchievementsSection /></Suspense></div>
+      <div id="reviews" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ReviewsSection /></Suspense></div>
+      <div id="leadership" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><LeadershipSection /></Suspense></div>
+      <div id="contact" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ContactSection /><div className="block md:hidden"><MobileFooter /></div><div className="hidden md:block"><OrbitFooter /></div></Suspense></div>
 
       {isLoaded && (
         <Suspense fallback={null}>
@@ -414,7 +424,7 @@ export default function App() {
                         <PublicSite />
                       </VisitorGateway>
                     }>
-                      {['/', '/services', '/process', '/techstack', '/why-us', '/proj', '/achievements', '/reviews', '/leadership', '/contact'].map(path => (
+                      {['/', '/services', '/process', '/techstack', '/why-us', '/proj', '/project', '/achievements', '/reviews', '/leadership', '/contact'].map(path => (
                         <Route key={path} path={path} element={null} />
                       ))}
                       <Route path="*" element={<Navigate to="/" replace />} />
