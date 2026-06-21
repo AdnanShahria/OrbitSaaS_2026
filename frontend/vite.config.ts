@@ -12,7 +12,7 @@ import { VitePWA } from "vite-plugin-pwa";
 async function getPrerenderPlugin() {
   try {
     // Check if puppeteer is importable since it's a peer dependency required by the renderer
-    // @ts-ignore
+    // @ts-expect-error: puppeteer is an optional peer dependency
     await import("puppeteer");
     const { default: prerender } = await import("@prerenderer/rollup-plugin");
     const { default: PuppeteerRenderer } = await import("@prerenderer/renderer-puppeteer");
@@ -59,7 +59,7 @@ export default defineConfig(async ({ mode }) => {
     assetsInclude: ['**/*.lottie'],
     server: {
       host: "::",
-      port: 5173,
+      port: 6970,
       proxy: {
         '/api': {
           target: 'https://orbitsaas.cloud', // Proxy to prod to bypass CORS when sharing on local network

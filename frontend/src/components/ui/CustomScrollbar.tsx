@@ -24,7 +24,7 @@ export function CustomScrollbar() {
     const trackHeight = windowHeight - 80; // Start under navbar
     
     // Calculate thumb height proportionally
-    let thumbHeight = Math.max((windowHeight / documentHeight) * trackHeight, 40);
+    const thumbHeight = Math.max((windowHeight / documentHeight) * trackHeight, 40);
     
     // Calculate scroll progress (0 to 1)
     const scrollProgress = scrollY / (documentHeight - windowHeight);

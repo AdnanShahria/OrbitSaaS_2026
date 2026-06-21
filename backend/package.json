@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "wrangler pages dev ../frontend/dist --port 3000 --compatibility-date 2024-12-01 --compatibility-flag nodejs_compat"
+    "dev": "wrangler pages dev ../frontend/dist --port 6969 --compatibility-date 2024-12-01 --compatibility-flag nodejs_compat"
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",

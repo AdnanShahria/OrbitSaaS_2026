@@ -61,8 +61,8 @@ function killPort(port) {
 
 // ── Start ────────────────────────────────────────────────────────────
 printLogo();
-killPort(5173);
-killPort(3000);
+killPort(6970);
+killPort(6969);
 
 const frontend = spawn('npm run dev:frontend', { shell: true, stdio: 'pipe' });
 const backend  = spawn('npm run dev:api',      { shell: true, stdio: 'pipe' });
@@ -148,8 +148,8 @@ function showReadyBanner() {
     console.log(`  ${c.green}${c.bold}┌──────────────────────────────────────────┐${c.reset}`);
     console.log(`  ${c.green}${c.bold}│${c.reset}  ${c.green}${c.bold}✓${c.reset}  ${c.bold}All servers ready!${c.reset}                  ${c.green}${c.bold}│${c.reset}`);
     console.log(`  ${c.green}${c.bold}│${c.reset}                                          ${c.green}${c.bold}│${c.reset}`);
-    console.log(`  ${c.green}${c.bold}│${c.reset}  ${c.blue}Frontend${c.reset}  ${c.dim}→${c.reset}  ${c.cyan}${c.bold}http://localhost:5173/${c.reset}   ${c.green}${c.bold}│${c.reset}`);
-    console.log(`  ${c.green}${c.bold}│${c.reset}  ${c.green}Backend${c.reset}   ${c.dim}→${c.reset}  ${c.cyan}${c.bold}http://127.0.0.1:3000${c.reset}    ${c.green}${c.bold}│${c.reset}`);
+    console.log(`  ${c.green}${c.bold}│${c.reset}  ${c.blue}Frontend${c.reset}  ${c.dim}→${c.reset}  ${c.cyan}${c.bold}http://localhost:6970/${c.reset}   ${c.green}${c.bold}│${c.reset}`);
+    console.log(`  ${c.green}${c.bold}│${c.reset}  ${c.green}Backend${c.reset}   ${c.dim}→${c.reset}  ${c.cyan}${c.bold}http://127.0.0.1:6969${c.reset}    ${c.green}${c.bold}│${c.reset}`);
     console.log(`  ${c.green}${c.bold}│${c.reset}                                          ${c.green}${c.bold}│${c.reset}`);
     console.log(`  ${c.green}${c.bold}│${c.reset}  ${c.dim}Press ${c.yellow}Ctrl+C${c.reset}${c.dim} to stop${c.reset}                   ${c.green}${c.bold}│${c.reset}`);
     console.log(`  ${c.green}${c.bold}└──────────────────────────────────────────┘${c.reset}`);
