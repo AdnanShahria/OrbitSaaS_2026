@@ -8,3 +8,58 @@
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-site
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://i.ibb.co https://i.imgbb.com https://image.ibb.co https://orbitsaas.cloud; connect-src 'self' https://orbitsaas.cloud http://localhost:6969 https://fcm.googleapis.com https://push.services.mozilla.com https://*.push.apple.com https://cdn.jsdelivr.net https://unpkg.com; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'none';
+
+# Static assets — aggressive long-term caching for performance
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Fonts — 1 year cache
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Images — 30 day cache
+/images/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
+
+# OG banner — 30 day cache
+/og-banner-v2.png
+  Cache-Control: public, max-age=2592000
+
+# Favicon and PWA icons — 30 day cache
+/favicon.png
+  Cache-Control: public, max-age=2592000
+
+/pwa-192x192.png
+  Cache-Control: public, max-age=2592000
+
+/pwa-512x512.png
+  Cache-Control: public, max-age=2592000
+
+# robots.txt — no cache (must always be fresh)
+/robots.txt
+  Cache-Control: public, max-age=3600
+
+# sitemap — short cache, refreshes frequently
+/sitemap.xml
+  Cache-Control: public, max-age=3600
+  Content-Type: application/xml; charset=utf-8
+
+# llms.txt — AEO: readable by AI crawlers immediately
+/llms.txt
+  Cache-Control: public, max-age=3600
+  Content-Type: text/plain; charset=utf-8
+  X-Robots-Tag: index, follow
+
+# Google Search Console verification
+/googleec64690665fa45f8.html
+  Cache-Control: public, max-age=86400
+  Content-Type: text/html; charset=utf-8
+
+/google686da8116d698aaf.html
+  Cache-Control: public, max-age=86400
+  Content-Type: text/html; charset=utf-8
+
+# Bing Webmaster Tools verification
+/BingSiteAuth.xml
+  Cache-Control: public, max-age=86400
+  Content-Type: application/xml; charset=utf-8

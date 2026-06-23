@@ -1,123 +1,183 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- ══════════════════════════════════════════
+       MAIN PAGES
+       ══════════════════════════════════════════ -->
+
   <url>
     <loc>https://orbitsaas.cloud/</loc>
-    <lastmod>2026-06-21</lastmod>
+    <lastmod>2026-06-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://orbitsaas.cloud/" />
+    <xhtml:link rel="alternate" hreflang="bn" href="https://orbitsaas.cloud/?lang=bn" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://orbitsaas.cloud/" />
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/og-banner-v2.png</image:loc>
+      <image:title>ORBIT SaaS — Custom Web Development &amp; AI Agency</image:title>
+      <image:caption>ORBIT SaaS is a top-rated web development and AI agency offering custom websites, SaaS platforms, AI chatbots, and enterprise solutions worldwide.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/orbit-logo.png</image:loc>
+      <image:title>ORBIT SaaS Logo</image:title>
+      <image:caption>Official logo of ORBIT SaaS — Web Development &amp; AI Agency, Bangladesh</image:caption>
+    </image:image>
   </url>
+
   <url>
-    <loc>https://orbitsaas.cloud/#services</loc>
-    <lastmod>2026-06-21</lastmod>
+    <loc>https://orbitsaas.cloud/services</loc>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://orbitsaas.cloud/services" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://orbitsaas.cloud/services" />
+  </url>
+
+  <url>
+    <loc>https://orbitsaas.cloud/process</loc>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://orbitsaas.cloud/techstack</loc>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://orbitsaas.cloud/why-us</loc>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://orbitsaas.cloud/projects</loc>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://orbitsaas.cloud/reviews</loc>
+    <lastmod>2026-06-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+
   <url>
-    <loc>https://orbitsaas.cloud/#tech-stack</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <loc>https://orbitsaas.cloud/leadership</loc>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
+
   <url>
-    <loc>https://orbitsaas.cloud/#why-us</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <loc>https://orbitsaas.cloud/contact</loc>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
   </url>
-  <url>
-    <loc>https://orbitsaas.cloud/#projects</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://orbitsaas.cloud/#leadership</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://orbitsaas.cloud/#contact</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
+
   <url>
     <loc>https://orbitsaas.cloud/privacy</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/terms</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
   </url>
+
+  <!-- ══════════════════════════════════════════
+       PROJECT DETAIL PAGES
+       ══════════════════════════════════════════ -->
+
   <url>
     <loc>https://orbitsaas.cloud/project/0</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/project/1</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/project/2</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/project/3</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/project/4</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/project/5</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/project/6</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/project/7</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/project/8</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/project/9</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
   <url>
     <loc>https://orbitsaas.cloud/project/10</loc>
-    <lastmod>2026-06-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
+
 </urlset>

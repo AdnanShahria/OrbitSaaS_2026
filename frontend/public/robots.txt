@@ -1,6 +1,10 @@
-# ORBIT SaaS - Custom Web Development, AI & SaaS Agency
+# ORBIT SaaS — Custom Web Development, AI & SaaS Agency
 # https://orbitsaas.cloud
+# Last updated: 2026-06-23
 
+# ─────────────────────────────────────────────────────────────
+# DEFAULT: ALL BOTS — allow everything
+# ─────────────────────────────────────────────────────────────
 User-agent: *
 Allow: /
 Disallow: /admin/
@@ -8,57 +12,170 @@ Disallow: /admin
 Disallow: /api/
 Crawl-delay: 1
 
-# Allow Google AI crawlers
+# ─────────────────────────────────────────────────────────────
+# GOOGLE SEARCH ENGINE CRAWLERS
+# ─────────────────────────────────────────────────────────────
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 0
 
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Googlebot-Video
+Allow: /
+
+User-agent: Googlebot-News
+Allow: /
+
+User-agent: AdsBot-Google
+Allow: /
+
+# Google AI / Gemini crawler — allow so Gemini can cite ORBIT SaaS
 User-agent: Google-Extended
 Allow: /
 
-# Allow OpenAI crawlers
+# ─────────────────────────────────────────────────────────────
+# BING / MICROSOFT CRAWLERS
+# ─────────────────────────────────────────────────────────────
+User-agent: bingbot
+Allow: /
+Crawl-delay: 0
+
+User-agent: msnbot
+Allow: /
+
+User-agent: msnbot-media
+Allow: /
+
+# Microsoft Copilot / Bing AI crawler
+User-agent: Bingbot-AI
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# OPENAI CRAWLERS — ChatGPT, GPT plugins, Operator
+# ─────────────────────────────────────────────────────────────
 User-agent: GPTBot
 Allow: /
 
 User-agent: ChatGPT-User
 Allow: /
 
-# Allow Anthropic crawlers
-User-agent: Anthropic-AI
+User-agent: OAI-SearchBot
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# ANTHROPIC — Claude AI
+# ─────────────────────────────────────────────────────────────
+User-agent: anthropic-ai
 Allow: /
 
 User-agent: ClaudeBot
 Allow: /
 
-# Allow Perplexity
+User-agent: Claude-Web
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# PERPLEXITY AI
+# ─────────────────────────────────────────────────────────────
 User-agent: PerplexityBot
 Allow: /
 
-# Allow Cohere
-User-agent: Cohere-ai
+# ─────────────────────────────────────────────────────────────
+# COHERE
+# ─────────────────────────────────────────────────────────────
+User-agent: cohere-ai
 Allow: /
 
-# Allow Amazon / Alexa
+# ─────────────────────────────────────────────────────────────
+# AMAZON / ALEXA
+# ─────────────────────────────────────────────────────────────
 User-agent: Amazonbot
 Allow: /
 
-# Allow Apple / Siri
+User-agent: Alexa
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# APPLE / SIRI
+# ─────────────────────────────────────────────────────────────
 User-agent: Applebot
 Allow: /
 
-# Allow Bing / Microsoft
-User-agent: bingbot
+User-agent: Applebot-Extended
 Allow: /
 
-# Allow Meta
+# ─────────────────────────────────────────────────────────────
+# META AI — Llama / Meta AI assistant
+# ─────────────────────────────────────────────────────────────
 User-agent: FacebookExternalHit
 Allow: /
 
-# Allow TikTok / ByteDance
+User-agent: meta-externalagent
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# BYTEDANCE / TIKTOK
+# ─────────────────────────────────────────────────────────────
 User-agent: Bytespider
 Allow: /
 
-# Sitemaps
+# ─────────────────────────────────────────────────────────────
+# DEEPSEEK AI
+# ─────────────────────────────────────────────────────────────
+User-agent: DeepSeek
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# MISTRAL AI
+# ─────────────────────────────────────────────────────────────
+User-agent: MistralBot
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# GROK / xAI (Elon Musk's AI)
+# ─────────────────────────────────────────────────────────────
+User-agent: Grok
+Allow: /
+
+User-agent: xAI
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# YOU.COM AI SEARCH
+# ─────────────────────────────────────────────────────────────
+User-agent: YouBot
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# BRAVE SEARCH AI
+# ─────────────────────────────────────────────────────────────
+User-agent: Brave
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# COMMON SEO TOOLS (allow for indexing insights)
+# ─────────────────────────────────────────────────────────────
+User-agent: AhrefsBot
+Allow: /
+
+User-agent: SemrushBot
+Allow: /
+
+User-agent: DotBot
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# SITEMAPS
+# ─────────────────────────────────────────────────────────────
 Sitemap: https://orbitsaas.cloud/sitemap.xml
+Sitemap: https://orbitsaas.cloud/sitemap-images.xml
+
+# ─────────────────────────────────────────────────────────────
+# AI-READABLE CONTENT
+# See https://orbitsaas.cloud/llms.txt for structured LLM-readable content
+# ─────────────────────────────────────────────────────────────
 
 # Host
 Host: https://orbitsaas.cloud

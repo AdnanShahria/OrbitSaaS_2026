@@ -1,10 +1,19 @@
 {
     "version": 1,
-    "description": "Route config for Cloudflare Pages. API and project routes go to Functions; everything else is static assets.",
+    "description": "Route config for Cloudflare Pages. API and project routes go to Functions; SEO/static files and everything else are served as static assets.",
     "include": [
         "/api/*",
         "/project/*",
-        "/sitemap.xml"
+        "/sitemap.xml",
+        "/sitemap-images.xml"
     ],
-    "exclude": []
+    "exclude": [
+        "/robots.txt",
+        "/llms.txt",
+        "/googleec64690665fa45f8.html",
+        "/google686da8116d698aaf.html",
+        "/BingSiteAuth.xml",
+        "/favicon.png",
+        "/og-banner-v2.png"
+    ]
 }

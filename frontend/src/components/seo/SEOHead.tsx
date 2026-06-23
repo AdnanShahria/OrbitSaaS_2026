@@ -10,9 +10,9 @@ export function SEOHead() {
     const seoData = content[lang] as Record<string, any> || {};
 
     // Keyword-optimized defaults
-    const defaultTitle = "ORBIT SaaS | Custom Web Development, AI Chatbot & SaaS Agency";
-    const defaultDesc = "ORBIT SaaS is a full-service web development and AI agency based in Bangladesh. We build custom websites, SaaS platforms, AI chatbots, mobile apps, and enterprise solutions for businesses worldwide.";
-    const defaultKeywords = "web development, web development company, custom web development, best web development company, hire web developers, full stack web development, custom website development, web application development, website design and development, responsive web design, frontend development, backend development, React development, Node.js development, Next.js development, TypeScript development, web development agency, web development Bangladesh, best web development company Bangladesh, software development agency, custom software development, SaaS development, custom SaaS platform, AI chatbot development, custom AI chatbot, chatbot integration, conversational AI, AI automation, agentic AI, mobile app development, Flutter app development, React Native app development, eCommerce website development, enterprise web application, PWA development, progressive web app, orbit, ORBIT SaaS, orbit saas, orbot saas, OrbitSaaS, orbitsaas, orbit sass, orbit sas, Orbot, Assa, orbit software, orbit agency, orbit ai, orbitsaas.cloud, orboit, orboit saas, orboit assa, orbit sasa, orbit assa, orbt saas, obit saas, orbir saas, orbit saass, orbot sas, orbot assa, orbit cloud, orbit development, orbit web agency, orbit software agency, orbit ai agency";
+    const defaultTitle = "ORBIT SaaS | Custom Web Development, AI Chatbot & SaaS Agency Bangladesh";
+    const defaultDesc = "ORBIT SaaS is a top-rated web development and AI agency based in Rajshahi, Bangladesh. We build custom websites, SaaS platforms, AI chatbots, autonomous AI agents, mobile apps, and enterprise solutions for businesses worldwide. Fast delivery. Proven results.";
+    const defaultKeywords = "web development, web development company, custom web development, best web development company, hire web developers, full stack web development, custom website development, web application development, website design and development, responsive web design, frontend development, backend development, React development, Node.js development, Next.js development, TypeScript development, web development agency, web development Bangladesh, best web development company Bangladesh, software development agency, custom software development, SaaS development, custom SaaS platform, AI chatbot development, custom AI chatbot, chatbot integration, conversational AI, AI automation, agentic AI, AI agent development, autonomous AI, mobile app development, Flutter app development, React Native app development, eCommerce website development, enterprise web application, PWA development, progressive web app, orbit, ORBIT SaaS, orbit saas, OrbitSaaS, orbitsaas, orbit software, orbit agency, orbit ai, orbitsaas.cloud, orbit development, orbit web agency";
 
     // Data from DB (saved via AdminSEO)
     const title = (content[lang]?.['seo_title'] as string) || defaultTitle;
@@ -61,8 +61,18 @@ export function SEOHead() {
             {/* Additional SEO meta */}
             <meta name="language" content={lang === 'bn' ? 'Bengali' : 'English'} />
 
-            {/* Google Search Console verification */}
+            {/* GEO / Location targeting */}
+            <meta name="geo.region" content="BD-64" />
+            <meta name="geo.placename" content="Rajshahi, Bangladesh" />
+            <meta name="geo.position" content="24.3745;88.6042" />
+            <meta name="ICBM" content="24.3745, 88.6042" />
+
+            {/* AEO — AI-readable content declaration */}
+            <meta name="ai-content-declarations" content="human-authored" />
+
+            {/* Google Search Console verification — both tokens */}
             <meta name="google-site-verification" content="google686da8116d698aaf" />
+            <meta name="google-site-verification" content="ec64690665fa45f8" />
         </Helmet>
     );
 }
