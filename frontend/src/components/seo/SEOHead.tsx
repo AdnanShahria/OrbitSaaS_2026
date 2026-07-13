@@ -19,8 +19,20 @@ export function SEOHead() {
     const description = (content[lang]?.['seo_description'] as string) || defaultDesc;
     const keywords = (content[lang]?.['seo_keywords'] as string) || defaultKeywords;
 
-    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://orbitsaas.cloud';
-    const canonicalUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : 'https://orbitsaas.cloud';
+    const isClient = typeof window !== 'undefined';
+    const currentUrl = isClient ? window.location.href : 'https://orbitsaas.cloud';
+    let canonicalUrl = 'https://orbitsaas.cloud';
+    if (isClient) {
+        canonicalUrl = window.location.origin + window.location.pathname;
+        // Preserve language query parameter for localized canonical matching
+        if (window.location.pathname === '/' && window.location.search.includes('lang=')) {
+            const params = new URLSearchParams(window.location.search);
+            const langParam = params.get('lang');
+            if (langParam) {
+                canonicalUrl += `?lang=${langParam}`;
+            }
+        }
+    }
     const image = 'https://orbitsaas.cloud/og-banner-v2.png';
 
     return (

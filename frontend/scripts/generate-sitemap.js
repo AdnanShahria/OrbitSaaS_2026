@@ -21,40 +21,40 @@ async function generateSitemap() {
         const projectItems = data.content.projects?.items || [];
         console.log(`Found ${projectItems.length} projects.`);
 
+        // Only real, indexable pages — no hash fragments (Google ignores fragments)
         const staticRoutes = [
-            '/',
-            '/#services',
-            '/#tech-stack',
-            '/#why-us',
-            '/#projects',
-            '/#leadership',
-            '/#contact',
-            '/privacy',
-            '/terms'
+            { path: '/', priority: '1.0' },
+            { path: '/?lang=bn', priority: '0.8' },
+            { path: '/privacy', priority: '0.4' },
+            { path: '/terms', priority: '0.4' }
         ];
 
         let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
 
+        const today = new Date().toISOString().split('T')[0];
+
         // Add static routes
         staticRoutes.forEach(route => {
             sitemap += `
   <url>
-    <loc>${SITE_URL}${route}</loc>
-    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+    <loc>${SITE_URL}${route.path}</loc>
+    <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>${route === '/' ? '1.0' : '0.8'}</priority>
+    <priority>${route.priority}</priority>
   </url>`;
         });
 
-        // Add dynamic project routes
-        projectItems.forEach((_, index) => {
+        // Add dynamic project routes using slug ID (not numeric index)
+        projectItems.forEach((proj, index) => {
+            if (proj.hidden) return; // Skip hidden projects
+            const id = proj.id || String(index);
             sitemap += `
   <url>
-    <loc>${SITE_URL}/project/${index}</loc>
-    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <loc>${SITE_URL}/project/${encodeURIComponent(id)}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>`;
         });
 
