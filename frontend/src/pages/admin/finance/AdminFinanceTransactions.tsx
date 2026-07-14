@@ -63,6 +63,9 @@ export default function AdminFinanceTransactions() {
     const [marketingPercent, setMarketingPercent] = useState(25);
     const [devPercent, setDevPercent] = useState(35);
 
+    // Temporary state to hold amount inputs while editing to prevent cursor jumps and rounding feedback loops
+    const [activeTempAmount, setActiveTempAmount] = useState<{ field: string; value: string } | null>(null);
+
     // Miscellaneous Expense inside Income Modal State
     const [miscExpenseAmount, setMiscExpenseAmount] = useState(0);
     const [miscExpenseDescription, setMiscExpenseDescription] = useState('Tea/coffee & bus fare');
@@ -115,6 +118,7 @@ export default function AdminFinanceTransactions() {
     const OTP_EMAILS = [
         { label: 'Adnan Shahria (adnanshahria2019@gmail.com)', value: 'adnanshahria2019@gmail.com' },
         { label: 'Abdur Rafiu (abdurrafiu7@gmail.com)', value: 'abdurrafiu7@gmail.com' },
+        { label: 'Nisar (nisarfeni2015@gmail.com)', value: 'nisarfeni2015@gmail.com' },
     ];
 
     /** Clears the finance token from state + localStorage and re-opens the OTP modal. */
@@ -1358,8 +1362,14 @@ export default function AdminFinanceTransactions() {
                                                             <span className="text-muted-foreground flex items-center gap-1">🏢 Company Funding:</span>
                                                             <div className="flex items-center gap-1">
                                                                 <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                <input type="number" min="0" value={companyFundingShare}
-                                                                    onChange={e => handleSplitChange('company', 'amount', parseFloat(e.target.value) || 0)}
+                                                                <input type="number" min="0" 
+                                                                    value={activeTempAmount?.field === 'company' ? activeTempAmount.value : (companyFundingShare || '')}
+                                                                    onFocus={e => setActiveTempAmount({ field: 'company', value: e.target.value })}
+                                                                    onChange={e => {
+                                                                        setActiveTempAmount({ field: 'company', value: e.target.value });
+                                                                        handleSplitChange('company', 'amount', parseFloat(e.target.value) || 0);
+                                                                    }}
+                                                                    onBlur={() => setActiveTempAmount(null)}
                                                                     className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
                                                             </div>
                                                         </div>
@@ -1382,8 +1392,14 @@ export default function AdminFinanceTransactions() {
                                                             <span className="text-muted-foreground flex items-center gap-1">💼 Broker Allowance:</span>
                                                             <div className="flex items-center gap-1">
                                                                 <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                <input type="number" min="0" value={brokerShare}
-                                                                    onChange={e => handleSplitChange('broker', 'amount', parseFloat(e.target.value) || 0)}
+                                                                <input type="number" min="0" 
+                                                                    value={activeTempAmount?.field === 'broker' ? activeTempAmount.value : (brokerShare || '')}
+                                                                    onFocus={e => setActiveTempAmount({ field: 'broker', value: e.target.value })}
+                                                                    onChange={e => {
+                                                                        setActiveTempAmount({ field: 'broker', value: e.target.value });
+                                                                        handleSplitChange('broker', 'amount', parseFloat(e.target.value) || 0);
+                                                                    }}
+                                                                    onBlur={() => setActiveTempAmount(null)}
                                                                     className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
                                                             </div>
                                                         </div>
@@ -1406,8 +1422,14 @@ export default function AdminFinanceTransactions() {
                                                             <span className="text-muted-foreground flex items-center gap-1">📢 Marketing Share:</span>
                                                             <div className="flex items-center gap-1">
                                                                 <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                <input type="number" min="0" value={marketingShare}
-                                                                    onChange={e => handleSplitChange('marketing', 'amount', parseFloat(e.target.value) || 0)}
+                                                                <input type="number" min="0" 
+                                                                    value={activeTempAmount?.field === 'marketing' ? activeTempAmount.value : (marketingShare || '')}
+                                                                    onFocus={e => setActiveTempAmount({ field: 'marketing', value: e.target.value })}
+                                                                    onChange={e => {
+                                                                        setActiveTempAmount({ field: 'marketing', value: e.target.value });
+                                                                        handleSplitChange('marketing', 'amount', parseFloat(e.target.value) || 0);
+                                                                    }}
+                                                                    onBlur={() => setActiveTempAmount(null)}
                                                                     className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
                                                             </div>
                                                         </div>
@@ -1430,8 +1452,14 @@ export default function AdminFinanceTransactions() {
                                                             <span className="text-muted-foreground flex items-center gap-1">🛠️ Development Share:</span>
                                                             <div className="flex items-center gap-1">
                                                                 <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                <input type="number" min="0" value={devShare}
-                                                                    onChange={e => handleSplitChange('dev', 'amount', parseFloat(e.target.value) || 0)}
+                                                                <input type="number" min="0" 
+                                                                    value={activeTempAmount?.field === 'dev' ? activeTempAmount.value : (devShare || '')}
+                                                                    onFocus={e => setActiveTempAmount({ field: 'dev', value: e.target.value })}
+                                                                    onChange={e => {
+                                                                        setActiveTempAmount({ field: 'dev', value: e.target.value });
+                                                                        handleSplitChange('dev', 'amount', parseFloat(e.target.value) || 0);
+                                                                    }}
+                                                                    onBlur={() => setActiveTempAmount(null)}
                                                                     className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
                                                             </div>
                                                         </div>
