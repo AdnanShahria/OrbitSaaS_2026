@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-import { X } from 'lucide-react';
+import { X, MessageCircle } from 'lucide-react';
 import { useChatContext } from '../ChatContext';
+import { useDevicePerformance } from '@/hooks/use-performance';
 
 export function ChatToggleButton() {
   const { open, setOpen } = useChatContext();
+  const { isLowEnd } = useDevicePerformance();
 
   return (
     <motion.button
@@ -14,14 +16,17 @@ export function ChatToggleButton() {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={() => setOpen(!open)}
-      className={`fixed bottom-[6dvh] md:bottom-4 right-4 sm:right-6 z-[200] flex items-center justify-center cursor-pointer transition-all duration-300 ${open
-        ? 'w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary text-primary-foreground shadow-xl hidden md:flex'
-        : 'w-16 h-16 sm:w-[88px] sm:h-[88px] bg-transparent'
-        }`}
+      className={`fixed bottom-[6dvh] md:bottom-4 right-4 sm:right-6 z-[200] flex items-center justify-center cursor-pointer transition-all duration-300 ${
+        open || isLowEnd
+          ? 'w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-xl' + (open ? ' hidden md:flex' : '')
+          : 'w-16 h-16 sm:w-[88px] sm:h-[88px] bg-transparent'
+      }`}
       style={{ willChange: 'opacity' }}
     >
       {open ? (
         <X className="w-5 h-5" />
+      ) : isLowEnd ? (
+        <MessageCircle className="w-6 h-6" />
       ) : (
         <div className="chatbot-float-icon relative w-full h-full flex items-center justify-center">
           <DotLottieReact

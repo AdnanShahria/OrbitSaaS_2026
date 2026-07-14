@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Float, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { useReducedMotion } from 'framer-motion';
+import { useDevicePerformance } from '@/hooks/use-performance';
 
 /*  ═══════════════════════════════════════════════════════════
     HERO 3D VISUAL — Glassmorphic 3D Glove
@@ -15,6 +16,7 @@ import { useReducedMotion } from 'framer-motion';
 export function Hero3DVisual() {
   const groupRef = useRef<any>(null);
   const prefersReducedMotion = useReducedMotion();
+  const { isLowEnd } = useDevicePerformance();
   const startTime = useRef(Date.now());
 
   // Geometries for the glove parts
@@ -27,24 +29,36 @@ export function Hero3DVisual() {
   const pinkyGeometry = useMemo(() => new THREE.CapsuleGeometry(0.25, 1.1, 16, 16), []);
 
   // Shared glass material
-  const glassMaterial = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: "#312e81",
-    transmission: 0.92,
-    thickness: 3,
-    roughness: 0.03,
-    clearcoat: 1,
-    clearcoatRoughness: 0.05,
-    ior: 2.4,
-    envMapIntensity: 2.5,
-    iridescence: 0.8,
-    iridescenceIOR: 1.3,
-    iridescenceThicknessRange: [100, 800],
-    specularIntensity: 1,
-    specularColor: new THREE.Color('#6366f1'),
-    transparent: true,
-    side: THREE.DoubleSide,
-    toneMapped: false
-  }), []);
+  const glassMaterial = useMemo(() => {
+    if (isLowEnd) {
+      return new THREE.MeshStandardMaterial({
+        color: "#312e81",
+        metalness: 0.8,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 0.7,
+        side: THREE.DoubleSide
+      });
+    }
+    return new THREE.MeshPhysicalMaterial({
+      color: "#312e81",
+      transmission: 0.92,
+      thickness: 3,
+      roughness: 0.03,
+      clearcoat: 1,
+      clearcoatRoughness: 0.05,
+      ior: 2.4,
+      envMapIntensity: 2.5,
+      iridescence: 0.8,
+      iridescenceIOR: 1.3,
+      iridescenceThicknessRange: [100, 800],
+      specularIntensity: 1,
+      specularColor: new THREE.Color('#6366f1'),
+      transparent: true,
+      side: THREE.DoubleSide,
+      toneMapped: false
+    });
+  }, [isLowEnd]);
 
   // Inner core material to give the palm depth
   const coreMaterial = useMemo(() => new THREE.MeshBasicMaterial({

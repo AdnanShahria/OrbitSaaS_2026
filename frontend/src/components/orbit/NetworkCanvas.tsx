@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { useReducedMotion } from 'framer-motion';
+import { useDevicePerformance } from '@/hooks/use-performance';
 
 export function NetworkCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const prefersReducedMotion = useReducedMotion();
+  const { isLowEnd, maxDpr } = useDevicePerformance();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -14,12 +16,19 @@ export function NetworkCanvas() {
 
     let animationFrameId: number;
     let particles: Particle[] = [];
+    let logicalWidth = 0;
+    let logicalHeight = 0;
 
     const resize = () => {
       const parent = canvas.parentElement;
       if (parent) {
-        canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight;
+        logicalWidth = parent.clientWidth;
+        logicalHeight = parent.clientHeight;
+        canvas.width = logicalWidth * maxDpr;
+        canvas.height = logicalHeight * maxDpr;
+        canvas.style.width = `${logicalWidth}px`;
+        canvas.style.height = `${logicalHeight}px`;
+        ctx.scale(maxDpr, maxDpr);
       }
     };
     
@@ -62,21 +71,21 @@ export function NetworkCanvas() {
       resize();
       particles = [];
       // Adjust density based on container size
-      const particleCount = Math.floor((canvas.width * canvas.height) / 10000);
+      const particleCount = Math.floor((logicalWidth * logicalHeight) / 10000);
       // Cap particles to ensure performance
-      const maxParticles = Math.min(particleCount, 120);
+      const maxParticles = Math.min(particleCount, isLowEnd ? 40 : 120);
       for (let i = 0; i < maxParticles; i++) {
-        particles.push(new Particle(canvas.width, canvas.height));
+        particles.push(new Particle(logicalWidth, logicalHeight));
       }
     };
 
     const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, logicalWidth, logicalHeight);
       
       // Update particles
-      particles.forEach(p => {
-        p.update(canvas.width, canvas.height);
-      });
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update(logicalWidth, logicalHeight);
+      }
 
       // Draw connections first (so they are behind the nodes)
       for (let i = 0; i < particles.length; i++) {
@@ -100,7 +109,9 @@ export function NetworkCanvas() {
       }
 
       // Draw nodes on top
-      particles.forEach(p => p.draw(ctx));
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].draw(ctx);
+      }
 
       animationFrameId = requestAnimationFrame(animate);
     };
@@ -114,7 +125,7 @@ export function NetworkCanvas() {
       window.removeEventListener('resize', init);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, isLowEnd, maxDpr]);
 
   return (
     <canvas 

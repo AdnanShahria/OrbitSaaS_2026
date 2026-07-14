@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useContent } from '@/contexts/ContentContext';
 import { useLang } from '@/contexts/LanguageContext';
+import { useDevicePerformance } from '@/hooks/use-performance';
 import { ArrowRight, Mail, MapPin, ExternalLink, Globe2, Facebook, Instagram, Linkedin, Send, Twitter, Youtube, Github, MessageCircle } from 'lucide-react';
 
 import DOMPurify from 'dompurify';
@@ -19,13 +20,10 @@ const COLORS = ['#f59e0b', '#d97706', '#fbbf24', '#f97316', '#ef4444'];
 const ContactBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [isMobile] = React.useState(() =>
-    typeof window !== 'undefined' &&
-    (window.matchMedia('(hover: none) and (pointer: coarse)').matches || window.innerWidth < 768)
-  );
+  const { isLowEnd, maxDpr } = useDevicePerformance();
 
   useEffect(() => {
-    if (isMobile) return;
+    if (isLowEnd) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -45,8 +43,9 @@ const ContactBackground = () => {
     const resize = () => {
       W = canvas.offsetWidth;
       H = canvas.offsetHeight;
-      canvas.width = W;
-      canvas.height = H;
+      canvas.width = W * maxDpr;
+      canvas.height = H * maxDpr;
+      ctx.scale(maxDpr, maxDpr);
     };
     resize();
     window.addEventListener('resize', resize);
@@ -548,9 +547,9 @@ const ContactBackground = () => {
       cancelAnimationFrame(animationFrameId);
       observer.disconnect();
     };
-  }, [isMobile]);
+  }, [isLowEnd, maxDpr]);
 
-  if (isMobile) return null;
+  if (isLowEnd) return null;
 
   return (
     <canvas
