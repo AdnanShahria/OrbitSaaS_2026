@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { RichText } from '@/components/ui/RichText';
 import { WaveDivider } from '@/components/ui/WaveDivider';
+import { useDevicePerformance } from '@/hooks/use-performance';
 
 
 const ICONS = [BarChart3, Layers, TrendingUp, Brain];
@@ -147,6 +148,7 @@ const ROIVisual = () => (
 const ScalabilityVisual = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { isLowEnd, maxDpr } = useDevicePerformance();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -167,7 +169,7 @@ const ScalabilityVisual = () => {
     observer.observe(container);
 
     // High DPI scaling
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = maxDpr;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
@@ -200,7 +202,8 @@ const ScalabilityVisual = () => {
     ];
 
     const particles: any[] = [];
-    for (let i = 0; i < 24; i++) {
+    const particleCount = isLowEnd ? 4 : 24;
+    for (let i = 0; i < particleCount; i++) {
         const conn = connections[Math.floor(Math.random() * connections.length)];
         particles.push({
             conn,
@@ -336,13 +339,15 @@ const ScalabilityVisual = () => {
       });
 
       // 4. Scanning line effect for "sharpened" feel
-      const scanY = (time * 40) % 200;
-      const scanGrad = ctx.createLinearGradient(0, scanY - 10, 0, scanY + 10);
-      scanGrad.addColorStop(0, 'transparent');
-      scanGrad.addColorStop(0.5, 'rgba(212, 160, 23, 0.08)');
-      scanGrad.addColorStop(1, 'transparent');
-      ctx.fillStyle = scanGrad;
-      ctx.fillRect(0, scanY - 10, 200, 20);
+      if (!isLowEnd) {
+        const scanY = (time * 40) % 200;
+        const scanGrad = ctx.createLinearGradient(0, scanY - 10, 0, scanY + 10);
+        scanGrad.addColorStop(0, 'transparent');
+        scanGrad.addColorStop(0.5, 'rgba(212, 160, 23, 0.08)');
+        scanGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = scanGrad;
+        ctx.fillRect(0, scanY - 10, 200, 20);
+      }
 
       animationFrameId = requestAnimationFrame(render);
     };
@@ -352,7 +357,7 @@ const ScalabilityVisual = () => {
       cancelAnimationFrame(animationFrameId);
       observer.disconnect();
     };
-  }, []);
+  }, [isLowEnd, maxDpr]);
 
 
   return (
@@ -498,6 +503,7 @@ const WORLD_MAP = [
 const GlobalVisual = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { isLowEnd, maxDpr } = useDevicePerformance();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -517,6 +523,14 @@ const GlobalVisual = () => {
     );
     observer.observe(container);
 
+    // High DPI scaling
+    const dpr = maxDpr;
+    canvas.width = 200 * dpr;
+    canvas.height = 200 * dpr;
+    ctx.scale(dpr, dpr);
+    canvas.style.width = '200px';
+    canvas.style.height = '200px';
+
     const rows = WORLD_MAP.length;
     const cols = WORLD_MAP[0].length;
     const spacing = 4;
@@ -527,9 +541,9 @@ const GlobalVisual = () => {
         animationFrameId = requestAnimationFrame(render);
         return;
       }
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
+      ctx.clearRect(0, 0, 200, 200);
+      const centerX = 100;
+      const centerY = 100;
       const radius = 60;
 
       // ── 1. Sphere Base Shading ──
@@ -591,53 +605,55 @@ const GlobalVisual = () => {
       ctx.restore();
 
       // ── 3. Connection Arcs ──
-      const time = Date.now() / 1000;
-      const arcs = [
-        { start: { x: centerX - 30, y: centerY }, end: { x: centerX + 30, y: centerY - 20 }, phase: 0 },
-        { start: { x: centerX - 20, y: centerY + 20 }, end: { x: centerX + 20, y: centerY + 25 }, phase: 2 },
-        { start: { x: centerX - 10, y: centerY - 30 }, end: { x: centerX + 5, y: centerY + 30 }, phase: 4 },
-      ];
+      if (!isLowEnd) {
+        const time = Date.now() / 1000;
+        const arcs = [
+          { start: { x: centerX - 30, y: centerY }, end: { x: centerX + 30, y: centerY - 20 }, phase: 0 },
+          { start: { x: centerX - 20, y: centerY + 20 }, end: { x: centerX + 20, y: centerY + 25 }, phase: 2 },
+          { start: { x: centerX - 10, y: centerY - 30 }, end: { x: centerX + 5, y: centerY + 30 }, phase: 4 },
+        ];
 
-      arcs.forEach((arc) => {
-        const progress = (time + arc.phase) % 4 / 4;
-        const cpX = (arc.start.x + arc.end.x) / 2;
-        const cpY = Math.min(arc.start.y, arc.end.y) - 30;
-        
-        ctx.beginPath();
-        ctx.moveTo(arc.start.x, arc.start.y);
-        ctx.quadraticCurveTo(cpX, cpY, arc.end.x, arc.end.y);
-        
-        const arcGrad = ctx.createLinearGradient(arc.start.x, arc.start.y, arc.end.x, arc.end.y);
-        arcGrad.addColorStop(0, 'rgba(212,160,23,0)');
-        arcGrad.addColorStop(progress, 'rgba(212,160,23,0.4)');
-        arcGrad.addColorStop(Math.min(progress + 0.1, 1), 'rgba(212,160,23,0)');
-        
-        ctx.strokeStyle = arcGrad;
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        arcs.forEach((arc) => {
+          const progress = (time + arc.phase) % 4 / 4;
+          const cpX = (arc.start.x + arc.end.x) / 2;
+          const cpY = Math.min(arc.start.y, arc.end.y) - 30;
+          
+          ctx.beginPath();
+          ctx.moveTo(arc.start.x, arc.start.y);
+          ctx.quadraticCurveTo(cpX, cpY, arc.end.x, arc.end.y);
+          
+          const arcGrad = ctx.createLinearGradient(arc.start.x, arc.start.y, arc.end.x, arc.end.y);
+          arcGrad.addColorStop(0, 'rgba(212,160,23,0)');
+          arcGrad.addColorStop(progress, 'rgba(212,160,23,0.4)');
+          arcGrad.addColorStop(Math.min(progress + 0.1, 1), 'rgba(212,160,23,0)');
+          
+          ctx.strokeStyle = arcGrad;
+          ctx.lineWidth = 1;
+          ctx.stroke();
 
-        // Data particle
-        const t = progress;
-        const px = (1 - t) * (1 - t) * arc.start.x + 2 * (1 - t) * t * cpX + t * t * arc.end.x;
-        const py = (1 - t) * (1 - t) * arc.start.y + 2 * (1 - t) * t * cpY + t * t * arc.end.y;
-        
+          // Data particle
+          const t = progress;
+          const px = (1 - t) * (1 - t) * arc.start.x + 2 * (1 - t) * t * cpX + t * t * arc.end.x;
+          const py = (1 - t) * (1 - t) * arc.start.y + 2 * (1 - t) * t * cpY + t * t * arc.end.y;
+          
+          ctx.beginPath();
+          ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff';
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = 'rgba(212, 160, 23, 0.8)';
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        });
+
+        // ── 4. Fresnel Glow ──
         ctx.beginPath();
-        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff';
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = 'rgba(212, 160, 23, 0.8)';
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        const fresnel = ctx.createRadialGradient(centerX, centerY, radius * 0.8, centerX, centerY, radius);
+        fresnel.addColorStop(0, 'rgba(212,160,23,0)');
+        fresnel.addColorStop(1, 'rgba(212,160,23,0.3)');
+        ctx.fillStyle = fresnel;
         ctx.fill();
-        ctx.shadowBlur = 0;
-      });
-
-      // ── 4. Fresnel Glow ──
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      const fresnel = ctx.createRadialGradient(centerX, centerY, radius * 0.8, centerX, centerY, radius);
-      fresnel.addColorStop(0, 'rgba(212,160,23,0)');
-      fresnel.addColorStop(1, 'rgba(212,160,23,0.3)');
-      ctx.fillStyle = fresnel;
-      ctx.fill();
+      }
 
       // Border shine
       ctx.strokeStyle = 'rgba(255,255,255,0.1)';
@@ -652,7 +668,7 @@ const GlobalVisual = () => {
       cancelAnimationFrame(animationFrameId);
       observer.disconnect();
     };
-  }, []);
+  }, [isLowEnd]);
 
 
   return (

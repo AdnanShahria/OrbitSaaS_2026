@@ -4,9 +4,10 @@ import { useLang } from '@/contexts/LanguageContext';
 import { useState, useEffect, useRef, useMemo, forwardRef } from 'react';
 import { Sparkles, Search, PenTool, Code, CheckCircle2, Truck } from 'lucide-react';
 import { WaveDivider } from '@/components/ui/WaveDivider';
+import { useDevicePerformance } from '@/hooks/use-performance';
 
 
-const ProcessCard = forwardRef<HTMLDivElement, any>(({ card, icon: Icon, isPeak, node, isDelivery }, ref) => {
+const ProcessCard = forwardRef<HTMLDivElement, any>(({ card, icon: Icon, isPeak, node, isDelivery, isLowEnd }, ref) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -17,6 +18,7 @@ const ProcessCard = forwardRef<HTMLDivElement, any>(({ card, icon: Icon, isPeak,
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isLowEnd) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
@@ -29,6 +31,7 @@ const ProcessCard = forwardRef<HTMLDivElement, any>(({ card, icon: Icon, isPeak,
   };
 
   const handleMouseLeave = () => {
+    if (isLowEnd) return;
     x.set(0);
     y.set(0);
   };
@@ -85,7 +88,7 @@ const ProcessCard = forwardRef<HTMLDivElement, any>(({ card, icon: Icon, isPeak,
       <motion.div
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+        style={isLowEnd ? {} : { rotateX, rotateY, transformStyle: "preserve-3d" }}
         className="relative group p-[1px] rounded-[1.5rem] bg-gradient-to-br from-[#00ff80]/40 via-white/5 to-transparent hover:from-[#00ff80] transition-all duration-500 overflow-hidden shadow-[0_0_30px_rgba(0,255,128,0.1)] hover:shadow-[0_0_50px_rgba(0,255,128,0.2)]"
       >
         <div className="relative bg-[#05100a]/90 backdrop-blur-3xl rounded-[1.45rem] p-5 overflow-hidden border border-white/5">
@@ -178,6 +181,8 @@ export function ProcessSection() {
       String(a.id).localeCompare(String(b.id), undefined, { numeric: true })
     );
   }, [t?.steps]);
+
+  const { isLowEnd } = useDevicePerformance();
 
   const sectionRef = useRef<HTMLDivElement>(null);
   const stepRef = useRef(0);
@@ -365,7 +370,7 @@ export function ProcessSection() {
               </defs>
               <motion.path
                 d="M0,200 C40,200 50,176 100,176 C200,176 200,224 300,224 C400,224 400,176 500,176 C600,176 600,224 700,224"
-                fill="none" stroke="#00ff80" strokeWidth="3.5" filter="url(#glow)"
+                fill="none" stroke="#00ff80" strokeWidth="3.5" filter={isLowEnd ? undefined : "url(#glow)"}
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: hasMounted ? ([0, 0.145, 0.43, 0.715, 1.0, 1.0][step] || 0) : 0 }}
                 transition={{ duration: 0.8, ease: "easeInOut" }}
@@ -383,7 +388,7 @@ export function ProcessSection() {
                   <motion.circle
                     r="3"
                     fill="#ffffff"
-                    filter="url(#lightningGlow)"
+                    filter={isLowEnd ? undefined : "url(#lightningGlow)"}
                     opacity={0.9}
                   >
                     <animateMotion
@@ -399,7 +404,7 @@ export function ProcessSection() {
                   <motion.circle
                     r="6"
                     fill="#00ff80"
-                    filter="url(#lightningGlow)"
+                    filter={isLowEnd ? undefined : "url(#lightningGlow)"}
                     opacity={0.3}
                   >
                     <animateMotion
@@ -427,7 +432,7 @@ export function ProcessSection() {
                     <motion.path
                       d="M700,224 C740,224 760,210 790,200"
                       fill="none" stroke="#FFD700" strokeWidth="6" strokeLinecap="round"
-                      filter="url(#goldGlow)"
+                      filter={isLowEnd ? undefined : "url(#goldGlow)"}
                       initial={{ pathLength: 0, opacity: 0 }}
                       animate={{ pathLength: 1, opacity: [0.04, 0.1, 0.04] }}
                       transition={{
@@ -516,6 +521,7 @@ export function ProcessSection() {
                   isPeak={isPeak}
                   node={node}
                   isDelivery={cardIdx === 4}
+                  isLowEnd={isLowEnd}
                 />
               );
             })}
