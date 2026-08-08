@@ -325,9 +325,9 @@ export default function AdminFinanceTransactions() {
                     payload.misc_amount = miscExpenseAmount;
                     payload.misc_description = miscExpenseDescription;
 
-                    // Subtract misc directly from the parent income amount
+                    // Full income amount is retained for the parent transaction, while net split pool is distributed
+                    payload.amount = form.amount;
                     const netIncomeAmount = Math.max(0, form.amount - miscExpenseAmount);
-                    payload.amount = netIncomeAmount;
 
                     const companyAmt = Math.round((netIncomeAmount * companyFundingPercent) / 100);
                     const brokerAmt = Math.round((netIncomeAmount * brokerPercent) / 100);
@@ -446,38 +446,26 @@ export default function AdminFinanceTransactions() {
         } catch { toast.error('Error'); }
     };
 
-    // Typable Money Input Split Logic & Auto-balancer of 4th Field
+    // Manual Split Change Logic (Auto percentage system turned off)
     const handleSplitChange = (field: 'company' | 'broker' | 'marketing' | 'dev', key: 'percent' | 'amount', value: number) => {
-        const totalAmt = form.amount || 0;
-        if (totalAmt <= 0) {
-            toast.error('Please enter transaction amount first!');
-            return;
-        }
+        const netAmt = Math.max(0, (form.amount || 0) - miscExpenseAmount);
 
         let targetPct = 0;
         if (key === 'percent') {
             targetPct = Math.min(100, Math.max(0, value));
         } else {
-            targetPct = Math.min(100, Math.max(0, Math.round((value / totalAmt) * 100)));
+            if (netAmt <= 0) {
+                toast.error('Please enter valid transaction amount first!');
+                return;
+            }
+            targetPct = Math.min(100, Math.max(0, Math.round((value / netAmt) * 100)));
         }
 
-        if (field === 'company') {
-            setCompanyFundingPercent(targetPct);
-            const sum = targetPct + brokerPercent + marketingPercent;
-            setDevPercent(Math.max(0, Math.min(100, 100 - sum)));
-        } else if (field === 'broker') {
-            setBrokerPercent(targetPct);
-            const sum = companyFundingPercent + targetPct + marketingPercent;
-            setDevPercent(Math.max(0, Math.min(100, 100 - sum)));
-        } else if (field === 'marketing') {
-            setMarketingPercent(targetPct);
-            const sum = companyFundingPercent + brokerPercent + targetPct;
-            setDevPercent(Math.max(0, Math.min(100, 100 - sum)));
-        } else if (field === 'dev') {
-            setDevPercent(targetPct);
-            const sum = brokerPercent + marketingPercent + targetPct;
-            setCompanyFundingPercent(Math.max(0, Math.min(100, 100 - sum)));
-        }
+        // Each slider/input updates independently (auto-balancing turned off)
+        if (field === 'company') setCompanyFundingPercent(targetPct);
+        else if (field === 'broker') setBrokerPercent(targetPct);
+        else if (field === 'marketing') setMarketingPercent(targetPct);
+        else if (field === 'dev') setDevPercent(targetPct);
     };
 
     const handleAutoBalance = () => {
@@ -676,12 +664,29 @@ export default function AdminFinanceTransactions() {
     const totalPages = Math.ceil(total / 30);
     const typeInfo = (type: string) => TYPES.find(t => t.value === type) || { label: type, color: 'text-muted-foreground', bg: 'bg-secondary' };
 
-    // Live split calculations
+    // Live split calculations (miscellaneous expense counted during calculation)
+    const netIncomeAmount = Math.max(0, (form.amount || 0) - miscExpenseAmount);
     const totalSplitPercent = companyFundingPercent + brokerPercent + marketingPercent + devPercent;
-    const companyFundingShare = Math.round((form.amount * companyFundingPercent) / 100);
-    const brokerShare = Math.round((form.amount * brokerPercent) / 100);
-    const marketingShare = Math.round((form.amount * marketingPercent) / 100);
-    const devShare = Math.round((form.amount * devPercent) / 100);
+    const companyFundingShare = Math.round((netIncomeAmount * companyFundingPercent) / 100);
+    const brokerShare = Math.round((netIncomeAmount * brokerPercent) / 100);
+    const marketingShare = Math.round((netIncomeAmount * marketingPercent) / 100);
+    const devShare = Math.round((netIncomeAmount * devPercent) / 100);
+    const totalAllocatedAmount = companyFundingShare + brokerShare + marketingShare + devShare + miscExpenseAmount;
+
+    // Disabled state for Save button when totals aren't properly calculated or percentages don't sum to 100%
+    const isSaveDisabled = useMemo(() => {
+        if (saving) return true;
+        if (!form.description || !form.amount || form.amount <= 0) return true;
+        if (form.type !== 'distribution' && !form.category) return true;
+        if (form.type === 'distribution' && !form.recipient) return true;
+
+        if (form.type === 'income' && !editTx) {
+            if (miscExpenseAmount < 0 || miscExpenseAmount > form.amount) return true;
+            if (totalSplitPercent !== 100) return true;
+        }
+
+        return false;
+    }, [saving, form, editTx, miscExpenseAmount, totalSplitPercent]);
 
     return (
         <div className="space-y-6 relative">
@@ -1348,11 +1353,26 @@ export default function AdminFinanceTransactions() {
                                             <div className="bg-secondary/40 border border-primary/20 rounded-xl p-4 space-y-4">
                                                 <div className="flex items-center justify-between border-b border-border/80 pb-2">
                                                     <span className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1">
-                                                        <Share2 className="w-3.5 h-3.5 text-primary" /> Live Distribution Split (Automatic)
+                                                        <Share2 className="w-3.5 h-3.5 text-primary" /> Live Distribution Split (Manual)
                                                     </span>
-                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${totalSplitPercent === 100 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${totalSplitPercent === 100 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'}`}>
                                                         Total: {totalSplitPercent}%
                                                     </span>
+                                                </div>
+
+                                                {/* Live Calculation Summary & Miscellaneous Counting Display */}
+                                                <div className="bg-background/60 border border-border/70 rounded-xl p-3 space-y-2">
+                                                    <div className="flex flex-wrap items-center justify-between text-xs gap-2">
+                                                        <span className="text-muted-foreground">Total Income: <strong className="text-foreground">{formatCurrency(form.amount || 0, form.currency)}</strong></span>
+                                                        <span className="text-muted-foreground">Misc Expense: <strong className="text-amber-400">-{formatCurrency(miscExpenseAmount || 0, form.currency)}</strong></span>
+                                                        <span className="text-muted-foreground">Net Split Pool: <strong className="text-emerald-400">{formatCurrency(netIncomeAmount, form.currency)}</strong></span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between pt-1.5 border-t border-border/40 text-xs">
+                                                        <span className="text-muted-foreground font-medium">Counted Total (Misc + 4 Splits):</span>
+                                                        <span className={`font-bold font-mono ${totalSplitPercent === 100 && miscExpenseAmount <= (form.amount || 0) ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                            {formatCurrency(totalAllocatedAmount, form.currency)} / {formatCurrency(form.amount || 0, form.currency)}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 <div className="space-y-4">
@@ -1488,9 +1508,14 @@ export default function AdminFinanceTransactions() {
                                                     </button>
                                                 </div>
                                                 {totalSplitPercent !== 100 && (
-                                                    <p className="text-[10px] text-amber-400 font-medium animate-pulse text-center">
-                                                        ⚠️ Warning: Sum is {totalSplitPercent}%. It is highly recommended to balance to 100%.
-                                                    </p>
+                                                    <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium text-center space-y-1">
+                                                        <p className="font-bold flex items-center justify-center gap-1">
+                                                            ⚠️ Manual Adjustment Needed (Sum is {totalSplitPercent}%)
+                                                        </p>
+                                                        <p className="text-[11px] text-amber-400/80">
+                                                            The split percentages must equal 100% before you can save. The save button is grayed out until total is 100%.
+                                                        </p>
+                                                    </div>
                                                 )}
 
                                                 {/* ☕ Miscellaneous Expense Input Inside Income Modal */}
@@ -1512,7 +1537,7 @@ export default function AdminFinanceTransactions() {
                                                     </div>
                                                     {miscExpenseAmount > 0 && (
                                                         <p className="text-[9px] text-muted-foreground leading-normal mt-1">
-                                                            💡 <strong>{formatCurrency(miscExpenseAmount, form.currency)}</strong> will be subtracted from the income total. The net split amount will be <strong>{formatCurrency(form.amount - miscExpenseAmount, form.currency)}</strong>. A linked operational expense of type <strong>expense</strong> will be created in Company Funding!
+                                                            💡 <strong>{formatCurrency(miscExpenseAmount, form.currency)}</strong> will be subtracted from the income total. The net split amount will be <strong>{formatCurrency(netIncomeAmount, form.currency)}</strong>. A linked operational expense will be created in Company Funding!
                                                         </p>
                                                     )}
                                                 </div>
@@ -1615,8 +1640,15 @@ export default function AdminFinanceTransactions() {
                             {/* Actions */}
                             <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-border">
                                 <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
-                                <button onClick={handleSave} disabled={saving}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 text-sm font-semibold disabled:opacity-50 shadow-lg shadow-emerald-500/20">
+                                <button 
+                                    onClick={handleSave} 
+                                    disabled={isSaveDisabled}
+                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                        isSaveDisabled 
+                                            ? 'bg-gray-700/60 text-gray-400 border border-gray-600/50 cursor-not-allowed shadow-none opacity-50' 
+                                            : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 cursor-pointer'
+                                    }`}
+                                >
                                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                     {editTx ? 'Update Mutation' : 'Authorize Mutation'}
                                 </button>
