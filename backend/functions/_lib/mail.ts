@@ -9,6 +9,18 @@ interface MailOptions {
     fromName?: string;
 }
 
+function encodeBase64(str: string): string {
+    if (typeof Buffer !== 'undefined') {
+        return Buffer.from(str, 'utf-8').toString('base64');
+    }
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
 export async function sendMail(env: Env, options: MailOptions): Promise<boolean> {
     const { to, subject, text, html, fromName = 'ORBIT SaaS' } = options;
 
@@ -79,7 +91,7 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
                 },
                 body: JSON.stringify({
                     email: {
-                        html,
+                        html: encodeBase64(html),
                         text,
                         subject,
                         from: { name: fromName, email: 'contact@orbitsaas.cloud' },

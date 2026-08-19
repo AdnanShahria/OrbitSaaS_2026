@@ -10,26 +10,30 @@ const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
  * @param file The image file to upload
  * @param folder Optional virtual folder in R2 (e.g., 'projects/lifesolver')
  */
-export async function uploadImage(file: File, folder: string = 'uploads'): Promise<ImageUrl> {
-    // 1. Compress the file before uploading
-    const options = {
-        maxSizeMB: 0.15, // 150KB target
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
-        fileType: 'image/webp' // Convert everything to webp for maximum compression
-    };
-    
+export async function uploadImage(
+    file: File, 
+    folder: string = 'uploads',
+    skipCompression: boolean = false
+): Promise<ImageUrl> {
+    // 1. Compress the file before uploading (unless skipped)
     let fileToUpload = file;
-    try {
-        if (file.type.startsWith('image/')) {
+    if (!skipCompression && file.type.startsWith('image/')) {
+        const options = {
+            maxSizeMB: 0.15, // 150KB target
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+            fileType: 'image/webp' // Convert everything to webp for maximum compression
+        };
+        
+        try {
             const compressedBlob = await imageCompression(file, options);
             console.log(`[Image Optimizer] Compressed "${file.name}": ${(file.size / 1024 / 1024).toFixed(2)} MB -> ${(compressedBlob.size / 1024).toFixed(2)} KB`);
             fileToUpload = new File([compressedBlob], file.name.replace(/\.[^/.]+$/, ".webp"), {
                 type: 'image/webp',
             });
+        } catch (error) {
+            console.error('Image compression failed, uploading original:', error);
         }
-    } catch (error) {
-        console.error('Image compression failed, uploading original:', error);
     }
 
     // 2. Upload to Cloudflare R2 Backend (which also handles ImgBB sync)

@@ -25,9 +25,9 @@ async function run() {
         },
         body: JSON.stringify({
             email: {
-                html: 'test',
-                text: 'test',
-                subject: 'Test',
+                html: Buffer.from('<div style="background:#6c5ce7;padding:20px;color:white;border-radius:8px;font-family:sans-serif;"><h2>ORBIT SaaS Test</h2><p>This is styled HTML via SendPulse!</p></div>').toString('base64'),
+                text: 'This is fallback plain text',
+                subject: 'SendPulse Base64 HTML Test',
                 from: { name: 'Admin', email: 'contact@orbitsaas.cloud' },
                 to: [{ email: 'adnanshahria2019@gmail.com' }]
             }

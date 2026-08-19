@@ -10,11 +10,75 @@ import {
 } from 'lucide-react';
 import { uploadImage } from '@/lib/imageUpload';
 import imageCompression from 'browser-image-compression';
-import { getImageUrl, getFallbackUrl, serializeImageUrl, parseImageUrl } from '@/lib/imageUrl';
+import { getImageUrl, getFallbackUrl, serializeImageUrl, parseImageUrl, type ImageUrl } from '@/lib/imageUrl';
 
 // ─── Regex ────────────────────────────────────────────────────────────────────
 const BASE_URL_REGEX = `https?:\\/\\/[^\\s"'<>]+\\.(?:jpg|jpeg|png|webp|gif)(?:\\?[^\\s"'<>]+)?|https?:\\/\\/i\\.ibb\\.co\\/[^\\s"'<>]+`;
 const URL_REGEX = new RegExp(`(?:${BASE_URL_REGEX})(?:\\|\\|\\|(?:${BASE_URL_REGEX}))?`, 'g');
+
+// ─── Deep Object URL Replacement Helper ─────────────────────────────────────────
+function replaceImageUrlsInObject(data: any, replacements: Map<string, ImageUrl>): any {
+    if (data === null || data === undefined) return data;
+
+    // 1. Strings
+    if (typeof data === 'string') {
+        const trimmed = data.trim();
+        // Exact match with old key
+        if (replacements.has(trimmed)) {
+            return replacements.get(trimmed);
+        }
+        // Match parsed URL
+        const parsed = parseImageUrl(trimmed);
+        if (parsed) {
+            for (const [oldKey, newVal] of replacements.entries()) {
+                const oldParsed = parseImageUrl(oldKey);
+                if (oldParsed && (oldParsed.primary === parsed.primary || oldKey === trimmed)) {
+                    return newVal;
+                }
+            }
+        }
+        // If it's a long HTML/markdown text with embedded image URLs
+        if (data.includes('http')) {
+            let modified = data;
+            for (const [oldKey, newVal] of replacements.entries()) {
+                const oldPrimary = getImageUrl(oldKey);
+                const newPrimary = getImageUrl(newVal);
+                if (oldPrimary && newPrimary && modified.includes(oldPrimary)) {
+                    modified = modified.replaceAll(oldPrimary, newPrimary);
+                }
+            }
+            return modified;
+        }
+        return data;
+    }
+
+    // 2. Arrays
+    if (Array.isArray(data)) {
+        return data.map(item => replaceImageUrlsInObject(item, replacements));
+    }
+
+    // 3. Objects
+    if (typeof data === 'object') {
+        // If data is an ImageUrl object: { primary: "...", fallback?: "..." }
+        if (typeof data.primary === 'string') {
+            for (const [oldKey, newVal] of replacements.entries()) {
+                const oldParsed = parseImageUrl(oldKey);
+                if (oldParsed && (oldParsed.primary === data.primary || oldKey === data.primary)) {
+                    return newVal;
+                }
+            }
+        }
+
+        // Generic object traversal
+        const newObj: Record<string, any> = {};
+        for (const [k, v] of Object.entries(data)) {
+            newObj[k] = replaceImageUrlsInObject(v, replacements);
+        }
+        return newObj;
+    }
+
+    return data;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type StorageType = 'ImgBB' | 'R2' | 'Dual' | 'Unknown';
@@ -289,7 +353,7 @@ export default function AdminImageOptimizer() {
         setResults([]);
         const toastId = toast.loading('Backing up images to R2...');
         let successCount = 0, failCount = 0;
-        const urlReplacements = new Map<string, string>();
+        const urlReplacements = new Map<string, ImageUrl>();
         const localResults: typeof results = [];
 
         for (let i = 0; i < imagesToProcess.length; i++) {
@@ -303,7 +367,8 @@ export default function AdminImageOptimizer() {
                 const filename = primaryUrl.split('/').pop() || 'image.jpg';
                 const file = new File([blob], filename, { type: blob.type });
                 const folder = img.sections[0]?.section || 'uploads';
-                const newImageUrl = await uploadImage(file, folder);
+                // Pass skipCompression = true so existing images aren't re-compressed during backup
+                const newImageUrl = await uploadImage(file, folder, true);
                 const newUrlSerialized = serializeImageUrl(newImageUrl);
                 try {
                     const newPrimary = getImageUrl(newImageUrl);
@@ -311,7 +376,7 @@ export default function AdminImageOptimizer() {
                     const newSize = newRes.headers.get('content-length');
                     if (newSize) setNewImageSizes(prev => ({ ...prev, [img.url]: parseInt(newSize, 10) }));
                 } catch { /* ignore size fetch */ }
-                urlReplacements.set(img.url, newUrlSerialized);
+                urlReplacements.set(img.url, newImageUrl);
                 successCount++;
                 localResults.push({ url: img.url, newUrl: newUrlSerialized });
             } catch (err: any) {
@@ -328,19 +393,21 @@ export default function AdminImageOptimizer() {
             for (const img of discoveredImages) {
                 if (urlReplacements.has(img.url)) for (const s of img.sections) sectionsToUpdate.set(`${s.lang}-${s.section}`, s);
             }
+            let anySaveFailed = false;
             for (const s of Array.from(sectionsToUpdate.values())) {
                 const sectionData = content[s.lang as 'en' | 'bn']?.[s.section];
                 if (sectionData) {
-                    let jsonStr = JSON.stringify(sectionData);
-                    for (const [oldUrl, newUrlStr] of urlReplacements.entries()) {
-                        const escaped = oldUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        jsonStr = jsonStr.replace(new RegExp(escaped, 'g'), newUrlStr);
-                    }
-                    await updateSection(s.section, s.lang, JSON.parse(jsonStr));
+                    const updatedData = replaceImageUrlsInObject(sectionData, urlReplacements);
+                    const ok = await updateSection(s.section, s.lang, updatedData);
+                    if (!ok) anySaveFailed = true;
                 }
             }
             await refreshContent();
-            toast.success(`Done! ${successCount} backed up, ${failCount} failed.`, { id: toastId });
+            if (anySaveFailed) {
+                toast.error(`Images uploaded, but saving some sections to DB failed.`, { id: toastId });
+            } else {
+                toast.success(`Done! ${successCount} backed up & saved to database.`, { id: toastId });
+            }
         } else {
             toast.error('No images were successfully backed up.', { id: toastId });
         }
@@ -373,7 +440,8 @@ export default function AdminImageOptimizer() {
         const toastId = toast.loading('Uploading to Cloudflare R2...');
         try {
             const fileToUpload = new File([sandboxCompressedBlob], sandboxFile.name.replace(/\.[^/.]+$/, '.webp'), { type: 'image/webp' });
-            const newUrl = await uploadImage(fileToUpload, 'sandbox');
+            // Already compressed in handleSandboxCompress, so skip re-compression
+            const newUrl = await uploadImage(fileToUpload, 'sandbox', true);
             setSandboxResultUrl(newUrl);
             toast.success('Sandbox upload successful!', { id: toastId });
         } catch { toast.error('Sandbox upload failed.', { id: toastId }); }
