@@ -6,6 +6,7 @@ import { Users, Linkedin, Twitter, Mail, Instagram, Facebook, Github, Send } fro
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { WaveDivider } from '@/components/ui/WaveDivider';
 import { ensureAbsoluteUrl } from '@/lib/utils';
+import { getImageUrl, getFallbackUrl } from '@/lib/imageUrl';
 
 // ─── Custom SVG Icons for platforms not in lucide ───
 
@@ -239,10 +240,14 @@ export function LeadershipSection() {
                     <div className={`w-full h-full rounded-full overflow-hidden ring-4 ring-white shadow-xl transition-transform duration-500 ${isActive ? 'scale-105' : 'group-hover:scale-105'}`}>
                       {member.image || member.avatar ? (
                         <img
-                          src={member.image || member.avatar}
+                          src={getImageUrl(member.image || member.avatar)}
                           alt={member.name}
                           className={`w-full h-full object-cover transition-all duration-700 ${isActive ? 'grayscale-0 scale-110' : 'grayscale scale-100 group-hover:grayscale-0 group-hover:scale-110'}`}
                           loading="lazy"
+                          onError={(e) => {
+                            const fallback = getFallbackUrl(member.image || member.avatar);
+                            if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+                          }}
                         />
                       ) : (
                         <div

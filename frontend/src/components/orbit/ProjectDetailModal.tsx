@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ensureAbsoluteUrl } from '@/lib/utils';
 import { ImageWithSkeleton } from '@/components/orbit/ImageWithSkeleton';
 import { RichText } from '@/components/ui/RichText';
+import { getImageUrl, getFallbackUrl } from '@/lib/imageUrl';
 
 type MediaItem = { type: 'image'; url: string } | { type: 'video'; url: string };
 
@@ -114,7 +115,7 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                             <AnimatePresence initial={false} custom={direction}>
                                 <motion.img
                                     key={currentIndex}
-                                    src={currentMedia.url}
+                                    src={getImageUrl(currentMedia.url)}
                                     custom={direction}
                                     variants={variants}
                                     initial="enter"
@@ -131,6 +132,10 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                                     draggable="false"
                                     className="absolute inset-0 w-full h-full object-contain bg-black/5 touch-pan-y no-browser-trigger"
                                     alt={`${title} - slide ${currentIndex + 1}`}
+                                    onError={(e) => {
+                                        const fb = getFallbackUrl(currentMedia.url);
+                                        if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
+                                    }}
                                 />
                             </AnimatePresence>
                         )}
@@ -221,7 +226,7 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ duration: 0.3 }}
-                                src={currentMedia.url}
+                                src={getImageUrl(currentMedia.url)}
                                 alt="Fullscreen view"
                                 drag="x"
                                 dragConstraints={{ left: 0, right: 0 }}
@@ -230,6 +235,10 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                                 draggable="false"
                                 className="max-w-full max-h-full md:max-w-[85vw] md:max-h-[85vh] object-contain select-none shadow-2xl touch-pan-y no-browser-trigger"
                                 onClick={(e) => e.stopPropagation()}
+                                onError={(e) => {
+                                    const fb = getFallbackUrl(currentMedia.url);
+                                    if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
+                                }}
                             />
                         )}
 

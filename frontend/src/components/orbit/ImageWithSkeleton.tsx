@@ -1,35 +1,66 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
+import { parseImageUrl, type ImageUrl } from '@/lib/imageUrl';
 
 interface ImageWithSkeletonProps {
-    src: string;
+    src: ImageUrl | string;
     alt: string;
     className?: string;
     showSkeleton?: boolean;
+    priority?: boolean;
 }
 
-export function ImageWithSkeleton({ src, alt, className, showSkeleton = true }: ImageWithSkeletonProps) {
+export function ImageWithSkeleton({ src, alt, className, showSkeleton = true, priority = false }: ImageWithSkeletonProps) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
 
+    // Fallback logic for `R2|||IMGBB` format
+    const [urls, setUrls] = useState<string[]>([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    useEffect(() => {
+        if (!src) return;
+        const parsed = parseImageUrl(src as ImageUrl);
+        if (!parsed) { setUrls([]); return; }
+        const list = [parsed.primary, ...(parsed.fallback ? [parsed.fallback] : [])];
+        setUrls(list);
+        setCurrentIndex(0);
+        setIsLoaded(false);
+        setHasError(false);
+    }, [src]);
+
+    const currentSrc = urls[currentIndex] || '';
+    const primaryUrl = urls[0] || '';
+
+    const handleImageError = () => {
+        if (currentIndex < urls.length - 1) {
+            setCurrentIndex(prev => prev + 1);
+            setHasError(false);
+            setIsLoaded(false);
+        } else {
+            setIsLoaded(true);
+            setHasError(true);
+        }
+    };
+
     // Initial check for cached images
     useLayoutEffect(() => {
-        if (imgRef.current?.complete) {
+        if (imgRef.current?.complete && imgRef.current?.naturalHeight > 0) {
             setIsLoaded(true);
         }
-    }, []);
-
-    // Reset state when src changes
-    useEffect(() => {
-        if (imgRef.current?.src !== src) {
-            setIsLoaded(false);
-            setHasError(false);
-        }
-    }, [src]);
+    }, [currentSrc]);
 
     return (
         <div className={`relative w-full h-full overflow-hidden ${className || ''}`}>
+            {/* Priority Preload Hint */}
+            {priority && primaryUrl && (
+                <Helmet>
+                    <link rel="preload" as="image" href={primaryUrl} />
+                </Helmet>
+            )}
+
             {/* Shimmer Skeleton & Progress Bar Area */}
             <AnimatePresence>
                 {showSkeleton && !isLoaded && !hasError && (
@@ -89,18 +120,19 @@ export function ImageWithSkeleton({ src, alt, className, showSkeleton = true }: 
             )}
 
             {/* The Actual Image */}
-            <img
-                ref={imgRef}
-                src={src}
-                alt={alt}
-                onLoad={() => setIsLoaded(true)}
-                onError={() => {
-                    setIsLoaded(true); 
-                    setHasError(true);
-                }}
-                className={`w-full h-full transition-all duration-700 ${isLoaded && !hasError ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.02]'}`}
-                style={{ objectFit: 'cover', position: 'relative', zIndex: isLoaded ? 30 : 10 }}
-            />
+            {currentSrc && (
+                <img
+                    ref={imgRef}
+                    src={currentSrc}
+                    alt={alt}
+                    onLoad={() => setIsLoaded(true)}
+                    onError={handleImageError}
+                    loading={priority ? 'eager' : 'lazy'}
+                    fetchpriority={priority ? 'high' : 'auto'}
+                    className={`w-full h-full transition-all duration-700 ${isLoaded && !hasError ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.02]'}`}
+                    style={{ objectFit: 'cover', position: 'relative', zIndex: isLoaded ? 30 : 10 }}
+                />
+            )}
         </div>
     );
 }

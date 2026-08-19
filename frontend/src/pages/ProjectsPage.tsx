@@ -107,6 +107,7 @@ function ArchiveCard({ item, i }: { item: ProjectItem; i: number }) {
                                 src={currentImage}
                                 alt={item.title}
                                 showSkeleton={activeIndex === -1}
+                                priority={true}
                                 className="w-full h-full object-cover no-browser-trigger"
                             />
                         </motion.div>

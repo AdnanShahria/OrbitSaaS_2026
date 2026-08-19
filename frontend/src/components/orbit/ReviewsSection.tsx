@@ -4,6 +4,7 @@ import { useLang } from '@/contexts/LanguageContext';
 import { Star, Quote, User, Twitter, Instagram, Facebook, Linkedin, Mail, ArrowUpRight, Github, Briefcase, Globe, AtSign } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { WaveDivider } from '@/components/ui/WaveDivider';
+import { getImageUrl, getFallbackUrl } from '@/lib/imageUrl';
 
 
 // ── WhatsApp Icon Component (Synced with Navbar) ──
@@ -163,7 +164,11 @@ export function ReviewsSection() {
                                                         
                                                         {review.avatar ? (
                                                             <div className="w-11 h-11 rounded-full overflow-hidden border border-white/10 relative z-10 bg-black">
-                                                                <img src={review.avatar} alt={review.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                                                <img src={getImageUrl(review.avatar)} alt={review.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                                                    onError={(e) => {
+                                                                        const fallback = getFallbackUrl(review.avatar);
+                                                                        if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+                                                                    }} />
                                                             </div>
                                                         ) : (
                                                             <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center text-gray-500 relative z-10">

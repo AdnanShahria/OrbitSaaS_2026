@@ -3,10 +3,11 @@ import { toast } from 'sonner';
 import { SectionHeader, LangToggle, SaveButton, TextField, ErrorAlert, useSectionEditor, JsonPanel } from '@/components/admin/EditorComponents';
 import { Plus, Trash2, ChevronUp, ChevronDown, Upload, X, Link2, Layers, Settings2, HelpCircle, Search } from 'lucide-react';
 import { RichTextEditor } from '@/components/admin/RichTextEditor';
-import { uploadToImgBB } from '@/lib/imgbb';
+import { uploadImage } from '@/lib/imageUpload';
+import { getImageUrl } from '@/lib/imageUrl';
 
 // --- Multi Image Upload ---
-function MultiImageUpload({ images, onChange, title }: { images: string[]; onChange: (imgs: string[]) => void; title: string }) {
+function MultiImageUpload({ images, onChange, title }: { images: any[]; onChange: (imgs: any[]) => void; title: string }) {
     const [uploading, setUploading] = useState(false);
     const [imageUrl, setImageUrl] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
@@ -17,10 +18,10 @@ function MultiImageUpload({ images, onChange, title }: { images: string[]; onCha
         setUploading(true);
         const toastId = toast.loading(`Uploading ${imageFiles.length} images...`);
         try {
-            const newUrls: string[] = [];
+            const newUrls: any[] = [];
             for (let i = 0; i < imageFiles.length; i += 3) {
                 const batch = imageFiles.slice(i, i + 3);
-                const urls = await Promise.all(batch.map(file => uploadToImgBB(file)));
+                const urls = await Promise.all(batch.map(file => uploadImage(file, 'achievements')));
                 newUrls.push(...urls);
             }
             onChange([...images, ...newUrls]);
@@ -52,7 +53,7 @@ function MultiImageUpload({ images, onChange, title }: { images: string[]; onCha
                 const urls: string[] = []; 
                 for (let i = 0; i < imageFiles.length; i += 3) {
                     const batch = imageFiles.slice(i, i + 3);
-                    const batchUrls = await Promise.all(batch.map(f => uploadToImgBB(f)));
+                    const batchUrls = await Promise.all(batch.map(f => uploadImage(f, 'achievements')));
                     urls.push(...batchUrls);
                 }
                 onChange([...images, ...urls]); 
@@ -70,7 +71,7 @@ function MultiImageUpload({ images, onChange, title }: { images: string[]; onCha
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
                     {images.map((img, i) => (
                         <div key={i} className={`relative rounded-lg overflow-hidden border group ${i === 0 ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}>
-                            <img src={img} alt="" className="w-full h-32 object-cover" />
+                            <img src={getImageUrl(img)} alt="" className="w-full h-32 object-cover" />
                             {i === 0 && <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-primary text-white text-[10px] uppercase">Cover</span>}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
                                 {i > 0 && <button onClick={() => moveImage(i, i - 1)} className="p-1 rounded-full bg-white text-black text-xs">←</button>}
@@ -342,7 +343,7 @@ export default function AdminAchievements() {
                         {/* Collapsed Header */}
                         <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => setExpandedIdx(expandedIdx === idx ? null : idx)}>
                             <div className="flex items-center gap-3 min-w-0">
-                                {item.images[0] && <img src={item.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover border border-border flex-shrink-0" />}
+                                {item.images[0] && <img src={getImageUrl(item.images[0])} alt="" className="w-10 h-10 rounded-lg object-cover border border-border flex-shrink-0" />}
                                 <div className="min-w-0">
                                     <span className="text-sm font-bold text-foreground block truncate">{item.en.title || `Achievement #${idx + 1}`}</span>
                                     <span className="text-[10px] text-muted-foreground">{item.category} {item.date ? `· ${item.date}` : ''} {item.hidden ? '· 🔴 Hidden' : ''}</span>

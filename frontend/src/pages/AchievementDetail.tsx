@@ -8,6 +8,7 @@ import { OrbitFooter } from '@/components/orbit/OrbitFooter';
 import { MobileFooter } from '@/components/orbit/MobileFooter';
 import { Chatbot } from '@/components/orbit/chatbot';
 import { useState, useEffect } from 'react';
+import { getImageUrl, getFallbackUrl } from '@/lib/imageUrl';
 import { Helmet } from 'react-helmet-async';
 import { ensureAbsoluteUrl } from '@/lib/utils';
 import { ImageWithSkeleton } from '@/components/orbit/ImageWithSkeleton';
@@ -110,12 +111,16 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                     <div className={`absolute inset-0 ${currentMedia.type === 'image' ? 'cursor-pointer' : ''}`} onClick={currentMedia.type === 'image' ? openLightbox : undefined}>
                         {currentMedia.type === 'video' ? renderVideo(currentMedia) : (
                             <AnimatePresence initial={false} custom={direction}>
-                                <motion.img key={currentIndex} src={currentMedia.url} custom={direction} variants={variants} initial="enter" animate="center" exit="exit"
+                                <motion.img key={currentIndex} src={getImageUrl(currentMedia.url)} custom={direction} variants={variants} initial="enter" animate="center" exit="exit"
                                     transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
                                     drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={1} onDragEnd={handleDragEnd} draggable="false"
                                     loading="eager" fetchPriority="high"
                                     className="absolute inset-0 w-full h-full object-contain bg-black/5 touch-pan-y no-browser-trigger"
                                     alt={`${title} - slide ${currentIndex + 1}`}
+                                    onError={(e) => {
+                                        const fb = getFallbackUrl(currentMedia.url);
+                                        if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
+                                    }}
                                 />
                             </AnimatePresence>
                         )}
@@ -157,8 +162,12 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                             <div className="w-full max-w-[85vw] aspect-video" onClick={(e) => e.stopPropagation()}>{renderVideo(currentMedia, true)}</div>
                         ) : (
                             <motion.img key={currentIndex} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }}
-                                src={currentMedia.url} alt="Fullscreen view" drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={1} onDragEnd={handleDragEnd} draggable="false"
+                                src={getImageUrl(currentMedia.url)} alt="Fullscreen view" drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={1} onDragEnd={handleDragEnd} draggable="false"
                                 className="max-w-full max-h-full md:max-w-[85vw] md:max-h-[85vh] object-contain select-none shadow-2xl touch-pan-y no-browser-trigger" onClick={(e) => e.stopPropagation()}
+                                onError={(e) => {
+                                    const fb = getFallbackUrl(currentMedia.url);
+                                    if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
+                                }}
                             />
                         )}
                         <div className="absolute bottom-6 left-1/2 -translate-x-1/2">

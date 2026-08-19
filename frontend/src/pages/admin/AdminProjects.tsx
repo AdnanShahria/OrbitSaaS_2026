@@ -5,11 +5,12 @@ import { SectionHeader, SaveButton, TextField, ErrorAlert, ItemListEditor, LangT
 import { Upload, Trash2, X, Plus, Layers, Settings2, ChevronDown, HelpCircle, Search, GripVertical, Link2, ArrowUp, ArrowDown } from 'lucide-react';
 import { RichTextEditor } from '@/components/admin/RichTextEditor';
 import { useContent } from '@/contexts/ContentContext';
-import { uploadToImgBB } from '@/lib/imgbb';
+import { uploadImage } from '@/lib/imageUpload';
+import { getImageUrl, type ImageUrl } from '@/lib/imageUrl';
 
 // --- Shared Helper Components ---
 
-function MultiImageUpload({ images, onChange, title }: { images: string[]; onChange: (imgs: string[]) => void; title: string; }) {
+function MultiImageUpload({ images, onChange, title }: { images: any[]; onChange: (imgs: any[]) => void; title: string; }) {
     const [uploading, setUploading] = useState(false);
     const [imageUrl, setImageUrl] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
@@ -23,11 +24,11 @@ function MultiImageUpload({ images, onChange, title }: { images: string[]; onCha
 
         try {
             // Upload in concurrent batches to balance speed and rate limits
-            const newUrls: string[] = [];
+            const newUrls: any[] = [];
             const CONCURRENCY = 3;
             for (let i = 0; i < imageFiles.length; i += CONCURRENCY) {
                 const batch = imageFiles.slice(i, i + CONCURRENCY);
-                const urls = await Promise.all(batch.map(file => uploadToImgBB(file)));
+                const urls = await Promise.all(batch.map(file => uploadImage(file, 'projects')));
                 newUrls.push(...urls);
             }
 
@@ -88,7 +89,7 @@ function MultiImageUpload({ images, onChange, title }: { images: string[]; onCha
                 const CONCURRENCY = 3;
                 for (let i = 0; i < imageFiles.length; i += CONCURRENCY) {
                     const batch = imageFiles.slice(i, i + CONCURRENCY);
-                    const urls = await Promise.all(batch.map(file => uploadToImgBB(file)));
+                    const urls = await Promise.all(batch.map(file => uploadImage(file, 'projects')));
                     newUrls.push(...urls);
                 }
                 onChange([...images, ...newUrls]);
@@ -117,7 +118,7 @@ function MultiImageUpload({ images, onChange, title }: { images: string[]; onCha
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
                     {images.map((img, i) => (
                         <div key={i} className={`relative rounded-lg overflow-hidden border group ${i === 0 ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}>
-                            <img src={img} alt="" className="w-full h-32 object-cover" />
+                            <img src={getImageUrl(img)} alt="" className="w-full h-32 object-cover" />
                             {i === 0 && <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-primary text-white text-[10px] uppercase">Cover</span>}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
                                 {i > 0 && <button onClick={() => moveImage(i, i - 1)} className="p-1 rounded-full bg-white text-black text-xs">←</button>}
@@ -425,7 +426,7 @@ function ProjectEditor({ item, update, categories: availableCategories, onSave }
                                                     : 'border-border/50 opacity-60 hover:opacity-100 hover:border-border'
                                                     }`}
                                             >
-                                                <img src={img} alt="" className="w-full h-20 object-cover" />
+                                                <img src={getImageUrl(img)} alt="" className="w-full h-20 object-cover" />
                                                 {isSelected && (
                                                     <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                                                         <span className="text-[10px] font-bold text-white">
@@ -1350,7 +1351,7 @@ export default function AdminProjects() {
                                 <span className="text-sm font-bold text-muted-foreground w-5 text-center flex-shrink-0">{i + 1}</span>
                                 {p.images && p.images[0] ? (
                                     <div className={`w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-background border ${p.hidden ? 'border-red-500/30 grayscale' : 'border-border'}`}>
-                                        <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
+                                        <img src={getImageUrl(p.images[0])} alt="" className="w-full h-full object-cover" />
                                     </div>
                                 ) : (
                                     <div className="w-10 h-10 rounded flex-shrink-0 bg-background border border-border flex flex-col items-center justify-center text-[8px] text-muted-foreground">

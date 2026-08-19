@@ -39,4 +39,7 @@ export interface Env {
   VAPID_PUBLIC_KEY: string;
   VAPID_PRIVATE_KEY: string;
   VAPID_EMAIL: string;
+
+  // Cloudflare R2
+  IMAGE_BUCKET: R2Bucket;
 }

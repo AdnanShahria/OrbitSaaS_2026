@@ -20,3 +20,8 @@ name = "os-test"
 name = "os-test-preview"
 [env.preview.vars]
 # VITE_API_URL = "https://orbitsaas.cloud"
+
+[[r2_buckets]]
+binding = "IMAGE_BUCKET"
+bucket_name = "orbitsaas-images"
+preview_bucket_name = "orbitsaas-images-preview"

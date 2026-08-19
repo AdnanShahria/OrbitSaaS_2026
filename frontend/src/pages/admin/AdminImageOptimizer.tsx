@@ -3,11 +3,13 @@ import { toast } from 'sonner';
 import { useContent } from '@/contexts/ContentContext';
 import { SectionHeader } from '@/components/admin/EditorComponents';
 import { ImageIcon, Zap, Loader2, CheckCircle2, ChevronDown, CheckSquare, Square, RefreshCcw, Layers, Lock, X } from 'lucide-react';
-import { uploadToImgBB } from '@/lib/imgbb';
+import { uploadImage } from '@/lib/imageUpload';
 import imageCompression from 'browser-image-compression';
+import { getImageUrl, serializeImageUrl } from '@/lib/imageUrl';
 
-// Regex to find image URLs in text (including i.ibb.co)
-const URL_REGEX = /https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp|gif)(?:\?[^\s"'<>]+)?|https?:\/\/i\.ibb\.co\/[^\s"'<>]+/g;
+// Regex to find image URLs in text (Gen 1 i.ibb.co strings, Gen 1 R2 strings)
+const BASE_URL_REGEX = `https?:\\/\\/[^\\s"'<>]+\\.(?:jpg|jpeg|png|webp|gif)(?:\\?[^\\s"'<>]+)?|https?:\\/\\/i\\.ibb\\.co\\/[^\\s"'<>]+`;
+const URL_REGEX = new RegExp(`(?:${BASE_URL_REGEX})(?:\\|\\|\\|(?:${BASE_URL_REGEX}))?`, 'g');
 
 interface ImageSectionPath {
     section: string;
@@ -45,7 +47,7 @@ export default function AdminImageOptimizer() {
     const [sandboxPreview, setSandboxPreview] = useState<string | null>(null);
     const [sandboxCompressedBlob, setSandboxCompressedBlob] = useState<Blob | null>(null);
     const [sandboxCompressing, setSandboxCompressing] = useState(false);
-    const [sandboxResultUrl, setSandboxResultUrl] = useState<string | null>(null);
+    const [sandboxResultUrl, setSandboxResultUrl] = useState<any | null>(null);
 
     // Store sizes for newly compressed images
     const [newImageSizes, setNewImageSizes] = useState<Record<string, number>>({});
@@ -57,57 +59,55 @@ export default function AdminImageOptimizer() {
         const scanLang = (langData: Record<string, any>, lang: string) => {
             for (const [sectionKey, sectionData] of Object.entries(langData)) {
                 if (!sectionData) continue;
-                
+
+                // Helper: register a discovered URL into the image map
+                const registerUrl = (rawUrl: string, sectionTitle?: string) => {
+                    // Gen 2: JSON object {primary, fallback} — extract primary URL
+                    let displayUrl = rawUrl;
+                    try {
+                        const parsed = JSON.parse(rawUrl);
+                        if (parsed && typeof parsed === 'object' && parsed.primary) {
+                            displayUrl = parsed.primary;
+                        }
+                    } catch { /* not JSON — treat as plain string */ }
+
+                    // Strip trailing quote/bracket artifacts
+                    displayUrl = displayUrl.replace(/["']$/, '').replace(/\]$/, '');
+                    if (!displayUrl || displayUrl.endsWith('.svg')) return;
+
+                    // Use the raw form as the map key so we can replace it later
+                    const key = rawUrl.replace(/["']$/, '').replace(/\]$/, '');
+                    const isCompressed = displayUrl.toLowerCase().includes('.webp') || key.includes('|||') || key.startsWith('{"primary"');
+
+                    if (!imageMap.has(key)) {
+                        imageMap.set(key, { url: key, sections: [], isCompressed });
+                    }
+                    const img = imageMap.get(key)!;
+                    const path = { section: sectionKey, lang, ...(sectionTitle ? { title: sectionTitle } : {}) };
+                    if (!img.sections.some(s => s.section === path.section && s.lang === path.lang && s.title === path.title)) {
+                        img.sections.push(path);
+                    }
+                };
+
                 // Smart extraction for standard OrbitSaaS sections that have `.items`
                 if (sectionData.items && Array.isArray(sectionData.items)) {
                     sectionData.items.forEach((item: any, idx: number) => {
                         const itemTitle = item.en?.title || item.title || item.name || `Item #${idx + 1}`;
                         const jsonStr = JSON.stringify(item);
                         const matches = jsonStr.match(URL_REGEX) || [];
-                        
-                        matches.forEach(url => {
-                            const cleanUrl = url.replace(/["']$/, '').replace(/\]$/, '');
-                            if (cleanUrl.endsWith('.svg')) return;
-                            if (!imageMap.has(cleanUrl)) {
-                                imageMap.set(cleanUrl, { url: cleanUrl, sections: [], isCompressed: cleanUrl.toLowerCase().endsWith('.webp') });
-                            }
-                            const img = imageMap.get(cleanUrl)!;
-                            if (!img.sections.some(s => s.section === sectionKey && s.lang === lang && s.title === itemTitle)) {
-                                img.sections.push({ section: sectionKey, lang, title: itemTitle });
-                            }
-                        });
+                        matches.forEach(url => registerUrl(url, itemTitle));
                     });
 
                     // Also scan the section wrapper (title, subtitle, etc.) excluding items
                     const { items, ...rest } = sectionData;
                     const restStr = JSON.stringify(rest);
                     const restMatches = restStr.match(URL_REGEX) || [];
-                    restMatches.forEach(url => {
-                        const cleanUrl = url.replace(/["']$/, '').replace(/\]$/, '');
-                        if (cleanUrl.endsWith('.svg')) return;
-                        if (!imageMap.has(cleanUrl)) {
-                            imageMap.set(cleanUrl, { url: cleanUrl, sections: [], isCompressed: cleanUrl.toLowerCase().endsWith('.webp') });
-                        }
-                        const img = imageMap.get(cleanUrl)!;
-                        if (!img.sections.some(s => s.section === sectionKey && s.lang === lang && s.title === 'Section Settings')) {
-                            img.sections.push({ section: sectionKey, lang, title: 'Section Settings' });
-                        }
-                    });
+                    restMatches.forEach(url => registerUrl(url, 'Section Settings'));
                 } else {
                     // Fallback for sections without items
                     const jsonStr = JSON.stringify(sectionData);
                     const matches = jsonStr.match(URL_REGEX) || [];
-                    matches.forEach(url => {
-                        const cleanUrl = url.replace(/["']$/, '').replace(/\]$/, '');
-                        if (cleanUrl.endsWith('.svg')) return;
-                        if (!imageMap.has(cleanUrl)) {
-                            imageMap.set(cleanUrl, { url: cleanUrl, sections: [], isCompressed: cleanUrl.toLowerCase().endsWith('.webp') });
-                        }
-                        const img = imageMap.get(cleanUrl)!;
-                        if (!img.sections.some(s => s.section === sectionKey && s.lang === lang && !s.title)) {
-                            img.sections.push({ section: sectionKey, lang });
-                        }
-                    });
+                    matches.forEach(url => registerUrl(url));
                 }
             }
         };
@@ -311,26 +311,35 @@ export default function AdminImageOptimizer() {
         let successCount = 0;
         let failCount = 0;
         
+        // Map old raw key → new serialized string (ready for JSON replacement)
         const urlReplacements = new Map<string, string>();
 
         for (let i = 0; i < imagesToProcess.length; i++) {
             const img = imagesToProcess[i];
+            // img.url is the raw key (could be a plain URL, a |||string, or a JSON object string)
+            // To fetch via proxy we need just the primary URL
+            const primaryUrl = getImageUrl(img.url);
             
             try {
                 const API_BASE = import.meta.env.VITE_API_URL || '';
-                const proxyUrl = `${API_BASE}/api/img-proxy?url=${encodeURIComponent(img.url)}`;
+                const proxyUrl = `${API_BASE}/api/img-proxy?url=${encodeURIComponent(primaryUrl)}`;
                 const res = await fetch(proxyUrl);
                 if (!res.ok) throw new Error(`Failed to fetch via proxy (${res.status})`);
                 const blob = await res.blob();
                 
-                const filename = img.url.split('/').pop() || 'image.jpg';
+                const filename = primaryUrl.split('/').pop() || 'image.jpg';
                 const file = new File([blob], filename, { type: blob.type });
 
-                const newUrl = await uploadToImgBB(file);
+                const folder = img.sections[0]?.section || 'uploads';
+                const newImageUrl = await uploadImage(file, folder);
+
+                // Serialize the new ImageUrl object for embedding back into the DB JSON string
+                const newUrlSerialized = serializeImageUrl(newImageUrl);
                 
-                // Fetch the new size to display it
+                // Fetch new size using the primary URL
                 try {
-                    const newRes = await fetch(`${API_BASE}/api/img-proxy?url=${encodeURIComponent(newUrl)}`, { method: 'HEAD' });
+                    const newPrimary = getImageUrl(newImageUrl);
+                    const newRes = await fetch(`${API_BASE}/api/img-proxy?url=${encodeURIComponent(newPrimary)}`, { method: 'HEAD' });
                     const newSize = newRes.headers.get('content-length');
                     if (newSize) {
                         setNewImageSizes(prev => ({ ...prev, [img.url]: parseInt(newSize, 10) }));
@@ -339,9 +348,9 @@ export default function AdminImageOptimizer() {
                     // Ignore
                 }
 
-                urlReplacements.set(img.url, newUrl);
+                urlReplacements.set(img.url, newUrlSerialized);
                 successCount++;
-                results.push({ url: img.url, newUrl }); // modify array in place to avoid lag
+                results.push({ url: img.url, newUrl: newUrlSerialized });
             } catch (err: any) {
                 console.error(`Error compressing ${img.url}:`, err);
                 failCount++;
@@ -372,8 +381,11 @@ export default function AdminImageOptimizer() {
                 
                 if (sectionData) {
                     let jsonStr = JSON.stringify(sectionData);
-                    for (const [oldUrl, newUrl] of urlReplacements.entries()) {
-                        jsonStr = jsonStr.split(oldUrl).join(newUrl);
+                    for (const [oldUrl, newUrlStr] of urlReplacements.entries()) {
+                        // Replace the old raw key with the new serialized URL string
+                        // We need to escape special chars in oldUrl before using as regex
+                        const escaped = oldUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        jsonStr = jsonStr.replace(new RegExp(escaped, 'g'), newUrlStr);
                     }
                     const updatedData = JSON.parse(jsonStr);
                     await updateSection(s.section, s.lang, updatedData);
@@ -421,24 +433,15 @@ export default function AdminImageOptimizer() {
 
     const runSandboxUpload = async () => {
         if (!sandboxFile || !sandboxCompressedBlob) return;
-        const toastId = toast.loading('Uploading to ImgBB...');
+        const toastId = toast.loading('Uploading to Cloudflare R2...');
         try {
             const fileToUpload = new File([sandboxCompressedBlob], sandboxFile.name.replace(/\.[^/.]+$/, ".webp"), {
                 type: 'image/webp',
             });
             
-            const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
-            const formData = new FormData();
-            formData.append('image', fileToUpload);
-
-            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!res.ok) throw new Error('ImgBB upload failed');
-            const data = await res.json();
-            setSandboxResultUrl(data.data.url);
+            const newUrl = await uploadImage(fileToUpload, 'sandbox');
+            
+            setSandboxResultUrl(newUrl);
             toast.success('Sandbox test upload successful!', { id: toastId });
         } catch (error) {
             console.error(error);
@@ -491,8 +494,8 @@ export default function AdminImageOptimizer() {
             )}
 
             <SectionHeader
-                title="Bulk Image Optimizer"
-                description="Scan and compress all existing images in your database to improve website loading speed."
+                title="Bulk Image Optimizer & R2 Migration"
+                description="Scan all existing images in your database and push them to Cloudflare R2 into virtual folders. This drastically improves website loading speed and organizes your storage."
             />
 
             {/* Test Sandbox Section */}
@@ -540,8 +543,8 @@ export default function AdminImageOptimizer() {
                         {sandboxResultUrl && (
                             <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                                 <p className="text-sm text-emerald-600 font-semibold mb-1">Upload Successful!</p>
-                                <a href={sandboxResultUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline break-all">
-                                    {sandboxResultUrl}
+                                <a href={getImageUrl(sandboxResultUrl)} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline break-all">
+                                    {getImageUrl(sandboxResultUrl)}
                                 </a>
                             </div>
                         )}
@@ -573,7 +576,7 @@ export default function AdminImageOptimizer() {
                         </div>
                         <div className="space-y-2">
                             <h3 className="text-2xl font-bold tracking-tight text-foreground">
-                                Scan & Optimize Images
+                                Scan & Migrate Images to R2
                             </h3>
                             <p className="text-sm text-muted-foreground leading-relaxed">
                                 We discovered <span className="text-blue-500 font-semibold">{discoveredImages.length} images</span> in your site content. Click below to load their details and preview thumbnails.
@@ -640,7 +643,7 @@ export default function AdminImageOptimizer() {
                                             {isCompressing ? (
                                                 <><Loader2 className="w-4 h-4 animate-spin" /> Compressing... {progress.done}/{progress.total}</>
                                             ) : (
-                                                <><Zap className="w-4 h-4" /> Compress {selectedUrls.size} Selected Images</>
+                                                <><Zap className="w-4 h-4" /> Migrate {selectedUrls.size} Selected Images to R2</>
                                             )}
                                         </button>
                                     </div>
@@ -696,11 +699,11 @@ export default function AdminImageOptimizer() {
                                                                                 else newSet.delete(img.url);
                                                                                 setSelectedUrls(newSet);
                                                                             }}
-                                                                            disabled={isCompressing || (result && result.newUrl ? true : false)}
+                                                                            disabled={isCompressing || (result && result.newUrl !== undefined)}
                                                                         />
                                                                     </div>
                                                                     <div className="w-16 h-16 rounded-lg overflow-hidden border border-border/50 flex-shrink-0 bg-background">
-                                                                        <img src={img.url} alt="Preview" className="w-full h-full object-cover" loading="lazy" />
+                                                                        <img src={getImageUrl(img.url)} alt="" className="w-full h-full object-cover" loading="lazy" />
                                                                     </div>
                                                                     <div className="flex-1 min-w-0">
                                                                         <div className="flex items-center gap-2 mb-1">

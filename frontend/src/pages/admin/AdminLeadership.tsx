@@ -10,8 +10,9 @@ import {
     ToggleField,
 } from '@/components/admin/EditorComponents';
 import { Upload, Trash2, User, Mail, Instagram, Facebook, Twitter, Linkedin, Github, Globe, Briefcase, AtSign, Send } from 'lucide-react';
-import { uploadToImgBB } from '@/lib/imgbb';
+import { uploadImage } from '@/lib/imageUpload';
 import { useContent } from '@/contexts/ContentContext';
+import { getImageUrl } from '@/lib/imageUrl';
 
 // ─── Custom SVG Icons ───
 
@@ -101,8 +102,8 @@ function MemberImageUpload({
     image,
     onChange,
 }: {
-    image: string;
-    onChange: (url: string) => void;
+    image: any;
+    onChange: (url: any) => void;
 }) {
     const [uploading, setUploading] = useState(false);
 
@@ -111,7 +112,7 @@ function MemberImageUpload({
         setUploading(true);
         const toastId = toast.loading('Uploading image...');
         try {
-            const url = await uploadToImgBB(file);
+            const url = await uploadImage(file, 'team');
             onChange(url);
             toast.success('Image uploaded!', { id: toastId });
         } catch (err) {
@@ -129,7 +130,7 @@ function MemberImageUpload({
                 {image ? (
                     <>
                         <img
-                            src={image}
+                            src={getImageUrl(image)}
                             alt="Member"
                             className="w-full h-full object-cover"
                         />
