@@ -3,26 +3,7 @@ compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "frontend/dist"
 
-# Pages configuration is done via Cloudflare Dashboard
-# This file is for local development with wrangler
-
-[vars]
-# Non-sensitive env vars (sensitive ones go in CF Dashboard or .dev.vars)
-# VITE_API_URL = "https://orbitsaas.cloud"
-
-# Environment-specific overrides
-[env.production]
-name = "os-test"
-[[env.production.r2_buckets]]
-binding = "IMAGE_BUCKET"
-bucket_name = "orbitsaas-images"
-
-[env.preview]
-name = "os-test-preview"
-[[env.preview.r2_buckets]]
-binding = "IMAGE_BUCKET"
-bucket_name = "orbitsaas-images-preview"
-
+# Single clean R2 Bucket Binding for local and deployment
 [[r2_buckets]]
 binding = "IMAGE_BUCKET"
 bucket_name = "orbitsaas-images"
