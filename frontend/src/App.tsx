@@ -154,6 +154,7 @@ const AdminNotifications = lazyWithRetry(() => import('./pages/admin/AdminNotifi
 const AdminProfile = lazyWithRetry(() => import('./pages/admin/AdminProfile'));
 const AdminFinanceDashboard = lazyWithRetry(() => import('./pages/admin/finance/AdminFinanceDashboard'));
 const AdminFinanceTransactions = lazyWithRetry(() => import('./pages/admin/finance/AdminFinanceTransactions'));
+const AdminInvoices = lazyWithRetry(() => import('./pages/admin/AdminInvoices'));
 const AdminAuditLog = lazyWithRetry(() => import('./pages/admin/AdminAuditLog'));
 const AdminImageOptimizer = lazyWithRetry(() => import('./pages/admin/AdminImageOptimizer'));
 
@@ -481,6 +482,7 @@ export default function App() {
                       <Route path="profile" element={<AdminProfile />} />
                       <Route path="finance" element={<AdminFinanceDashboard />} />
                       <Route path="finance/transactions" element={<AdminFinanceTransactions />} />
+                      <Route path="invoices" element={<AdminInvoices />} />
                       <Route path="audit" element={<AdminAuditLog />} />
                       <Route path="optimizer" element={<AdminImageOptimizer />} />
                     </Route>

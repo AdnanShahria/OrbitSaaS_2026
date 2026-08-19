@@ -1,12 +1,20 @@
 import nodemailer from 'nodemailer';
 import type { Env } from './types';
 
-interface MailOptions {
+export interface MailAttachment {
+    filename: string;
+    content: string; // Base64 encoded string
+    contentType?: string;
+    encoding?: string;
+}
+
+export interface MailOptions {
     to: string;
     subject: string;
     text: string;
     html: string;
     fromName?: string;
+    attachments?: MailAttachment[];
 }
 
 function encodeBase64(str: string): string {
@@ -22,7 +30,7 @@ function encodeBase64(str: string): string {
 }
 
 export async function sendMail(env: Env, options: MailOptions): Promise<boolean> {
-    const { to, subject, text, html, fromName = 'ORBIT SaaS' } = options;
+    const { to, subject, text, html, fromName = 'ORBIT SaaS', attachments } = options;
 
     // 1. Try Gmail (Nodemailer SMTP) first
     if (env.GMAIL_USER && env.GMAIL_APP_PASSWORD) {
@@ -36,13 +44,24 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
                 }
             });
 
-            await transporter.sendMail({
+            const mailPayload: any = {
                 from: `"${fromName}" <${env.GMAIL_USER}>`,
                 to,
                 subject,
                 text,
                 html
-            });
+            };
+
+            if (attachments && attachments.length > 0) {
+                mailPayload.attachments = attachments.map(att => ({
+                    filename: att.filename,
+                    content: att.content,
+                    encoding: att.encoding || 'base64',
+                    contentType: att.contentType || 'application/pdf',
+                }));
+            }
+
+            await transporter.sendMail(mailPayload);
             console.log(`[Mail] Email successfully sent via Gmail to ${to}`);
             return true;
         } catch (err: any) {
@@ -82,6 +101,24 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
                 throw new Error('No access token returned from SendPulse');
             }
 
+            // Build SendPulse email payload
+            const spEmailObj: any = {
+                html: encodeBase64(html),
+                text,
+                subject,
+                from: { name: fromName, email: 'contact@orbitsaas.cloud' },
+                to: [{ email: to }]
+            };
+
+            if (attachments && attachments.length > 0) {
+                const attachmentsBinary: Record<string, string> = {};
+                for (const att of attachments) {
+                    // SendPulse accepts raw base64 string
+                    attachmentsBinary[att.filename] = att.content.replace(/^data:[^;]+;base64,/, '');
+                }
+                spEmailObj.attachments_binary = attachmentsBinary;
+            }
+
             // Send Email via REST API
             const emailResp = await fetch('https://api.sendpulse.com/smtp/emails', {
                 method: 'POST',
@@ -89,16 +126,8 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${tokenData.access_token}`,
                 },
-                body: JSON.stringify({
-                    email: {
-                        html: encodeBase64(html),
-                        text,
-                        subject,
-                        from: { name: fromName, email: 'contact@orbitsaas.cloud' },
-                        to: [{ email: to }]
-                    }
-                }),
-                signal: AbortSignal.timeout(5000),
+                body: JSON.stringify({ email: spEmailObj }),
+                signal: AbortSignal.timeout(10000),
             });
 
             if (!emailResp.ok) {

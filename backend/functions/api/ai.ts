@@ -9,41 +9,61 @@ const MAX_MESSAGES = 50;
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_ENHANCE_LENGTH = 2000;
 
-// ─── AI Helper: Groq API ───
+const PRIMARY_AI_MODEL = 'openai/gpt-oss-120b';
+const FALLBACK_AI_MODELS = ['openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
+
+// ─── AI Helper: Groq API with Multi-Model Fallback ───
 async function executeAiRequest(
     messages: unknown[],
     env: Env,
     options: {
-        model: string;
+        model?: string;
         temperature: number;
         max_tokens: number;
     }
 ): Promise<{ content: string; source: string }> {
     if (!env.GROQ_API_KEY) throw new Error('AI configuration missing');
 
-    const res = await fetch(GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-            model: options.model,
-            messages,
-            temperature: options.temperature,
-            max_tokens: options.max_tokens,
-        }),
-    });
+    const primaryModel = options.model || PRIMARY_AI_MODEL;
+    const modelsToTry = [primaryModel, ...FALLBACK_AI_MODELS.filter(m => m !== primaryModel)];
+    let lastError = '';
 
-    if (!res.ok) {
-        const errorText = await res.text().catch(() => 'Unknown error');
-        console.error(`[AI] Groq API error ${res.status}: ${errorText}`);
-        throw new Error('AI provider unavailable');
+    for (const model of modelsToTry) {
+        try {
+            const res = await fetch(GROQ_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+                },
+                body: JSON.stringify({
+                    model,
+                    messages,
+                    temperature: options.temperature,
+                    max_tokens: options.max_tokens,
+                }),
+                signal: AbortSignal.timeout(15000),
+            });
+
+            if (res.ok) {
+                const data = await res.json() as any;
+                const content = data.choices?.[0]?.message?.content || '';
+                if (content) {
+                    return { content, source: 'Orbit AI' };
+                }
+            } else {
+                const errorText = await res.text().catch(() => 'Unknown error');
+                console.warn(`[AI] Model ${model} returned error ${res.status}: ${errorText}. Attempting fallback...`);
+                lastError = errorText;
+            }
+        } catch (err: any) {
+            console.warn(`[AI] Model ${model} request error:`, err.message || err);
+            lastError = err.message || String(err);
+        }
     }
 
-    const data = await res.json() as any;
-    const content = data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
-    return { content, source: 'Orbit AI' };
+    console.error(`[AI] All candidate models failed. Last error: ${lastError}`);
+    throw new Error('AI provider unavailable');
 }
 
 // ─── Action: Chat ───
@@ -66,7 +86,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
 
     try {
         const result = await executeAiRequest(messages, env, {
-            model: 'llama-3.3-70b-versatile',
+            model: PRIMARY_AI_MODEL,
             temperature: 0.7,
             max_tokens: 500,
         });
@@ -135,7 +155,7 @@ async function generateGist(knowledgeBase: string, env: Env): Promise<string | n
             ], 
             env, 
             {
-                model: 'llama-3.3-70b-versatile',
+                model: PRIMARY_AI_MODEL,
                 temperature: 0.2,
                 max_tokens: 400,
             }
@@ -255,7 +275,7 @@ async function handleEnhance(request: Request, env: Env): Promise<Response> {
             ],
             env,
             {
-                model: 'llama-3.3-70b-versatile',
+                model: PRIMARY_AI_MODEL,
                 temperature: 0.5,
                 max_tokens: 512,
             }
