@@ -13,13 +13,15 @@ pages_build_output_dir = "frontend/dist"
 # Environment-specific overrides
 [env.production]
 name = "os-test"
-[env.production.vars]
-# VITE_API_URL = "https://orbitsaas.cloud"
+[[env.production.r2_buckets]]
+binding = "IMAGE_BUCKET"
+bucket_name = "orbitsaas-images"
 
 [env.preview]
 name = "os-test-preview"
-[env.preview.vars]
-# VITE_API_URL = "https://orbitsaas.cloud"
+[[env.preview.r2_buckets]]
+binding = "IMAGE_BUCKET"
+bucket_name = "orbitsaas-images-preview"
 
 [[r2_buckets]]
 binding = "IMAGE_BUCKET"

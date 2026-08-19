@@ -436,7 +436,6 @@ async function handleSeed(request: Request, env: Env): Promise<Response> {
     }
 
     const db = getDb(env);
-    const bcrypt = await import('bcryptjs');
 
     // Dynamic import of translations
     const { translations } = await import('../_lib/i18n');
@@ -488,7 +487,11 @@ async function handleSeed(request: Request, env: Env): Promise<Response> {
     const adminEmail = env.ADMIN_EMAIL || 'admin@orbitsaas.com';
     const adminPassword = env.ADMIN_PASSWORD;
     if (!adminPassword) return jsonResponse({ error: 'ADMIN_PASSWORD not configured' }, request, 500);
-    const hash = await bcrypt.hash(adminPassword, 10);
+    
+    // Use Web Crypto SHA-256 for zero-dependency Workers compatibility
+    const enc = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode(adminPassword));
+    const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 
     await db.execute({
         sql: 'INSERT OR IGNORE INTO admin_users (email, password_hash) VALUES (?, ?)',
