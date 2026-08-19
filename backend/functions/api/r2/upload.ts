@@ -62,10 +62,12 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         const uploadToImgBB = fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
             method: 'POST',
             body: imgbbFormData,
-        }).then(res => res.json()).catch(err => {
-            console.error('ImgBB backup sync error:', err);
-            return null;
-        });
+        })
+            .then(res => res.json() as Promise<{ success?: boolean; data?: { url?: string } }>)
+            .catch(err => {
+                console.error('ImgBB backup sync error:', err);
+                return null;
+            });
 
         // Run both uploads concurrently
         const [r2Result, imgbbResult] = await Promise.all([uploadToR2, uploadToImgBB]);
