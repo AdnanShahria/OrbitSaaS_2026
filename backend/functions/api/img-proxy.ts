@@ -2,7 +2,7 @@ import { getCorsHeaders, handleOptions, jsonResponse } from '../_lib/cors';
 import type { Env } from '../_lib/types';
 
 // Allowed external image domains
-const ALLOWED_DOMAINS = ['i.ibb.co', 'i.imgbb.com', 'image.ibb.co'];
+const ALLOWED_DOMAINS = ['i.ibb.co', 'i.imgbb.com', 'image.ibb.co', 'orbitsaas.cloud', 'localhost', '127.0.0.1'];
 
 function isAllowedUrl(url: string): boolean {
     try {

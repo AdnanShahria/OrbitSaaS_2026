@@ -13,7 +13,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
 
     // Require authentication
-    if (!await isAuthorized(request, env)) {
+    if (!await isAuthorized(request, env.JWT_SECRET)) {
         return jsonResponse({ error: 'Unauthorized' }, request, 401);
     }
 
@@ -42,24 +42,30 @@ export const onRequest: PagesFunction<Env> = async (context) => {
              return jsonResponse({ error: 'Storage not configured properly' }, request, 500);
         }
 
-        // Prepare ImgBB upload
-        const imgbbFormData = new FormData();
-        // file.stream() consumes the file, so we need to clone it or pass it safely.
-        // Wait, FormData allows passing File objects directly in Workers if we construct a new Request or use native fetch.
-        // Actually, we can just pass the `file` directly to FormData for fetch.
-        imgbbFormData.append('image', file);
+        // Convert file to ArrayBuffer to safely upload to R2 and ImgBB concurrently without stream locking
+        const arrayBuffer = await file.arrayBuffer();
 
-        const uploadToR2 = env.IMAGE_BUCKET.put(objectKey, file.stream(), {
+        // 1. Upload to R2
+        const uploadToR2 = env.IMAGE_BUCKET.put(objectKey, arrayBuffer, {
             httpMetadata: {
-                contentType: file.type,
+                contentType: file.type || 'image/webp',
                 cacheControl: 'public, max-age=31536000', // 1 year
             }
         });
 
-        const uploadToImgBB = fetch(`https://api.imgbb.com/1/upload?key=${env.VITE_IMGBB_API_KEY}`, {
+        // 2. Upload to ImgBB concurrently for redundancy
+        const imgbbKey = env.VITE_IMGBB_API_KEY || (env as any).IMGBB_API_KEY || '3f1800c7533a4d96e6be30e235b1bcf2';
+        const imgbbFormData = new FormData();
+        const imgbbBlob = new Blob([arrayBuffer], { type: file.type || 'image/webp' });
+        imgbbFormData.append('image', imgbbBlob, file.name);
+
+        const uploadToImgBB = fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
             method: 'POST',
             body: imgbbFormData,
-        }).then(res => res.json()).catch(err => null);
+        }).then(res => res.json()).catch(err => {
+            console.error('ImgBB backup sync error:', err);
+            return null;
+        });
 
         // Run both uploads concurrently
         const [r2Result, imgbbResult] = await Promise.all([uploadToR2, uploadToImgBB]);
