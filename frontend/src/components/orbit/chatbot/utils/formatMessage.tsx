@@ -1,291 +1,320 @@
 import React from 'react';
 
 /**
- * Markdown-to-JSX formatter for chat messages.
- * Handles bold, links, bullet points, quoted text, and timeline/roadmap detection.
+ * Ultra-Fast & Lightweight Markdown-to-JSX Formatter for ORBIT AI Chatbot.
+ * - Headings: font-caladea (serif)
+ * - Body text, messages, & tables: font-poppins (sans-serif)
+ * - Tables: High-performance flat tables with zero nested scroll traps
  */
+
+interface LinkData {
+  url: string;
+  text: string;
+}
+
 export function formatMessage(content: string): React.ReactNode {
-  // 1. Pre-process to fix common AI punctuation spacing issues
-  let processed = content
-    .replace(/\s+([,.?!])/g, '$1')
-    .replace(/(\*\*.*?)(([,.?!])\s*)\*\*/g, '$1**$2');
+  if (!content) return null;
 
-  // 2. Extract ALL links (markdown and raw)
-  const linkPlaceholders: { url: string; text: string }[] = [];
+  // 1. Quick normalizations
+  const normalized = content.replace(/\r\n/g, '\n');
 
-  // First: Markdown links [text](url)
-  processed = processed.replace(/\[([^\]]*?)]\(([^)]+)\)/g, (_match, text, url) => {
+  // 2. Extract links (markdown & raw)
+  const linkPlaceholders: LinkData[] = [];
+  let processed = normalized.replace(/\[([^\]]*?)]\(([^)]+)\)/g, (_match, text, url) => {
     const idx = linkPlaceholders.length;
-    linkPlaceholders.push({ url, text: text.replace(/\*\*/g, '').trim() });
+    linkPlaceholders.push({ url: url.trim(), text: text.replace(/\*\*/g, '').trim() });
     return `__LINK_${idx}__`;
   });
 
-  // Second: Raw URLs (that aren't already placeholders)
-  processed = processed.replace(/(https?:\/\/[^\s)]+)/g, (url) => {
+  processed = processed.replace(/(https?:\/\/[^\s)<>]+)/g, (url) => {
     if (processed.includes(`](${url})`)) return url;
     const idx = linkPlaceholders.length;
-    linkPlaceholders.push({ url, text: '' });
+    linkPlaceholders.push({ url: url.trim(), text: '' });
     return `__LINK_${idx}__`;
   });
 
-  const lines = processed.split('\n');
+  // Fast inline parser (bold, italic, inline code, link)
+  const renderInline = (text: string, keyPrefix: string, customFont = 'font-poppins'): React.ReactNode => {
+    if (!text) return null;
+    const parts = text.split(/(`[^`]+`|\*\*.*?\*\*|__LINK_\d+__|\*[^*]+\*)/g);
 
-  // Helper: render inline content (bold, quoted text, + link placeholders)
-  const renderInline = (text: string, keyPrefix: string) => {
-    const parts = text.split(/(\*\*.*?\*\*|__LINK_\d+__|"[^"]{2,}")/g);
     return parts.map((part, i) => {
-      // Bold
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={`${keyPrefix}-b${i}`} className="font-bold text-primary/90">{part.slice(2, -2)}</strong>;
-      }
-      // Double-quoted text → render as bold italic (no quotes)
-      if (part.startsWith('"') && part.endsWith('"') && part.length > 2) {
-        return <strong key={`${keyPrefix}-q${i}`} className="font-bold italic text-primary/90">{part.slice(1, -1)}</strong>;
-      }
-      // Link placeholder → render as a sleek, modern inline card button
-      const linkMatch = part.match(/^__LINK_(\d+)__$/);
-      if (linkMatch) {
-        const link = linkPlaceholders[parseInt(linkMatch[1], 10)];
+      if (!part) return null;
+
+      // Inline Code: `code`
+      if (part.charCodeAt(0) === 96 && part.charCodeAt(part.length - 1) === 96 && part.length > 2) {
         return (
-          <a
-            key={`${keyPrefix}-l${i}`}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={link.url}
-            className="inline-flex mt-1.5 mb-1 mx-1 items-center gap-2 px-3 py-1.5 bg-background/60 hover:bg-background text-foreground text-xs md:text-[13px] font-semibold rounded-lg border border-border hover:border-primary/50 shadow-sm hover:shadow-primary/20 transition-all duration-300 group align-middle animate-in zoom-in-50 duration-300"
+          <code
+            key={`${keyPrefix}-c${i}`}
+            className="px-1.5 py-0.5 mx-0.5 rounded bg-white/10 text-emerald-300 font-mono text-[10.5px] border border-white/10"
           >
-            <span className="truncate max-w-[180px] md:max-w-[220px]">{link.text || 'View Details'}</span>
-            <span className="w-5 h-5 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-sm">
-              <svg className="w-3 h-3 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </span>
-          </a>
+            {part.slice(1, -1)}
+          </code>
         );
       }
-      return part;
+
+      // Bold: **text**
+      if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+        return (
+          <strong key={`${keyPrefix}-b${i}`} className={`font-semibold text-white ${customFont}`}>
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+
+      // Italic: *text*
+      if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
+        return (
+          <em key={`${keyPrefix}-i${i}`} className={`italic text-foreground/90 ${customFont}`}>
+            {part.slice(1, -1)}
+          </em>
+        );
+      }
+
+      // Link placeholder: __LINK_X__
+      if (part.startsWith('__LINK_') && part.endsWith('__')) {
+        const linkMatch = part.match(/^__LINK_(\d+)__$/);
+        if (linkMatch) {
+          const link = linkPlaceholders[parseInt(linkMatch[1], 10)];
+          if (link) {
+            return (
+              <a
+                key={`${keyPrefix}-l${i}`}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={link.url}
+                className="inline-flex mt-0.5 mb-0.5 mx-1 items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-indigo-200 text-[11px] font-medium font-poppins rounded-md border border-indigo-500/30 hover:border-indigo-400/50 shadow-sm transition-all group align-middle"
+              >
+                <span className="truncate max-w-[170px] md:max-w-[200px]">{link.text || 'View Details'}</span>
+                <svg
+                  className="w-2.5 h-2.5 text-indigo-400 group-hover:translate-x-0.5 transition-transform shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </a>
+            );
+          }
+        }
+      }
+
+      return <span key={`${keyPrefix}-t${i}`} className={customFont}>{part}</span>;
     });
   };
 
-  // ── TIMELINE/ROADMAP DETECTION ──
-  const numberedStepPattern = /^(?:\*\*)?(\d+)[.)]\s*(.+?)(?:\*\*)?$/;
-  const steps: { num: string; title: string; desc: string; url?: string }[] = [];
-  const preLines: string[] = [];
-  const postLines: string[] = [];
-  let inSteps = false;
-  let doneSteps = false;
+  // 3. Block-Level Tokenization
+  const rawLines = processed.split('\n');
+  const blocks: React.ReactNode[] = [];
+  let lineIdx = 0;
 
-  for (const line of lines) {
+  while (lineIdx < rawLines.length) {
+    const line = rawLines[lineIdx];
     const trimmed = line.trim();
+
+    // Blank line
     if (!trimmed) {
-      if (inSteps) continue;
-      if (doneSteps) { postLines.push(line); continue; }
-      preLines.push(line);
+      blocks.push(<div key={`sp-${lineIdx}`} className="h-1" />);
+      lineIdx++;
       continue;
     }
 
-    const cleanForStep = trimmed.replace(/^[\s*-]*/, '');
-    const stepMatch = cleanForStep.match(numberedStepPattern);
+    // Fenced Code Block (```lang ... ```)
+    if (trimmed.startsWith('```')) {
+      const lang = trimmed.slice(3).trim();
+      const codeLines: string[] = [];
+      lineIdx++;
+      while (lineIdx < rawLines.length && !rawLines[lineIdx].trim().startsWith('```')) {
+        codeLines.push(rawLines[lineIdx]);
+        lineIdx++;
+      }
+      lineIdx++;
 
+      blocks.push(
+        <div key={`code-${lineIdx}`} className="my-2 rounded-lg border border-white/10 bg-[#0a0a14] overflow-hidden">
+          {lang && (
+            <div className="px-2.5 py-1 bg-white/[0.04] border-b border-white/10 text-[9.5px] uppercase font-mono tracking-wider text-muted-foreground flex items-center justify-between">
+              <span>{lang}</span>
+            </div>
+          )}
+          <pre className="p-2.5 text-[11px] font-mono text-emerald-300 overflow-x-auto leading-relaxed">
+            <code>{codeLines.join('\n')}</code>
+          </pre>
+        </div>
+      );
+      continue;
+    }
+
+    // Markdown Table Detection (| Header 1 | Header 2 |)
+    // NOTE: Only horizontal overflow-x-auto, NEVER nested vertical overflow-y-auto to prevent scroll traps/lag!
+    if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.length > 2) {
+      const tableLines: string[] = [];
+      while (lineIdx < rawLines.length && rawLines[lineIdx].trim().startsWith('|') && rawLines[lineIdx].trim().endsWith('|')) {
+        tableLines.push(rawLines[lineIdx].trim());
+        lineIdx++;
+      }
+
+      if (tableLines.length >= 2) {
+        const headerCells = tableLines[0]
+          .slice(1, -1)
+          .split('|')
+          .map(c => c.trim());
+
+        const hasSeparator = tableLines.length > 1 && /^\|?(\s*:?-+:?\s*\|?)+$/.test(tableLines[1]);
+        const bodyStartIndex = hasSeparator ? 2 : 1;
+
+        const bodyRows = tableLines.slice(bodyStartIndex).map(r =>
+          r.slice(1, -1).split('|').map(c => c.trim())
+        );
+
+        blocks.push(
+          <div
+            key={`tbl-${lineIdx}`}
+            className="my-3 overflow-x-auto rounded-xl border border-emerald-500/35 bg-[#0b1313]/80 shadow-[0_0_22px_rgba(16,185,129,0.22),0_0_8px_rgba(52,211,153,0.15)] ring-1 ring-emerald-400/20 font-poppins"
+          >
+            <table className="w-full text-left text-xs border-collapse min-w-full">
+              <thead>
+                <tr className="bg-emerald-950/50 border-b border-emerald-500/25">
+                  {headerCells.map((header, hIdx) => (
+                    <th
+                      key={`th-${hIdx}`}
+                      className="py-2 px-2.5 font-semibold uppercase tracking-wider text-emerald-300 text-[10px] md:text-[10.5px] whitespace-nowrap bg-emerald-950/50"
+                    >
+                      {renderInline(header, `th-${hIdx}`)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-emerald-500/10">
+                {bodyRows.map((row, rIdx) => (
+                  <tr key={`tr-${rIdx}`} className="even:bg-emerald-950/20 hover:bg-emerald-500/15 transition-colors">
+                    {row.map((cell, cIdx) => (
+                      <td key={`td-${rIdx}-${cIdx}`} className="py-2 px-2.5 text-foreground/90 text-[11px] md:text-[11.5px] leading-snug">
+                        {renderInline(cell, `td-${rIdx}-${cIdx}`)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+        continue;
+      }
+    }
+
+    // Standalone Bold Header (e.g. **Our Core Services**)
+    const boldHeaderMatch = trimmed.match(/^\*\*([^*]+)\*\*:?$/);
+    if (boldHeaderMatch) {
+      const title = boldHeaderMatch[1].trim();
+      blocks.push(
+        <h3 key={`bh-${lineIdx}`} className="mt-2.5 mb-1 text-[14px] md:text-[15px] font-bold font-caladea chatbot-heading text-white tracking-wide flex items-center gap-1.5">
+          <span className="w-1 h-3 rounded-full bg-gradient-to-b from-indigo-400 to-purple-500 inline-block shrink-0" />
+          <span>{title}</span>
+        </h3>
+      );
+      lineIdx++;
+      continue;
+    }
+
+    // Headings (###, ##, #) — uses font-caladea
+    if (trimmed.startsWith('#')) {
+      const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const text = headingMatch[2];
+        lineIdx++;
+
+        if (level === 1 || level === 2) {
+          blocks.push(
+            <h3 key={`h-${lineIdx}`} className="mt-2.5 mb-1 text-[14.5px] md:text-[15.5px] font-bold font-caladea chatbot-heading text-white tracking-wide flex items-center gap-1.5">
+              <span className="w-1 h-3 rounded-full bg-gradient-to-b from-indigo-400 to-purple-500 inline-block shrink-0" />
+              {renderInline(text, `h-${lineIdx}`, 'font-caladea')}
+            </h3>
+          );
+        } else {
+          blocks.push(
+            <h4 key={`h-${lineIdx}`} className="mt-2 mb-0.5 text-[12.5px] md:text-[13.5px] font-bold font-caladea chatbot-heading text-indigo-300 tracking-wide">
+              {renderInline(text, `h-${lineIdx}`, 'font-caladea')}
+            </h4>
+          );
+        }
+        continue;
+      }
+    }
+
+    // Horizontal Divider (--- or ***)
+    if (/^(\*{3,}|-{3,}|_{3,})$/.test(trimmed)) {
+      blocks.push(<hr key={`hr-${lineIdx}`} className="my-2 border-white/10" />);
+      lineIdx++;
+      continue;
+    }
+
+    // Blockquote (> quote)
+    if (trimmed.startsWith('>')) {
+      const quoteText = trimmed.replace(/^>\s*/, '');
+      blocks.push(
+        <div key={`bq-${lineIdx}`} className="my-1.5 pl-2.5 py-1 border-l-2 border-indigo-500 bg-indigo-500/10 rounded-r-md text-[11px] font-poppins text-indigo-200 leading-relaxed">
+          {renderInline(quoteText, `bq-${lineIdx}`)}
+        </div>
+      );
+      lineIdx++;
+      continue;
+    }
+
+    // Numbered Steps / Process items (1. Step Title : description)
+    const stepMatch = trimmed.match(/^(?:\*\*)?(\d+)[.)]\s*(.+)$/);
     if (stepMatch) {
-      inSteps = true;
       const num = stepMatch[1];
       const rest = stepMatch[2].replace(/\*\*/g, '').trim();
       const sepMatch = rest.match(/^(.+?)\s*(?::\s|(?:\s[–—]\s))\s*(.+)$/);
-      
-      let title = '';
-      let desc = '';
-      
-      if (sepMatch) {
-        title = sepMatch[1].trim();
-        desc = sepMatch[2].trim();
-      } else {
-        title = rest;
-        desc = '';
-      }
 
-      // Check if title contains a link placeholder
-      let url = '';
-      const linkMatch = title.match(/__LINK_(\d+)__/);
-      if (linkMatch) {
-        const linkData = linkPlaceholders[parseInt(linkMatch[1], 10)];
-        url = linkData.url;
-        // Clean title to just be the text, removing the link placeholder
-        title = title.replace(`__LINK_${linkMatch[1]}__`, linkData.text).trim();
-      }
+      const title = sepMatch ? sepMatch[1].trim() : rest;
+      const desc = sepMatch ? sepMatch[2].trim() : '';
 
-      steps.push({ num, title, desc, url });
-    } else if (inSteps && !doneSteps) {
-      doneSteps = true;
-      postLines.push(line);
-    } else if (!inSteps) {
-      preLines.push(line);
-    } else {
-      postLines.push(line);
-    }
-  }
-
-  // Render timeline if 2+ steps detected
-  if (steps.length >= 2) {
-    const renderTextLines = (textLines: string[]) =>
-      textLines.map((line, li) => {
-        const isBullet = /^\s*[*-]\s+/.test(line);
-        let cleanLine = line.replace(/^\s*[*-]\s+/, '');
-        if (isBullet) {
-          const colonIndex = cleanLine.indexOf(':');
-          if (colonIndex > 0 && colonIndex < 80 && !cleanLine.includes('**')) {
-            cleanLine = `**${cleanLine.substring(0, colonIndex + 1)}**${cleanLine.substring(colonIndex + 1)}`;
-          }
-        }
-        const inline = renderInline(isBullet ? cleanLine : line, `tl-${li}`);
-        if (isBullet) {
-          return (
-            <div key={`tl-${li}`} className="flex gap-2.5 pl-1 my-1 text-[15px] md:text-sm group/bullet">
-              <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shrink-0 shadow-[0_0_6px_rgba(16,185,129,0.4)] group-hover/bullet:shadow-[0_0_10px_rgba(16,185,129,0.6)] transition-shadow" />
-              <span className="flex-1 leading-relaxed">{inline}</span>
-            </div>
-          );
-        }
-        return (
-          <div key={`tl-${li}`} className={`text-[15px] md:text-sm leading-relaxed ${line.trim() === '' ? 'h-2' : 'mb-1.5 last:mb-0'}`}>
-            {inline}
+      blocks.push(
+        <div key={`step-${lineIdx}`} className="flex gap-2 my-1 items-start font-poppins">
+          <div className="shrink-0 w-4 h-4 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-[9.5px] font-bold text-indigo-300 mt-0.5">
+            {num}
           </div>
-        );
-      });
-
-    // Determine if steps are sequential (process) or independent (list)
-    const introText = preLines.join(' ').toLowerCase();
-    const sequentialKeywords = /\b(step|process|follow|phase|plan|how|workflow|approach|stage|procedure|roadmap|order|sequence|first|then|next|finally|after)\b/i;
-    const allHaveDesc = steps.every(s => s.desc.length > 0);
-    const isSequential = sequentialKeywords.test(introText) || (allHaveDesc && steps.length <= 6);
-
-    return (
-      <>
-        {/* Pre-timeline text */}
-        {preLines.filter(l => l.trim()).length > 0 && renderTextLines(preLines)}
-
-        {/* Steps container */}
-        <div className="relative mt-2 mb-2 ml-0.5">
-          {steps.map((step, idx) => (
-            <div
-              key={`step-${idx}`}
-              className={`relative flex gap-2.5 ${isSequential ? 'pb-1.5' : 'pb-1.5'} last:pb-0 animate-in fade-in slide-in-from-bottom-3 duration-500`}
-              style={{ animationDelay: `${idx * 150}ms`, animationFillMode: 'both' }}
-            >
-              {/* Connector line — only for sequential steps */}
-              {isSequential && idx < steps.length - 1 && (
-                <div
-                  className="absolute left-[11px] top-[26px] bottom-0 w-[2px] animate-in fade-in duration-700"
-                  style={{
-                    background: 'linear-gradient(to bottom, rgba(16,185,129,0.5), rgba(16,185,129,0.08))',
-                    animationDelay: `${idx * 150 + 200}ms`,
-                    animationFillMode: 'both',
-                  }}
-                />
-              )}
-
-              {/* Step number circle — glowing badge */}
-              <div
-                className="relative z-10 shrink-0 w-[24px] h-[24px] rounded-full flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0.08) 100%)',
-                  border: '2px solid rgba(16,185,129,0.6)',
-                  boxShadow: '0 0 14px rgba(16,185,129,0.2), inset 0 1px 2px rgba(16,185,129,0.15)',
-                }}
-              >
-                <span
-                  className="text-[11px] font-black leading-none"
-                  style={{ color: '#34d399' }}
-                >
-                  {step.num.padStart(2, '0')}
-                </span>
-              </div>
-
-              {/* Content card */}
-              {step.url ? (
-                <a
-                  href={step.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 min-w-0 rounded-lg px-3 py-1.5 transition-all duration-300 block hover:-translate-y-0.5 group/card"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
-                    border: '1px solid rgba(16,185,129,0.3)',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.2), 0 0 15px rgba(16,185,129,0.1), inset 0 1px 0 rgba(255,255,255,0.04)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[13px] md:text-xs font-bold text-emerald-400 group-hover/card:text-emerald-300 leading-snug transition-colors">
-                      {renderInline(step.title, `st-${idx}`)}
-                    </p>
-                    <svg className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5 opacity-70 group-hover/card:opacity-100 group-hover/card:-translate-y-0.5 group-hover/card:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </div>
-                  {step.desc && (
-                    <p className="text-[11.5px] md:text-[11px] text-muted-foreground leading-relaxed mt-1 opacity-80 group-hover/card:opacity-100 transition-opacity">
-                      {renderInline(step.desc, `sd-${idx}`)}
-                    </p>
-                  )}
-                </a>
-              ) : (
-                <div
-                  className="flex-1 min-w-0 rounded-lg px-3 py-1.5 transition-all duration-300"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.04)',
-                  }}
-                >
-                  <p className="text-[13px] md:text-xs font-bold text-foreground leading-snug">
-                    {renderInline(step.title, `st-${idx}`)}
-                  </p>
-                  {step.desc && (
-                    <p className="text-[11.5px] md:text-[11px] text-muted-foreground leading-relaxed mt-1 opacity-80">
-                      {renderInline(step.desc, `sd-${idx}`)}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+          <div className="flex-1 text-[12px] md:text-[12.5px] leading-relaxed">
+            <span className="font-semibold text-white">{renderInline(title, `st-${lineIdx}`)}</span>
+            {desc && <span className="text-muted-foreground ml-1.5">{renderInline(desc, `sd-${lineIdx}`)}</span>}
+          </div>
         </div>
+      );
+      lineIdx++;
+      continue;
+    }
 
-        {/* Post-timeline text */}
-        {postLines.filter(l => l.trim()).length > 0 && renderTextLines(postLines)}
-      </>
-    );
-  }
-
-  // ── DEFAULT LINE-BY-LINE RENDERING (no timeline detected) ──
-  return lines.map((line, lineIndex) => {
-    const isBullet = /^\s*[*-]\s+/.test(line);
-    let cleanLine = line.replace(/^\s*[*-]\s+/, '');
-
-    if (isBullet) {
+    // Bullet Point (- or * )
+    if (/^\s*[*-]\s+/.test(trimmed)) {
+      let cleanLine = trimmed.replace(/^\s*[*-]\s+/, '');
       const colonIndex = cleanLine.indexOf(':');
       if (colonIndex > 0 && colonIndex < 80 && !cleanLine.includes('**')) {
         cleanLine = `**${cleanLine.substring(0, colonIndex + 1)}**${cleanLine.substring(colonIndex + 1)}`;
       }
-    }
 
-    const inlineContent = renderInline(isBullet ? cleanLine : line, `line-${lineIndex}`);
-
-    if (isBullet) {
-      return (
-        <div key={`line-${lineIndex}`} className="flex gap-2.5 pl-1 my-1 text-[15px] md:text-sm group/bullet">
-          <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shrink-0 shadow-[0_0_6px_rgba(16,185,129,0.4)] group-hover/bullet:shadow-[0_0_10px_rgba(16,185,129,0.6)] transition-shadow" />
-          <span className="flex-1 leading-relaxed">{inlineContent}</span>
+      blocks.push(
+        <div key={`bl-${lineIdx}`} className="flex gap-2 pl-0.5 my-0.5 text-[12px] md:text-[12.5px] font-poppins leading-relaxed">
+          <span className="mt-[6px] w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 shrink-0 shadow-[0_0_4px_rgba(108,92,231,0.4)]" />
+          <span className="flex-1 text-foreground/90">{renderInline(cleanLine, `bl-${lineIdx}`)}</span>
         </div>
       );
+      lineIdx++;
+      continue;
     }
 
-    return (
-      <div key={`line-${lineIndex}`} className={`text-[15px] md:text-sm leading-relaxed ${line.trim() === '' ? 'h-2' : 'mb-1.5 last:mb-0'}`}>
-        {inlineContent}
+    // Default Regular Paragraph Line in Poppins
+    blocks.push(
+      <div key={`p-${lineIdx}`} className="text-[12.5px] md:text-[12px] font-poppins leading-relaxed text-foreground/90 mb-1 last:mb-0">
+        {renderInline(trimmed, `p-${lineIdx}`)}
       </div>
     );
-  });
+    lineIdx++;
+  }
+
+  return <>{blocks}</>;
 }

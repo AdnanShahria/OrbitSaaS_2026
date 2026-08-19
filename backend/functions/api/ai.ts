@@ -87,8 +87,8 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
     try {
         const result = await executeAiRequest(messages, env, {
             model: PRIMARY_AI_MODEL,
-            temperature: 0.7,
-            max_tokens: 500,
+            temperature: 0.6,
+            max_tokens: 1200,
         });
 
         return jsonResponse({ success: true, content: result.content, source: result.source }, request);
@@ -276,8 +276,8 @@ async function handleEnhance(request: Request, env: Env): Promise<Response> {
             env,
             {
                 model: PRIMARY_AI_MODEL,
-                temperature: 0.5,
-                max_tokens: 512,
+                temperature: 0.4,
+                max_tokens: 1024,
             }
         );
         const enhancedText = content.trim() || text;

@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { useLang } from '@/contexts/LanguageContext';
 
 function CinematicAchievementCard({ item, i }: { item: AchievementItem; i: number }) {
-    const coverImage = item.images?.[0] || item.image || '/placeholder.png';
+    const coverImage = item.images?.[0] || item.image || '/placeholder.webp';
     const ref = useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, amount: 0.15 });
 

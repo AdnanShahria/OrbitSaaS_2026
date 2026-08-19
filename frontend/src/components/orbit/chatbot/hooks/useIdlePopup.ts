@@ -106,17 +106,26 @@ export function useIdlePopup({ open, messagesLength, chatLang }: UseIdlePopupPar
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Scroll tracking for behavior mode detection
+  // Scroll tracking for behavior mode detection (throttled to avoid layout thrashing)
   useEffect(() => {
+    if (open) return;
+    let scrollTimer: any = null;
     const handleScroll = () => {
       scrollCountRef.current++;
       lastScrollTimeRef.current = Date.now();
-      const sec = getActiveSection();
-      if (sec !== 'default') sectionHistoryRef.current.add(sec);
+      if (scrollTimer) return;
+      scrollTimer = setTimeout(() => {
+        scrollTimer = null;
+        const sec = getActiveSection();
+        if (sec !== 'default') sectionHistoryRef.current.add(sec);
+      }, 500);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    return () => {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [open]);
 
   // Progressive escalation: casual(3s) → engaging(10s) → action(30s)
   useEffect(() => {

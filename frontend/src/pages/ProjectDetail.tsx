@@ -408,7 +408,7 @@ function CollapsibleCards({ blocks }: { blocks: string[] }) {
 
 // --- Helper Components ---
 function SuggestedProjectCard({ item, routeId }: { item: any, routeId: string }) {
-    const coverImage = item.images?.[0] || item.image || '/placeholder.png';
+    const coverImage = item.images?.[0] || item.image || '/placeholder.webp';
     const itemCats: string[] = item.categories || (item.category ? [item.category] : []);
     
     const [isHovered, setIsHovered] = useState(false);
@@ -805,7 +805,7 @@ export default function ProjectDetail() {
                                     <div className="flex flex-col gap-3">
                                         {suggested.map((item: any) => {
                                             const routeId = item._id || item._originalIndex;
-                                            const coverImage = item.images?.[0] || item.image || '/placeholder.png';
+                                            const coverImage = item.images?.[0] || item.image || '/placeholder.webp';
                                             const itemCats: string[] = item.categories || (item.category ? [item.category] : []);
 
                                             return (

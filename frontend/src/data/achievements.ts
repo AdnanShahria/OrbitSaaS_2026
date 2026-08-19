@@ -24,7 +24,7 @@ export const fallbackAchievements: AchievementItem[] = [
     id: "hackathon-winner-2025",
     title: "Global AI Hackathon Winners",
     desc: "Secured 1st place in the Global AI Innovation Hackathon, showcasing our custom multi-agent orchestration framework. The judges praised the system's ability to autonomously resolve complex workflows with 99.9% accuracy.",
-    image: "/placeholder.png",
+    image: "/placeholder.webp",
     category: "Hackathon",
     date: "August 2025"
   },
@@ -32,7 +32,7 @@ export const fallbackAchievements: AchievementItem[] = [
     id: "partnership-gourmet",
     title: "Strategic Partnership with Gourmet Haven",
     desc: "Successfully deployed our enterprise management SaaS across 50+ Gourmet Haven restaurant chains. Our system streamlined their inventory management and reduced food waste by 30%.",
-    image: "/placeholder.png",
+    image: "/placeholder.webp",
     category: "Partnership",
     date: "October 2025"
   },
@@ -40,7 +40,7 @@ export const fallbackAchievements: AchievementItem[] = [
     id: "client-appreciation-fintech",
     title: "Outstanding Deliverable Award - FinTech Pro",
     desc: "Received direct appreciation and the 'Outstanding Technical Partner' award from FinTech Pro for delivering their highly secure, low-latency trading platform two months ahead of schedule.",
-    image: "/placeholder.png",
+    image: "/placeholder.webp",
     category: "Client Appreciation",
     date: "December 2025"
   }

@@ -27,7 +27,7 @@ interface ProjectItem {
 
 // --- Cinematic Project Card ---
 function CinematicCard({ item, i, routeId }: { item: ProjectItem; i: number; routeId: string }) {
-    const coverImage = item.images?.[0] || item.image || '/placeholder.png';
+    const coverImage = item.images?.[0] || item.image || '/placeholder.webp';
     const cats: string[] = item.categories || (item.category ? [item.category] : []);
     const ref = useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, amount: 0.15 });

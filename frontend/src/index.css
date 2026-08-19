@@ -1,7 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Abril+Fatface&family=Outfit:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caladea:ital,wght@0,400;0,700;1,400;1,700&family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Abril+Fatface&family=Outfit:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Explicit Chatbot & Typography Classes ── */
+.font-caladea,
+.chatbot-heading {
+  font-family: 'Caladea', Georgia, serif !important;
+}
+
+.font-poppins,
+.chatbot-panel,
+.chatbot-messages-area,
+.chatbot-input-area {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
 
 /* ── Marquee animation for TechStack mobile ── */
 @keyframes marquee-scroll {

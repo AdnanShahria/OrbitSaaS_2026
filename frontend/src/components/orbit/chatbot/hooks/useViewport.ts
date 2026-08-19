@@ -48,13 +48,11 @@ export function useViewport(open: boolean) {
 
     updateViewport();
     window.visualViewport?.addEventListener('resize', debouncedUpdateViewport);
-    window.visualViewport?.addEventListener('scroll', debouncedUpdateViewport);
     window.addEventListener('resize', debouncedUpdateViewport);
 
     return () => {
       clearTimeout(resizeTimer);
       window.visualViewport?.removeEventListener('resize', debouncedUpdateViewport);
-      window.visualViewport?.removeEventListener('scroll', debouncedUpdateViewport);
       window.removeEventListener('resize', debouncedUpdateViewport);
     };
   }, [open]);

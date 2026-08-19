@@ -5,30 +5,32 @@ export function ChatInput() {
   const { input, setInput, handleSend, isLoading, chatContentMemo, showEmailPrompt, suggestions } = useChatContext();
 
   return (
-    <div className="chatbot-input-area shrink-0 relative">
-      <div className={`px-4 py-3 pb-6 md:pb-3 ${suggestions.length > 0 && !isLoading ? 'pt-2' : ''} flex gap-2 bg-card/90 backdrop-blur-md transition-opacity ${showEmailPrompt ? 'opacity-40 pointer-events-none' : ''}`}>
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSend()}
-          onFocus={(e) => {
-            if (window.innerWidth < 768) {
-              e.target.scrollIntoView({ block: 'nearest' });
-              setTimeout(() => window.scrollTo(0, 0), 50);
-              setTimeout(() => window.scrollTo(0, 0), 150);
-              setTimeout(() => window.scrollTo(0, 0), 300);
-            }
-          }}
-          placeholder={chatContentMemo.placeholder}
-          disabled={isLoading}
-          enterKeyHint="send"
-          autoFocus={false}
-          className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-base md:text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 transition-all"
-        />
+    <div className="chatbot-input-area shrink-0 relative font-poppins">
+      <div className={`px-4 py-3 pb-6 md:pb-3 ${suggestions.length > 0 && !isLoading ? 'pt-2' : ''} flex gap-2.5 items-center bg-[#0d0d16]/95 border-t border-white/10 transition-opacity ${showEmailPrompt ? 'opacity-40 pointer-events-none' : ''}`}>
+        <div className="relative flex-1 group">
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            onFocus={(e) => {
+              if (window.innerWidth < 768) {
+                e.target.scrollIntoView({ block: 'nearest' });
+                setTimeout(() => window.scrollTo(0, 0), 50);
+                setTimeout(() => window.scrollTo(0, 0), 150);
+                setTimeout(() => window.scrollTo(0, 0), 300);
+              }
+            }}
+            placeholder={chatContentMemo.placeholder}
+            disabled={isLoading}
+            enterKeyHint="send"
+            autoFocus={false}
+            className="w-full bg-[#0b1313]/90 border border-emerald-500/35 rounded-xl px-4 py-2.5 text-base md:text-[14.5px] text-foreground placeholder:text-muted-foreground/70 outline-none font-poppins shadow-[0_0_16px_rgba(16,185,129,0.16)] ring-1 ring-emerald-400/20 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/40 focus:shadow-[0_0_24px_rgba(16,185,129,0.38),0_0_10px_rgba(52,211,153,0.25)] disabled:opacity-50 transition-all duration-200"
+          />
+        </div>
         <button
           onClick={handleSend}
           disabled={isLoading || !input.trim()}
-          className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-500 text-white flex items-center justify-center hover:from-emerald-500 hover:to-emerald-400 transition-all cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.35)] hover:shadow-[0_0_22px_rgba(16,185,129,0.55)] hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none shrink-0"
         >
           <Send className="w-4 h-4" strokeWidth={2.5} />
         </button>

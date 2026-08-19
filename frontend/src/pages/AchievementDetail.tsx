@@ -230,7 +230,7 @@ function CollapsibleCards({ blocks }: { blocks: string[] }) {
 }
 
 function SuggestedAchievementCard({ item, routeId }: { item: any, routeId: string }) {
-    const coverImage = item.images?.[0] || item.image || '/placeholder.png';
+    const coverImage = item.images?.[0] || item.image || '/placeholder.webp';
     const itemCats: string[] = item.categories || (item.category ? [item.category] : []);
 
     return (

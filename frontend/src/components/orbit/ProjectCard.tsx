@@ -23,7 +23,7 @@ interface ProjectCardProps {
 export function ProjectCard({ item, routeId, isHovered, onMouseEnter, onMouseLeave }: ProjectCardProps) {
     const plainDesc = stripHtml(item.desc || '');
     const shortDesc = truncate(plainDesc, 100);
-    const coverImage = item.images?.[0] || item.image || '/placeholder.png';
+    const coverImage = item.images?.[0] || item.image || '/placeholder.webp';
     const categories: string[] = item.categories || (item.category ? [item.category] : ['Portfolio']);
 
     // Build the list of hover images from admin-selected indices

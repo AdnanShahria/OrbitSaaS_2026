@@ -151,6 +151,34 @@ export default defineConfig(async ({ mode }) => {
                 },
               },
             },
+            {
+              urlPattern: /^https:\/\/(?:i|image)\.ibb\.co\/.*/i,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'imgbb-image-cache',
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /\/api\/r2\/image\/.*/i,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'r2-image-cache',
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
           ],
         },
       }),

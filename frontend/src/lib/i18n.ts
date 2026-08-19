@@ -159,7 +159,7 @@ export const translations = {
           id: "hackathon-winner-2025",
           title: "Global AI Hackathon Winners",
           desc: "Secured 1st place in the Global AI Innovation Hackathon, showcasing our custom multi-agent orchestration framework. The judges praised the system's ability to autonomously resolve complex workflows with 99.9% accuracy.",
-          image: "/placeholder.png",
+          image: "/placeholder.webp",
           category: "Hackathon",
           date: "August 2025"
         },
@@ -167,7 +167,7 @@ export const translations = {
           id: "partnership-gourmet",
           title: "Strategic Partnership with Gourmet Haven",
           desc: "Successfully deployed our enterprise management SaaS across 50+ Gourmet Haven restaurant chains. Our system streamlined their inventory management and reduced food waste by 30%.",
-          image: "/placeholder.png",
+          image: "/placeholder.webp",
           category: "Partnership",
           date: "October 2025"
         },
@@ -175,7 +175,7 @@ export const translations = {
           id: "client-appreciation-fintech",
           title: "Outstanding Deliverable Award - FinTech Pro",
           desc: "Received direct appreciation and the 'Outstanding Technical Partner' award from FinTech Pro for delivering their highly secure, low-latency trading platform two months ahead of schedule.",
-          image: "/placeholder.png",
+          image: "/placeholder.webp",
           category: "Client Appreciation",
           date: "December 2025"
         }
@@ -402,7 +402,7 @@ export const translations = {
           id: "hackathon-winner-2025",
           title: "গ্লোবাল এআই হ্যাকাথন বিজয়ী",
           desc: "আমাদের কাস্টম মাল্টি-এজেন্ট অর্কেস্ট্রেশন ফ্রেমওয়ার্ক প্রদর্শন করে গ্লোবাল এআই ইনোভেশন হ্যাকাথনে ১ম স্থান অর্জন করেছি। বিচারকগণ সিস্টেমের ৯৯.৯% নির্ভুলতার সাথে জটিল কাজের গতিপথ স্বায়ত্তশাসিতভাবে সমাধান করার ক্ষমতার প্রশংসা করেছেন।",
-          image: "/placeholder.png",
+          image: "/placeholder.webp",
           category: "হ্যাকাথন",
           date: "আগস্ট ২০২৫"
         },
@@ -410,7 +410,7 @@ export const translations = {
           id: "partnership-gourmet",
           title: "গুরমে হেভেনের সাথে কৌশলগত অংশীদারিত্ব",
           desc: "৫০+ গুরমে হেভেন রেস্তোরাঁ চেইনে আমাদের এন্টারপ্রাইজ ম্যানেজমেন্ট সাআস (SaaS) সফলভাবে স্থাপন করেছি। আমাদের সিস্টেম তাদের ইনভেন্টরি পরিচালন সহজতর করেছে এবং খাবারের অপচয় ৩০% কমিয়েছে।",
-          image: "/placeholder.png",
+          image: "/placeholder.webp",
           category: "অংশীদারিত্ব",
           date: "অক্টোবর ২০২৫"
         },
@@ -418,7 +418,7 @@ export const translations = {
           id: "client-appreciation-fintech",
           title: "অসামান্য ডেলিভারি পুরস্কার - ফিনটেক প্রো",
           desc: "নির্ধারিত সময়ের দুই মাস আগে অত্যন্ত নিরাপদ, কম-ল্যাটেন্সি ট্রেডিং প্ল্যাটফর্ম সরবরাহ করার জন্য ফিনটেক প্রো থেকে সরাসরি প্রশংসা এবং 'অসামান্য প্রযুক্তিগত অংশীদার' পুরস্কার পেয়েছি।",
-          image: "/placeholder.png",
+          image: "/placeholder.webp",
           category: "ক্লায়েন্ট প্রশংসা",
           date: "ডিসেম্বর ২০২৫"
         }

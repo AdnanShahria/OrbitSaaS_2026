@@ -21,6 +21,7 @@ export default {
       fontFamily: {
         bagel: ['Bagel Fat One', 'cursive'],
         poppins: ['Poppins', 'sans-serif'],
+        caladea: ['Caladea', 'serif'],
         abril: ['"Abril Fatface"', 'cursive'],
         garamond: ['"Cormorant Garamond"', 'serif'],
         playfair: ['"Playfair Display"', 'serif'],

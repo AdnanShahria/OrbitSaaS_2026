@@ -16,15 +16,32 @@ export function ImageWithSkeleton({ src, alt, className, showSkeleton = true, pr
     const [hasError, setHasError] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
 
-    // Fallback logic for `R2|||IMGBB` format
+    // Fallback logic for `R2 -> ImgBB -> /placeholder.webp`
     const [urls, setUrls] = useState<string[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
-        if (!src) return;
+        if (!src) {
+            setUrls(['/placeholder.webp']);
+            setCurrentIndex(0);
+            setIsLoaded(false);
+            setHasError(false);
+            return;
+        }
         const parsed = parseImageUrl(src as ImageUrl);
-        if (!parsed) { setUrls([]); return; }
-        const list = [parsed.primary, ...(parsed.fallback ? [parsed.fallback] : [])];
+        if (!parsed) {
+            setUrls(['/placeholder.webp']);
+            setCurrentIndex(0);
+            setIsLoaded(false);
+            setHasError(false);
+            return;
+        }
+        const list = [
+            parsed.primary,
+            ...(parsed.fallback && parsed.fallback !== parsed.primary ? [parsed.fallback] : []),
+            '/placeholder.webp'
+        ].filter(Boolean);
+
         setUrls(list);
         setCurrentIndex(0);
         setIsLoaded(false);
@@ -74,12 +91,12 @@ export function ImageWithSkeleton({ src, alt, className, showSkeleton = true, pr
                         <div className="absolute inset-0 shimmer-skeleton" />
                         
                         {/* 0-100% Progress Bar Container */}
-                        <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-200/20 overflow-hidden">
+                        <div className="absolute bottom-0 left-0 w-full h-1 bg-emerald-500/10 overflow-hidden">
                             <motion.div
                                 initial={{ width: "0%" }}
                                 animate={{ width: "95%" }}
                                 transition={{ 
-                                    duration: 3, 
+                                    duration: 2.5, 
                                     ease: [0.22, 1, 0.36, 1]
                                 }}
                                 className="h-full bg-[#22C55E]"
@@ -91,7 +108,7 @@ export function ImageWithSkeleton({ src, alt, className, showSkeleton = true, pr
                             <motion.div 
                                 animate={{ opacity: [0.4, 0.8, 0.4] }}
                                 transition={{ duration: 1.5, repeat: Infinity }}
-                                className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#22C55E]/60"
+                                className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#22C55E]/60 font-mono"
                             >
                                 Loading
                             </motion.div>
@@ -112,10 +129,15 @@ export function ImageWithSkeleton({ src, alt, className, showSkeleton = true, pr
                 )}
             </AnimatePresence>
 
-            {/* Error State */}
+            {/* Elegant Themed Fallback */}
             {hasError && (
-                <div className="absolute inset-0 z-40 bg-gray-50 flex items-center justify-center text-gray-400 text-[10px] uppercase font-bold">
-                    Image failed to load
+                <div className="absolute inset-0 z-40 bg-zinc-950 flex flex-col items-center justify-center p-4 text-center border border-white/5">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-1.5 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    </div>
+                    <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-500 font-mono">
+                        {alt || 'ORBIT Project'}
+                    </span>
                 </div>
             )}
 
@@ -128,7 +150,8 @@ export function ImageWithSkeleton({ src, alt, className, showSkeleton = true, pr
                     onLoad={() => setIsLoaded(true)}
                     onError={handleImageError}
                     loading={priority ? 'eager' : 'lazy'}
-                    fetchpriority={priority ? 'high' : 'auto'}
+                    decoding="async"
+                    fetchPriority={priority ? 'high' : 'auto'}
                     className={`w-full h-full transition-all duration-700 ${isLoaded && !hasError ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.02]'}`}
                     style={{ objectFit: 'cover', position: 'relative', zIndex: isLoaded ? 30 : 10 }}
                 />

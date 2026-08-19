@@ -29,7 +29,7 @@ interface ProjectItem {
 // --- Cinematic Archive Card ---
 function ArchiveCard({ item, i }: { item: ProjectItem; i: number }) {
     const routeId = item._id || item._originalIndex;
-    const coverImage = item.images?.[0] || item.image || '/placeholder.png';
+    const coverImage = item.images?.[0] || item.image || '/placeholder.webp';
     const cats: string[] = item.categories || (item.category ? [item.category] : []);
     const ref = useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, amount: 0.1 });

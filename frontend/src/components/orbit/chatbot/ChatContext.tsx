@@ -4,8 +4,7 @@ import { useLang } from '@/contexts/LanguageContext';
 import { useContent } from '@/contexts/ContentContext';
 import { sendToGroq } from '@/services/aiService';
 import { translations } from '@/lib/i18n';
-import type { Lang, ChatMessage, ContextMessage } from './types';
-import { useIdlePopup } from './hooks/useIdlePopup';
+import type { Lang, ChatMessage } from './types';
 import { useViewport } from './hooks/useViewport';
 import { useChatSummary } from './hooks/useChatSummary';
 import { extractAndCleanSuggestions } from './utils/suggestionParser';
@@ -36,11 +35,6 @@ interface ChatContextValue {
   setLeadEmail: React.Dispatch<React.SetStateAction<string>>;
   leadStatus: 'idle' | 'loading';
   pendingMessagesRef: React.MutableRefObject<ChatMessage[] | null>;
-  // Popup state (from useIdlePopup)
-  showWelcomePopup: boolean;
-  popupMessage: ContextMessage;
-  typingText: string;
-  isTypingAnim: boolean;
   // Viewport state (from useViewport)
   viewportStyle: React.CSSProperties;
   isKeyboardOpen: boolean;
@@ -90,12 +84,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   messagesRef.current = messages;
 
   // ─── Compose hooks ───
-  const { showWelcomePopup, popupMessage, typingText, isTypingAnim } = useIdlePopup({
-    open,
-    messagesLength: messages.length,
-    chatLang,
-  });
-
   const { viewportStyle, isKeyboardOpen } = useViewport(open);
 
   const { sendChatSummary, summarySentRef } = useChatSummary({
@@ -233,8 +221,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       // 4. Full system message
       const fullSystemMessage = buildFullSystemMessage(systemPrompt, hasProvidedEmail, knowledgeBase, qaContext);
 
-      // 5. Cap conversation history to last 8 messages
-      const recentHistory = chatHistory.filter(m => m.role !== 'system').slice(-8);
+      // 5. Cap conversation history to last 14 messages
+      const recentHistory = chatHistory.filter(m => m.role !== 'system').slice(-14);
       const conversationHistory: ChatMessage[] = [
         { role: 'system', content: fullSystemMessage },
         ...recentHistory
@@ -391,10 +379,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     leadEmail, setLeadEmail,
     leadStatus,
     pendingMessagesRef,
-    showWelcomePopup,
-    popupMessage,
-    typingText,
-    isTypingAnim,
     viewportStyle,
     isKeyboardOpen,
     chatContentMemo,

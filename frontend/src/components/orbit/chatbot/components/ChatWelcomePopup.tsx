@@ -1,8 +1,14 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatContext } from '../ChatContext';
+import { useIdlePopup } from '../hooks/useIdlePopup';
 
 export function ChatWelcomePopup() {
-  const { open, showWelcomePopup, chatLang, popupMessage, isTypingAnim, typingText, setOpen } = useChatContext();
+  const { open, chatLang, messages, setOpen } = useChatContext();
+  const { showWelcomePopup, popupMessage, isTypingAnim, typingText } = useIdlePopup({
+    open,
+    messagesLength: messages.length,
+    chatLang,
+  });
 
   return (
     <AnimatePresence>

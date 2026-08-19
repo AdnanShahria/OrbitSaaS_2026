@@ -8,8 +8,8 @@ export function ChatMessageList() {
   const { messages, chatLang, setChatLang, isLoading, messagesEndRef } = useChatContext();
 
   return (
-    <div className="chatbot-messages-area flex-1 min-h-0 overflow-y-auto p-4 space-y-3 bg-background/40 md:bg-card/40 md:max-h-[500px] relative">
-      <div className="space-y-3 transition-all duration-500">
+    <div className="chatbot-messages-area font-poppins flex-1 min-h-0 overflow-y-auto p-4 space-y-3 bg-background/40 md:bg-card/40 md:max-h-[500px] relative">
+      <div className="space-y-3">
         {/* Initial Selection Flow */}
         {messages.length === 0 && !isLoading && (
           <div className="space-y-4 py-2">
@@ -44,7 +44,7 @@ export function ChatMessageList() {
         )}
 
         {messages.filter(m => m.role !== 'system').map((msg, i) => (
-          <ChatMessageBubble key={i} msg={msg} index={i} />
+          <ChatMessageBubble key={`msg-${i}-${msg.role}`} msg={msg} index={i} />
         ))}
 
         {/* Email Prompt */}

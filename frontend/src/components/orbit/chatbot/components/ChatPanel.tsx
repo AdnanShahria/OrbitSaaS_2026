@@ -39,8 +39,10 @@ export function ChatPanel() {
               ...viewportStyle,
               transformOrigin: 'bottom',
             }}
-            className={`fixed md:bottom-[84px] left-0 right-0 md:left-auto md:right-6 z-[200] w-full md:w-[400px] max-w-full md:max-w-[400px] overflow-hidden bg-card border border-border shadow-2xl flex flex-col h-[100dvh] md:h-auto top-0 md:top-auto ${isKeyboardOpen && typeof window !== 'undefined' && window.innerWidth < 768 ? 'rounded-none border-t-0' : 'bottom-0 rounded-t-3xl md:rounded-2xl'}`}
+            className={`fixed md:bottom-[84px] left-0 right-0 md:left-auto md:right-6 z-[200] w-full md:w-[440px] max-w-full md:max-w-[440px] overflow-hidden bg-[#0d0d16] border border-indigo-500/40 shadow-[0_0_35px_rgba(99,102,241,0.35),0_0_70px_rgba(168,85,247,0.18),0_25px_60px_rgba(0,0,0,0.9)] ring-1 ring-indigo-400/20 flex flex-col h-[100dvh] md:h-auto top-0 md:top-auto font-poppins ${isKeyboardOpen && typeof window !== 'undefined' && window.innerWidth < 768 ? 'rounded-none border-t-0' : 'bottom-0 rounded-t-3xl md:rounded-2xl'}`}
           >
+            {/* Ambient Top Glow Line */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-400 to-transparent opacity-80 z-30 pointer-events-none" />
             <ChatHeader />
             <ChatMessageList />
             <ChatSuggestionChips />
