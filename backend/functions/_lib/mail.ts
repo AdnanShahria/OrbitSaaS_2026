@@ -33,53 +33,10 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
     const { to, subject, text, html, fromName = 'ORBIT SaaS', attachments } = options;
 
     // 1. Try Gmail (Nodemailer SMTP) first
-    if (env.GMAIL_USER && env.GMAIL_APP_PASSWORD) {
-        try {
-            console.log(`[Mail] Attempting to send email via Gmail to: ${to}`);
-            const transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: env.GMAIL_USER,
-                    pass: env.GMAIL_APP_PASSWORD
-                },
-                connectionTimeout: 3000,
-                greetingTimeout: 3000,
-                socketTimeout: 3000,
-            });
+    // Note: Nodemailer (TCP sockets) is not fully supported in standard Cloudflare Workers
+    // and causes hangs/warnings. Using SendPulse REST API directly instead.
 
-            const mailPayload: any = {
-                from: `"${fromName}" <${env.GMAIL_USER}>`,
-                to,
-                subject,
-                text,
-                html
-            };
-
-            if (attachments && attachments.length > 0) {
-                mailPayload.attachments = attachments.map(att => {
-                    const commaIdx = att.content.indexOf(',');
-                    const clean = commaIdx !== -1 ? att.content.substring(commaIdx + 1).trim() : att.content.trim();
-                    const isBufferAvailable = typeof Buffer !== 'undefined';
-                    return {
-                        filename: att.filename,
-                        content: isBufferAvailable ? Buffer.from(clean, 'base64') : clean,
-                        encoding: isBufferAvailable ? undefined : 'base64',
-                        contentType: att.contentType || 'application/pdf',
-                    };
-                });
-            }
-
-            await transporter.sendMail(mailPayload);
-            console.log(`[Mail] Email successfully sent via Gmail to ${to}`);
-            return true;
-        } catch (err: any) {
-            console.error('[Mail] Gmail SMTP failed, falling back to SendPulse:', err.message || err);
-        }
-    } else {
-        console.log('[Mail] Gmail credentials not configured, trying SendPulse directly.');
-    }
-
-    // 2. Try SendPulse (REST API) as fallback
+    // 2. Try SendPulse (REST API) as primary provider
     const spUserId = env.SENDPULSE_API_USER_ID;
     const spSecret = env.SENDPULSE_API_SECRET;
 
@@ -96,7 +53,7 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
                     client_id: spUserId,
                     client_secret: spSecret,
                 }),
-                signal: AbortSignal.timeout(5000),
+                signal: AbortSignal.timeout(15000),
             });
 
             if (!tokenResp.ok) {
@@ -136,7 +93,7 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
                     'Authorization': `Bearer ${tokenData.access_token}`,
                 },
                 body: JSON.stringify({ email: spEmailObj }),
-                signal: AbortSignal.timeout(10000),
+                signal: AbortSignal.timeout(60000),
             });
 
             if (!emailResp.ok) {
