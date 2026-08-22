@@ -120,18 +120,28 @@ let _cachedLogoBase64: string | null = null;
 export async function loadLogoBase64(): Promise<string | null> {
     if (_cachedLogoBase64) return _cachedLogoBase64;
     try {
-        const resp = await fetch('/favicon.png');
-        const blob = await resp.blob();
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                _cachedLogoBase64 = reader.result as string;
-                resolve(_cachedLogoBase64);
-            };
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(blob);
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = '/favicon.png';
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
         });
-    } catch {
+
+        // Downscale to 200x200 canvas thumbnail — reduces embedded image size from 5.14MB to ~15KB
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 200;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.drawImage(img, 0, 0, 200, 200);
+            _cachedLogoBase64 = canvas.toDataURL('image/png');
+        } else {
+            _cachedLogoBase64 = img.src;
+        }
+        return _cachedLogoBase64;
+    } catch (e) {
+        console.warn('[InvoicePDF] Could not load/downscale logo for PDF:', e);
         return null;
     }
 }
