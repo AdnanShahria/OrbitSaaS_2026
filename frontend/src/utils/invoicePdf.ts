@@ -47,7 +47,96 @@ export function formatCurrency(amount: number, currency: string = 'BDT'): string
     }
 }
 
-export function generateInvoicePdf(invoice: InvoiceData) {
+// PDF-safe currency formatter — avoids glyphs jsPDF Helvetica can't render cleanly
+function pdfCurrency(amount: number, currency: string = 'BDT'): string {
+    const formatted = Number(amount || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+    switch (currency.toUpperCase()) {
+        case 'USD': return `$ ${formatted}`;
+        case 'EUR': return `EUR ${formatted}`;
+        case 'GBP': return `GBP ${formatted}`;
+        case 'BDT':
+        default: return `BDT ${formatted}`;
+    }
+}
+
+// ─── PDF-Safe Text Sanitizer (strips emojis & non-Latin symbols that break jsPDF Helvetica) ───
+export function sanitizePdfText(str: string): string {
+    if (!str) return '';
+    return str
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '') // Emojis
+        .replace(/[\u2014\u2013]/g, '-') // Em-dash and En-dash to hyphen
+        .replace(/[\u2018\u2019]/g, "'") // Curly single quotes
+        .replace(/[\u201C\u201D]/g, '"') // Curly double quotes
+        .replace(/[\u2022\u2023\u25E6\u2043\u2219]/g, '-') // Bullet symbols
+        .replace(/[^\x20-\x7E\n\r\t]/g, '') // Strip remaining non-ASCII glyphs
+        .replace(/[ \t]+/g, ' ') // Collapse multiple spaces
+        .replace(/\n +/g, '\n') // Remove leading space after newline
+        .trim();
+}
+
+// ─── Design Tokens (Apple HIG–inspired) ───
+const C = {
+    // Brand
+    brand:       [88, 72, 206] as [number, number, number],   // #5848CE – refined indigo
+    brandLight:  [118, 102, 220] as [number, number, number], // lighter variant
+
+    // Neutrals — high contrast hierarchy
+    black:       [17, 17, 21] as [number, number, number],    // near-black for headings
+    heading:     [28, 28, 38] as [number, number, number],    // primary headings
+    body:        [55, 55, 68] as [number, number, number],    // body text – 7:1 on white
+    secondary:   [100, 100, 118] as [number, number, number], // secondary text – 4.6:1
+    tertiary:    [140, 140, 155] as [number, number, number], // labels/captions
+    muted:       [175, 175, 188] as [number, number, number], // subtle hints
+
+    // Semantic
+    success:     [30, 150, 100] as [number, number, number],  // green
+    warning:     [200, 140, 20] as [number, number, number],  // amber
+    danger:      [210, 35, 60] as [number, number, number],   // rose-red
+    dangerBg:    [254, 245, 245] as [number, number, number], // rose bg
+    dangerBorder:[252, 215, 215] as [number, number, number],
+
+    // Surfaces
+    white:       [255, 255, 255] as [number, number, number],
+    surfaceBg:   [248, 249, 252] as [number, number, number], // light gray bg
+    surfaceBorder:[228, 230, 240] as [number, number, number],
+    tableHeaderBg:[28, 28, 42] as [number, number, number],
+    tableAltRow: [250, 251, 255] as [number, number, number],
+    divider:     [225, 228, 238] as [number, number, number],
+
+    statusPaid:          { bg: [220, 252, 235], text: [20, 130, 85] },
+    statusPartiallyPaid: { bg: [254, 243, 199], text: [180, 83, 9] }, // amber
+    statusSent:          { bg: [228, 232, 255], text: [67, 56, 202] },
+    statusOverdue:       { bg: [255, 232, 235], text: [210, 35, 60] },
+    statusDraft:         { bg: [238, 238, 245], text: [90, 90, 110] },
+};
+
+// ─── Logo Loader ───
+// Call once at app init or before first PDF generation; caches the result.
+let _cachedLogoBase64: string | null = null;
+
+export async function loadLogoBase64(): Promise<string | null> {
+    if (_cachedLogoBase64) return _cachedLogoBase64;
+    try {
+        const resp = await fetch('/favicon.png');
+        const blob = await resp.blob();
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                _cachedLogoBase64 = reader.result as string;
+                resolve(_cachedLogoBase64);
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+        });
+    } catch {
+        return null;
+    }
+}
+
+export function generateInvoicePdf(invoice: InvoiceData, logoBase64?: string | null) {
     const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -59,302 +148,346 @@ export function generateInvoicePdf(invoice: InvoiceData) {
         ? JSON.parse(invoice.items)
         : (invoice.items || []);
 
-    const pageWidth = doc.internal.pageSize.getWidth(); // 210mm
-    const pageHeight = doc.internal.pageSize.getHeight(); // 297mm
-    const margin = 15;
+    const pw = doc.internal.pageSize.getWidth();   // 210mm
+    const ph = doc.internal.pageSize.getHeight();   // 297mm
+    const m = 18; // generous margin (HIG: give essential info sufficient space)
+    const contentW = pw - m * 2;
 
-    // ─── Header Gradient / Accent Bar ───
-    doc.setFillColor(108, 92, 231); // #6c5ce7 Primary Indigo/Purple
-    doc.rect(0, 0, pageWidth, 5, 'F');
+    // ─── Accent Bar ───
+    doc.setFillColor(...C.brand);
+    doc.rect(0, 0, pw, 4, 'F');
 
-    // ─── Company Brand & Logo ───
+    // ─── Company Brand (Logo + Text) ───
+    let y = 18;
+    const logoSize = 12; // mm — compact, professional
+    let textOffsetX = m;
+
+    if (logoBase64) {
+        try {
+            doc.addImage(logoBase64, 'PNG', m, y - 8, logoSize, logoSize);
+            textOffsetX = m + logoSize + 3; // shift text right of logo
+        } catch {
+            // Fallback: render without logo if addImage fails
+        }
+    }
+
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.setTextColor(24, 24, 38);
-    doc.text('ORBIT', margin, 20);
+    doc.setFontSize(20);
+    doc.setTextColor(...C.heading);
+    doc.text('ORBIT', textOffsetX, y);
 
-    doc.setTextColor(108, 92, 231);
-    doc.text('SaaS', margin + 26, 20);
+    const orbitW = doc.getTextWidth('ORBIT');
+    doc.setTextColor(...C.brand);
+    doc.text('SaaS', textOffsetX + orbitW + 2, y);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(120, 120, 140);
-    doc.text('DIGITAL PRODUCT & CLOUD ENGINEERING', margin, 25);
-    doc.text('contact@orbitsaas.cloud  |  www.orbitsaas.cloud', margin, 29);
+    doc.setFontSize(8);
+    doc.setTextColor(...C.secondary);
+    doc.text('DIGITAL PRODUCT & CLOUD ENGINEERING', textOffsetX, y + 5);
+    doc.text('contact@orbitsaas.cloud  |  www.orbitsaas.cloud', textOffsetX, y + 9);
 
-    // ─── INVOICE Badge & Metadata (Top Right) ───
+    // ─── INVOICE Title (Right) ───
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(24, 24, 38);
-    doc.text('INVOICE', pageWidth - margin, 20, { align: 'right' });
+    doc.setFontSize(16);
+    doc.setTextColor(...C.heading);
+    doc.text('INVOICE', pw - m, y, { align: 'right' });
 
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(108, 92, 231);
-    doc.text(invoice.invoice_number || 'INV-0000', pageWidth - margin, 26, { align: 'right' });
+    doc.setTextColor(...C.brand);
+    doc.text(invoice.invoice_number || 'INV-0000', pw - m, y + 6, { align: 'right' });
 
     // Status Pill
-    const statusText = (invoice.status || 'draft').toUpperCase();
-    let statusBg = [230, 230, 240];
-    let statusColor = [80, 80, 100];
-    if (invoice.status === 'paid') {
-        statusBg = [209, 250, 229]; // emerald-100
-        statusColor = [5, 150, 105]; // emerald-600
-    } else if (invoice.status === 'sent') {
-        statusBg = [224, 231, 255]; // indigo-100
-        statusColor = [67, 56, 202]; // indigo-700
-    } else if (invoice.status === 'overdue') {
-        statusBg = [255, 228, 230]; // rose-100
-        statusColor = [225, 29, 72]; // rose-600
-    }
+    const rawStatus = invoice.status || 'draft';
+    const statusText = rawStatus === 'partially_paid' ? 'PARTIAL' : rawStatus.toUpperCase();
+    let statusStyle = C.statusDraft;
+    if (rawStatus === 'paid') statusStyle = C.statusPaid;
+    else if (rawStatus === 'partially_paid') statusStyle = C.statusPartiallyPaid;
+    else if (rawStatus === 'sent') statusStyle = C.statusSent;
+    else if (rawStatus === 'overdue') statusStyle = C.statusOverdue;
 
-    doc.setFillColor(statusBg[0], statusBg[1], statusBg[2]);
-    doc.roundedRect(pageWidth - margin - 26, 29, 26, 5.5, 1.5, 1.5, 'F');
-    doc.setFontSize(7.5);
+    const pillW = Math.max(doc.getTextWidth(statusText) + 8, 22);
+    const pillX = pw - m - pillW;
+    doc.setFillColor(statusStyle.bg[0], statusStyle.bg[1], statusStyle.bg[2]);
+    doc.roundedRect(pillX, y + 9, pillW, 5.5, 2, 2, 'F');
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
-    doc.text(statusText, pageWidth - margin - 13, 33, { align: 'center' });
+    doc.setTextColor(statusStyle.text[0], statusStyle.text[1], statusStyle.text[2]);
+    doc.text(statusText, pillX + pillW / 2, y + 13, { align: 'center' });
 
     // ─── Divider ───
-    doc.setDrawColor(230, 232, 240);
-    doc.setLineWidth(0.4);
-    doc.line(margin, 38, pageWidth - margin, 38);
+    y = 36;
+    doc.setDrawColor(...C.divider);
+    doc.setLineWidth(0.3);
+    doc.line(m, y, pw - m, y);
 
-    // ─── Invoice Info Grid ───
-    const infoStartY = 45;
+    // ─── Client Info (Left) & Invoice Meta (Right) ───
+    y = 42;
 
-    // LEFT: Billed To Customer
+    // LEFT: Billed To
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(140, 140, 160);
-    doc.text('BILLED TO:', margin, infoStartY);
+    doc.setFontSize(7);
+    doc.setTextColor(...C.tertiary);
+    doc.text('BILLED TO', m, y);
 
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(24, 24, 38);
-    doc.text(invoice.client_name || 'Valued Client', margin, infoStartY + 5.5);
+    doc.setTextColor(...C.heading);
+    doc.text(invoice.client_name || 'Valued Client', m, y + 6);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.setTextColor(70, 70, 90);
-    let customerY = infoStartY + 10;
+    doc.setTextColor(...C.body);
+    let clientY = y + 11;
     if (invoice.client_email) {
-        doc.text(invoice.client_email, margin, customerY);
-        customerY += 4.2;
+        doc.text(invoice.client_email, m, clientY);
+        clientY += 4.5;
     }
     if (invoice.client_phone) {
-        doc.text(invoice.client_phone, margin, customerY);
-        customerY += 4.2;
+        doc.text(invoice.client_phone, m, clientY);
+        clientY += 4.5;
     }
     if (invoice.client_address) {
-        doc.text(invoice.client_address, margin, customerY);
-        customerY += 4.2;
+        doc.text(invoice.client_address, m, clientY);
+        clientY += 4.5;
     }
 
-    // RIGHT: Service Type & Dates Box
-    const boxX = pageWidth - margin - 75;
-    doc.setFillColor(248, 249, 252);
-    doc.roundedRect(boxX, infoStartY - 3, 75, 26, 2, 2, 'F');
-    doc.setDrawColor(230, 232, 242);
-    doc.roundedRect(boxX, infoStartY - 3, 75, 26, 2, 2, 'S');
+    // RIGHT: Service & Dates Box
+    const boxW = 72;
+    const boxX = pw - m - boxW;
+    const boxH = invoice.project_name ? 28 : 23;
+    doc.setFillColor(...C.surfaceBg);
+    doc.roundedRect(boxX, y - 3, boxW, boxH, 2.5, 2.5, 'F');
+    doc.setDrawColor(...C.surfaceBorder);
+    doc.setLineWidth(0.25);
+    doc.roundedRect(boxX, y - 3, boxW, boxH, 2.5, 2.5, 'S');
+
+    const bx = boxX + 5;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(...C.tertiary);
+    doc.text('SERVICE TYPE', bx, y + 1);
+    doc.setFontSize(9);
+    doc.setTextColor(...C.brand);
+    doc.text(invoice.service_type || 'Digital Services', bx, y + 5.5);
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(140, 140, 160);
-    doc.text('SERVICE TYPE:', boxX + 4, infoStartY + 2);
-    doc.setFontSize(8.5);
-    doc.setTextColor(108, 92, 231);
-    doc.text(invoice.service_type || 'Digital Services', boxX + 4, infoStartY + 6);
+    doc.setFontSize(7);
+    doc.setTextColor(...C.tertiary);
+    doc.text('ISSUE DATE', bx, y + 11);
+    doc.text('DUE DATE', bx + 36, y + 11);
 
-    doc.setFontSize(7.5);
-    doc.setTextColor(140, 140, 160);
-    doc.text('ISSUE DATE:', boxX + 4, infoStartY + 11.5);
-    doc.text('DUE DATE:', boxX + 40, infoStartY + 11.5);
-
-    doc.setFontSize(8.5);
-    doc.setTextColor(30, 30, 45);
-    doc.text(invoice.issue_date || '-', boxX + 4, infoStartY + 16);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...C.body);
+    doc.text(invoice.issue_date || '-', bx, y + 15.5);
 
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(225, 29, 72); // Rose red for due date
-    doc.text(invoice.due_date || '-', boxX + 40, infoStartY + 16);
+    doc.setTextColor(...C.danger);
+    doc.text(invoice.due_date || '-', bx + 36, y + 15.5);
 
     if (invoice.project_name) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
-        doc.setTextColor(120, 120, 140);
-        doc.text(`Project: ${invoice.project_name}`, boxX + 4, infoStartY + 21);
+        doc.setTextColor(...C.secondary);
+        doc.text(`Project: ${invoice.project_name}`, bx, y + 21);
     }
 
-    // ─── Table of Items ───
-    const tableColumns = [
-        { header: '#', dataKey: 'index' },
-        { header: 'DESCRIPTION', dataKey: 'description' },
-        { header: 'QTY', dataKey: 'quantity' },
-        { header: 'UNIT RATE', dataKey: 'rate' },
-        { header: 'AMOUNT', dataKey: 'amount' },
-    ];
-
-    const tableRows = items.map((item, idx) => ({
-        index: (idx + 1).toString(),
-        description: item.description || 'Service Description',
-        quantity: (item.quantity || 1).toString(),
-        rate: formatCurrency(item.unit_price, currency),
-        amount: formatCurrency(item.amount || (item.quantity * item.unit_price), currency),
-    }));
-
-    const startTableY = Math.max(customerY + 4, infoStartY + 28);
+    // ─── Items Table ───
+    const tableStartY = Math.max(clientY + 6, y + boxH + 4);
 
     autoTable(doc, {
-        columns: tableColumns,
-        body: tableRows,
-        startY: startTableY,
+        columns: [
+            { header: '#', dataKey: 'index' },
+            { header: 'Description', dataKey: 'description' },
+            { header: 'Qty', dataKey: 'quantity' },
+            { header: 'Unit Rate', dataKey: 'rate' },
+            { header: 'Amount', dataKey: 'amount' },
+        ],
+        body: items.map((item, idx) => ({
+            index: String(idx + 1),
+            description: item.description || 'Service',
+            quantity: String(item.quantity || 1),
+            rate: pdfCurrency(item.unit_price, currency),
+            amount: pdfCurrency(item.amount || (item.quantity * item.unit_price), currency),
+        })),
+        startY: tableStartY,
         theme: 'plain',
+        margin: { left: m, right: m },
         styles: {
             font: 'helvetica',
-            fontSize: 8.5,
-            cellPadding: 3.5,
-            textColor: [40, 40, 55],
+            fontSize: 9,
+            cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
+            textColor: C.body,
+            lineColor: C.divider,
+            lineWidth: 0.15,
             valign: 'middle',
         },
         headStyles: {
-            fillColor: [24, 24, 38], // Dark Charcoal Header
+            fillColor: C.tableHeaderBg,
             textColor: [255, 255, 255],
             fontStyle: 'bold',
             fontSize: 8,
-            cellPadding: 4,
+            cellPadding: { top: 3.5, bottom: 3.5, left: 3, right: 3 },
         },
         columnStyles: {
-            index: { cellWidth: 10, halign: 'center' },
+            index:       { cellWidth: 10, halign: 'center' },
             description: { cellWidth: 'auto', halign: 'left' },
-            quantity: { cellWidth: 16, halign: 'center' },
-            rate: { cellWidth: 28, halign: 'right' },
-            amount: { cellWidth: 32, halign: 'right', fontStyle: 'bold' },
+            quantity:    { cellWidth: 14, halign: 'center' },
+            rate:        { cellWidth: 34, halign: 'right' },
+            amount:      { cellWidth: 38, halign: 'right', fontStyle: 'bold' },
         },
         alternateRowStyles: {
-            fillColor: [250, 251, 255],
-        },
-        didDrawPage: (data) => {
-            // Draw a subtle border below header
-            doc.setDrawColor(220, 222, 235);
-            doc.setLineWidth(0.3);
+            fillColor: C.tableAltRow,
         },
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 6;
+    const tableEndY = (doc as any).lastAutoTable.finalY + 8;
 
-    // ─── Financial Summary Table (Bottom Right) ───
-    const summaryWidth = 80;
-    const summaryX = pageWidth - margin - summaryWidth;
+    // ─── Two-Column Bottom: Payment Info (Left) + Financial Summary (Right) ───
+    const summaryW = 82;
+    const summaryX = pw - m - summaryW;
+    const notesW = summaryX - m - 8;
+    let sY = tableEndY;
 
-    let currentSummaryY = finalY;
-
-    // Helper row drawer
-    const drawSummaryRow = (label: string, value: string, isBold: boolean = false, textColor: number[] = [40, 40, 55]) => {
-        doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-        doc.setFontSize(8.5);
-        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-        doc.text(label, summaryX, currentSummaryY);
-        doc.text(value, pageWidth - margin, currentSummaryY, { align: 'right' });
-        currentSummaryY += 5;
+    // ── Right Column: Financial Summary ──
+    const drawRow = (label: string, value: string, opts: {
+        bold?: boolean;
+        labelColor?: number[];
+        valueColor?: number[];
+        fontSize?: number;
+    } = {}) => {
+        const fs = opts.fontSize || 9;
+        doc.setFontSize(fs);
+        doc.setFont('helvetica', opts.bold ? 'bold' : 'normal');
+        doc.setTextColor(...(opts.labelColor || C.secondary) as [number, number, number]);
+        doc.text(label, summaryX, sY);
+        doc.setTextColor(...(opts.valueColor || C.body) as [number, number, number]);
+        doc.text(value, pw - m, sY, { align: 'right' });
+        sY += 6;
     };
 
-    drawSummaryRow('Subtotal:', formatCurrency(invoice.subtotal || 0, currency));
+    drawRow('Subtotal', pdfCurrency(invoice.subtotal || 0, currency));
 
     if (Number(invoice.discount || 0) > 0) {
-        drawSummaryRow('Discount:', `-${formatCurrency(invoice.discount || 0, currency)}`, false, [16, 185, 129]);
+        drawRow('Discount', `- ${pdfCurrency(invoice.discount || 0, currency)}`, {
+            valueColor: C.success,
+        });
     }
 
     if (Number(invoice.tax || 0) > 0) {
-        drawSummaryRow('Tax / VAT:', `+${formatCurrency(invoice.tax || 0, currency)}`);
+        drawRow('Tax / VAT', `+ ${pdfCurrency(invoice.tax || 0, currency)}`);
     }
 
-    // Total Amount Box
-    doc.setDrawColor(220, 222, 235);
-    doc.setLineWidth(0.4);
-    doc.line(summaryX, currentSummaryY - 2, pageWidth - margin, currentSummaryY - 2);
+    // Separator line before total
+    doc.setDrawColor(...C.divider);
+    doc.setLineWidth(0.3);
+    doc.line(summaryX, sY - 3, pw - m, sY - 3);
+    sY += 1;
 
-    drawSummaryRow('Total Amount:', formatCurrency(invoice.total_amount || 0, currency), true, [24, 24, 38]);
+    drawRow('Total Amount', pdfCurrency(invoice.total_amount || 0, currency), {
+        bold: true,
+        labelColor: C.heading,
+        valueColor: C.heading,
+    });
 
     if (Number(invoice.paid_amount || 0) > 0) {
-        drawSummaryRow('Paid Advance:', formatCurrency(invoice.paid_amount || 0, currency), false, [16, 185, 129]);
+        drawRow('Paid / Advance', pdfCurrency(invoice.paid_amount || 0, currency), {
+            valueColor: C.success,
+            labelColor: C.success,
+        });
     }
 
-    // Due Balance Highlight Box
-    currentSummaryY += 2;
-    doc.setFillColor(254, 242, 242); // Light red/rose
-    doc.roundedRect(summaryX - 2, currentSummaryY - 4, summaryWidth + 2, 10, 1.5, 1.5, 'F');
-    doc.setDrawColor(254, 202, 202);
-    doc.roundedRect(summaryX - 2, currentSummaryY - 4, summaryWidth + 2, 10, 1.5, 1.5, 'S');
+    // Balance Due highlight box
+    sY += 1;
+    const dueBoxH = 10;
+    doc.setFillColor(...C.dangerBg);
+    doc.roundedRect(summaryX - 2, sY - 5, summaryW + 4, dueBoxH, 2, 2, 'F');
+    doc.setDrawColor(...C.dangerBorder);
+    doc.setLineWidth(0.25);
+    doc.roundedRect(summaryX - 2, sY - 5, summaryW + 4, dueBoxH, 2, 2, 'S');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.setTextColor(190, 18, 60); // Rose-700
-    doc.text('Balance Due:', summaryX + 2, currentSummaryY + 2.5);
-    doc.setFontSize(10.5);
-    doc.text(formatCurrency(invoice.due_amount || 0, currency), pageWidth - margin - 2, currentSummaryY + 2.5, { align: 'right' });
+    doc.setFontSize(10);
+    doc.setTextColor(...C.danger);
+    doc.text('Balance Due', summaryX + 2, sY + 1);
+    doc.text(pdfCurrency(invoice.due_amount || 0, currency), pw - m, sY + 1, { align: 'right' });
 
-    // ─── Payment Instructions & Notes (Bottom Left) ───
-    const notesWidth = summaryX - margin - 10;
-    let notesY = finalY;
+    // ── Left Column: Payment Instructions & Notes ──
+    let nY = tableEndY;
 
     if (invoice.payment_instructions) {
-        doc.setFillColor(248, 249, 252);
-        doc.roundedRect(margin, notesY, notesWidth, 26, 2, 2, 'F');
-        doc.setDrawColor(230, 232, 242);
-        doc.roundedRect(margin, notesY, notesWidth, 26, 2, 2, 'S');
+        const cleanInstructions = sanitizePdfText(invoice.payment_instructions);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        const lines: string[] = doc.splitTextToSize(cleanInstructions, notesW - 10);
+        const lineH = 3.6;
+        const topPadding = 10;
+        const bottomPadding = 4;
+        const bxH = topPadding + (lines.length * lineH) + bottomPadding;
+
+        doc.setFillColor(...C.surfaceBg);
+        doc.roundedRect(m, nY, notesW, bxH, 2.5, 2.5, 'F');
+        doc.setDrawColor(...C.surfaceBorder);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(m, nY, notesW, bxH, 2.5, 2.5, 'S');
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
-        doc.setTextColor(108, 92, 231);
-        doc.text('PAYMENT METHODS & INSTRUCTIONS:', margin + 4, notesY + 5);
+        doc.setTextColor(...C.brand);
+        doc.text('Payment Methods & Instructions', m + 5, nY + 5.5);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
-        doc.setTextColor(70, 70, 90);
-        const splitInstructions = doc.splitTextToSize(invoice.payment_instructions, notesWidth - 8);
-        doc.text(splitInstructions, margin + 4, notesY + 10);
+        doc.setTextColor(...C.body);
+        lines.forEach((line, idx) => {
+            doc.text(line, m + 5, nY + topPadding + (idx * lineH));
+        });
 
-        notesY += 30;
+        nY += bxH + 5;
     }
 
     if (invoice.notes) {
+        const cleanNotes = sanitizePdfText(invoice.notes);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
-        doc.setTextColor(120, 120, 140);
-        doc.text('TERMS & NOTES:', margin, notesY + 3);
+        doc.setTextColor(...C.tertiary);
+        doc.text('Terms & Notes', m, nY + 3);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
-        doc.setTextColor(90, 90, 110);
-        const splitNotes = doc.splitTextToSize(invoice.notes, notesWidth);
-        doc.text(splitNotes, margin, notesY + 7.5);
+        doc.setTextColor(...C.secondary);
+        const noteLines: string[] = doc.splitTextToSize(cleanNotes, notesW);
+        const noteLineH = 3.6;
+        noteLines.forEach((line, idx) => {
+            doc.text(line, m, nY + 7.5 + (idx * noteLineH));
+        });
     }
 
-    // ─── Footer with Signature / Thank You ───
-    const footerY = pageHeight - 18;
-
-    doc.setDrawColor(230, 232, 240);
-    doc.setLineWidth(0.3);
-    doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+    // ─── Footer ───
+    const footerY = ph - 16;
+    doc.setDrawColor(...C.divider);
+    doc.setLineWidth(0.2);
+    doc.line(m, footerY - 4, pw - m, footerY - 4);
 
     doc.setFont('helvetica', 'italic');
-    doc.setFontSize(8);
-    doc.setTextColor(140, 140, 160);
-    doc.text('Thank you for your business and trust in ORBIT SaaS!', margin, footerY);
+    doc.setFontSize(7.5);
+    doc.setTextColor(...C.tertiary);
+    doc.text('Thank you for your business and trust in ORBIT SaaS!', m, footerY);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(160, 160, 180);
-    doc.text('Generated via Orbit SaaS Billing System', pageWidth - margin, footerY, { align: 'right' });
+    doc.setFontSize(7);
+    doc.setTextColor(...C.muted);
+    doc.text('Generated via Orbit SaaS Billing System', pw - m, footerY, { align: 'right' });
 
     return {
         doc,
         downloadPdf: () => {
             doc.save(`${invoice.invoice_number || 'invoice'}.pdf`);
         },
-        getBase64: () => {
-            return doc.output('datauristring');
+        getBase64: (): string => {
+            const dataUri = doc.output('datauristring');
+            const commaIndex = dataUri.indexOf(',');
+            return commaIndex !== -1 ? dataUri.substring(commaIndex + 1).trim() : dataUri.trim();
         },
         getBlobUrl: (): string => {
             const out = doc.output('bloburl');

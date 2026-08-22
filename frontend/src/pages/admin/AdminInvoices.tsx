@@ -8,7 +8,7 @@ import {
     Layers, User, Phone, MapPin, Calendar, FileText, ArrowRight,
     Copy, X, Sparkles, Check, ChevronDown, ExternalLink, ShieldAlert
 } from 'lucide-react';
-import { generateInvoicePdf, formatCurrency, InvoiceData, InvoiceItem } from '@/utils/invoicePdf';
+import { generateInvoicePdf, formatCurrency, loadLogoBase64, InvoiceData, InvoiceItem } from '@/utils/invoicePdf';
 import { buildInvoiceEmailTemplate } from '@/utils/invoiceEmailTemplate';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -81,10 +81,15 @@ export default function AdminInvoices() {
     const [emailModalOpen, setEmailModalOpen] = useState(false);
     const [previewModalOpen, setPreviewModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [builderPreviewOpen, setBuilderPreviewOpen] = useState(false);
+    const [builderPreviewUrl, setBuilderPreviewUrl] = useState<string | null>(null);
 
     // Selected Invoice States
     const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
     const [invoiceToDelete, setInvoiceToDelete] = useState<InvoiceData | null>(null);
+
+    // Cached logo for PDF generation
+    const logoRef = useRef<string | null>(null);
 
     // Invoice Builder Form
     const [formData, setFormData] = useState<InvoiceData>({
@@ -150,7 +155,19 @@ export default function AdminInvoices() {
 
     useEffect(() => {
         fetchInvoices();
+        // Pre-load logo for PDF generation (runs once, cached)
+        if (!logoRef.current) {
+            loadLogoBase64().then(b64 => { logoRef.current = b64; });
+        }
     }, [search, statusFilter, serviceFilter]);
+
+    // Helper to get fallback invoice number in INV-YYYY-MM-0001 format
+    const getFallbackInvoiceNumber = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        return `INV-${year}-${month}-0001`;
+    };
 
     // Fetch next invoice number for creation
     const fetchNextNumber = async () => {
@@ -159,9 +176,9 @@ export default function AdminInvoices() {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
-            return data.next_number || `INV-${new Date().getFullYear()}-0001`;
+            return data.next_number || getFallbackInvoiceNumber();
         } catch {
-            return `INV-${new Date().getFullYear()}-0001`;
+            return getFallbackInvoiceNumber();
         }
     };
 
@@ -352,7 +369,7 @@ export default function AdminInvoices() {
 
         // Generate PDF blob preview
         try {
-            const pdfRes = generateInvoicePdf(inv);
+            const pdfRes = generateInvoicePdf(inv, logoRef.current);
             setPdfPreviewUrl(pdfRes.getBlobUrl());
         } catch (e) {
             console.error('PDF preview error:', e);
@@ -372,10 +389,13 @@ export default function AdminInvoices() {
         setEmailSending(true);
         const toastId = toast.loading(`Generating invoice PDF and dispatching to ${emailForm.recipient}...`);
 
+        // Yield to the main thread so React can render the spinner before synchronous PDF generation blocks it
+        await new Promise(resolve => setTimeout(resolve, 20));
+
         try {
             let pdfBase64 = '';
             if (emailForm.attachPdf) {
-                const pdfRes = generateInvoicePdf(selectedInvoice);
+                const pdfRes = generateInvoicePdf(selectedInvoice, logoRef.current);
                 pdfBase64 = pdfRes.getBase64();
             }
 
@@ -416,11 +436,31 @@ export default function AdminInvoices() {
     // Direct PDF Download
     const handleDownloadPdf = (inv: InvoiceData) => {
         try {
-            const pdfRes = generateInvoicePdf(inv);
+            const pdfRes = generateInvoicePdf(inv, logoRef.current);
             pdfRes.downloadPdf();
             toast.success(`Downloaded ${inv.invoice_number}.pdf`);
         } catch (e: any) {
             toast.error('Failed to generate PDF: ' + e.message);
+        }
+    };
+
+    // Preview PDF from Builder Form (unsaved)
+    const handleBuilderPreview = () => {
+        try {
+            const effectiveServiceType = formData.service_type === 'Custom Service'
+                ? (customServiceInput.trim() || 'Custom Service')
+                : formData.service_type;
+
+            const previewData: InvoiceData = {
+                ...formData,
+                service_type: effectiveServiceType,
+            };
+
+            const pdfRes = generateInvoicePdf(previewData, logoRef.current);
+            setBuilderPreviewUrl(pdfRes.getBlobUrl());
+            setBuilderPreviewOpen(true);
+        } catch (e: any) {
+            toast.error('Failed to generate preview: ' + e.message);
         }
     };
 
@@ -844,12 +884,22 @@ export default function AdminInvoices() {
                                         </p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => setBuilderOpen(false)}
-                                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleBuilderPreview}
+                                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 hover:border-indigo-500/40 text-sm font-medium transition-all"
+                                    >
+                                        <Eye className="w-4 h-4" />
+                                        Preview
+                                    </button>
+                                    <button
+                                        onClick={() => setBuilderOpen(false)}
+                                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Section 1: Customer Identity */}
@@ -1087,9 +1137,54 @@ export default function AdminInvoices() {
                                 {/* Payment instructions & Notes */}
                                 <div className="space-y-3">
                                     <div>
-                                        <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                                            Payment Methods & Instructions
-                                        </label>
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <label className="block text-xs font-semibold text-muted-foreground">
+                                                Payment Methods & Instructions
+                                            </label>
+                                            <div className="flex items-center gap-1 flex-wrap justify-end">
+                                                {[
+                                                    {
+                                                        label: 'Default',
+                                                        color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20',
+                                                        text: `Bank Transfer:\nBank: City Bank PLC / Dutch-Bangla Bank\nAccount Name: ORBIT SaaS Solutions\nAccount Number: 1502-XXXXXXXXX-001\nRouting Number: 22527XXXX\n\nMobile Banking (bKash / Nagad Merchant):\n01700-000000 (Make Payment)\n\nInternational: Wire / Stripe payment link available upon request.`,
+                                                    },
+                                                    {
+                                                        label: 'Paid ✓',
+                                                        color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20',
+                                                        text: `PAYMENT RECEIVED - Thank you!\n\nThis invoice has been fully paid. No further action is required.\nIf you need a receipt or have questions, contact us at contact@orbitsaas.cloud.`,
+                                                    },
+                                                    {
+                                                        label: 'Partial',
+                                                        color: 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
+                                                        text: `PARTIAL PAYMENT RECEIVED - Balance Remaining\n\nThank you for your partial payment! Please remit the remaining balance before the due date.\n\nBank Transfer:\nBank: City Bank PLC / Dutch-Bangla Bank\nAccount Name: ORBIT SaaS Solutions\nAccount Number: 1502-XXXXXXXXX-001\nRouting Number: 22527XXXX\n\nMobile Banking (bKash / Nagad Merchant):\n01700-000000 (Make Payment)\n\nInternational: Wire / Stripe payment link available upon request.`,
+                                                    },
+                                                    {
+                                                        label: 'Due ⚠',
+                                                        color: 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
+                                                        text: `PAYMENT DUE - Please remit before the due date.\n\nBank Transfer:\nBank: City Bank PLC / Dutch-Bangla Bank\nAccount Name: ORBIT SaaS Solutions\nAccount Number: 1502-XXXXXXXXX-001\n\nMobile Banking (bKash / Nagad Merchant):\n01700-000000 (Make Payment)\n\nInternational: Wire / Stripe payment link available upon request.`,
+                                                    },
+                                                    {
+                                                        label: 'Overdue',
+                                                        color: 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20',
+                                                        text: `OVERDUE - Immediate payment required.\n\nThis invoice is past its due date. Please process payment immediately to avoid service interruption.\n\nBank Transfer:\nBank: City Bank PLC / Dutch-Bangla Bank\nAccount Name: ORBIT SaaS Solutions\nAccount Number: 1502-XXXXXXXXX-001\n\nMobile Banking (bKash / Nagad): 01700-000000\n\nContact us urgently at contact@orbitsaas.cloud if you have any concerns.`,
+                                                    },
+                                                    {
+                                                        label: 'Discontinued',
+                                                        color: 'bg-slate-500/10 text-slate-400 border-slate-500/20 hover:bg-slate-500/20',
+                                                        text: `SERVICE DISCONTINUED\n\nThis project/service has been discontinued. Any outstanding balance shown above remains payable.\nPlease settle the remaining amount via the methods below:\n\nMobile Banking (bKash / Nagad): 01700-000000\nBank Transfer available on request.\n\nFor questions, reach us at contact@orbitsaas.cloud.`,
+                                                    },
+                                                ].map((preset) => (
+                                                    <button
+                                                        key={preset.label}
+                                                        type="button"
+                                                        onClick={() => setFormData(f => ({ ...f, payment_instructions: preset.text }))}
+                                                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all ${preset.color}`}
+                                                    >
+                                                        {preset.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                         <textarea
                                             rows={4}
                                             value={formData.payment_instructions || ''}
@@ -1099,9 +1194,49 @@ export default function AdminInvoices() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                                            Terms & Friendly Notes
-                                        </label>
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <label className="block text-xs font-semibold text-muted-foreground">
+                                                 Terms & Friendly Notes
+                                            </label>
+                                            <div className="flex items-center gap-1 flex-wrap justify-end">
+                                                {[
+                                                    {
+                                                        label: 'Default',
+                                                        color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20',
+                                                        text: `1. Payment is due within the specified due date.\n2. In case of inquiries regarding this invoice, please reach us at contact@orbitsaas.cloud.\n3. Thank you for choosing ORBIT SaaS for your digital innovation!`,
+                                                    },
+                                                    {
+                                                        label: 'Paid ✓',
+                                                        color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20',
+                                                        text: `1. Payment has been received in full - thank you!\n2. This invoice is now closed. No further action needed.\n3. We appreciate your trust in ORBIT SaaS. Looking forward to continuing our partnership!`,
+                                                    },
+                                                    {
+                                                        label: 'Partial',
+                                                        color: 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
+                                                        text: `1. A partial payment has been received. The remaining balance is shown above.\n2. Please clear the outstanding amount before the due date to avoid service delays.\n3. Contact contact@orbitsaas.cloud for payment plans or questions.`,
+                                                    },
+                                                    {
+                                                        label: 'Overdue',
+                                                        color: 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20',
+                                                        text: `1. This invoice is past its due date. Please process payment immediately.\n2. Continued non-payment may result in service suspension or additional late fees.\n3. If you have already paid, please disregard this notice and contact us with your payment reference.`,
+                                                    },
+                                                    {
+                                                        label: 'Discontinued',
+                                                        color: 'bg-slate-500/10 text-slate-400 border-slate-500/20 hover:bg-slate-500/20',
+                                                        text: `1. This service/project has been discontinued as per mutual agreement.\n2. Any outstanding balance remains payable and must be settled within 15 business days.\n3. For queries regarding final settlement, contact contact@orbitsaas.cloud.`,
+                                                    },
+                                                ].map((preset) => (
+                                                    <button
+                                                        key={preset.label}
+                                                        type="button"
+                                                        onClick={() => setFormData(f => ({ ...f, notes: preset.text }))}
+                                                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all ${preset.color}`}
+                                                    >
+                                                        {preset.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                         <textarea
                                             rows={2}
                                             value={formData.notes || ''}
@@ -1198,19 +1333,29 @@ export default function AdminInvoices() {
                                         type="button"
                                         disabled={saving}
                                         onClick={() => handleSaveInvoice(false)}
-                                        className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-sm font-semibold text-white border border-white/10 transition-all"
+                                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-sm font-semibold text-white border border-white/10 transition-all disabled:opacity-50"
                                     >
-                                        Save Invoice
+                                        {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
+                                        {saving ? 'Saving...' : 'Save Invoice'}
                                     </button>
 
                                     <button
                                         type="button"
                                         disabled={saving}
                                         onClick={() => handleSaveInvoice(true)}
-                                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition-all"
+                                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50"
                                     >
-                                        <Mail className="w-4 h-4" />
-                                        Save & Compose Email
+                                        {saving ? (
+                                            <>
+                                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                                Processing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Mail className="w-4 h-4" />
+                                                Save & Compose Email
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -1411,6 +1556,80 @@ export default function AdminInvoices() {
 
                                 </div>
 
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* ══════════════════════════════════════════════════════════════════
+                MODAL: BUILDER PDF PREVIEW
+               ══════════════════════════════════════════════════════════════════ */}
+            <AnimatePresence>
+                {builderPreviewOpen && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            className="bg-[#0f0f18] border border-white/10 rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden"
+                        >
+                            {/* Preview Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.02]">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white">
+                                        <Eye className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                            Invoice Preview
+                                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                Unsaved Draft
+                                            </span>
+                                        </h2>
+                                        <p className="text-xs text-muted-foreground">
+                                            {formData.invoice_number} — {formData.client_name || 'No client'} — {formatCurrency(formData.total_amount, formData.currency)}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const effectiveServiceType = formData.service_type === 'Custom Service'
+                                                ? (customServiceInput.trim() || 'Custom Service')
+                                                : formData.service_type;
+                                            handleDownloadPdf({ ...formData, service_type: effectiveServiceType });
+                                        }}
+                                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium text-muted-foreground hover:text-white border border-white/10 transition-all"
+                                    >
+                                        <Download className="w-3.5 h-3.5" /> Download PDF
+                                    </button>
+                                    <button
+                                        onClick={() => setBuilderPreviewOpen(false)}
+                                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* PDF Embed */}
+                            <div className="flex-1 p-4 overflow-hidden">
+                                <div className="w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-[#1e1e2d] shadow-inner">
+                                    {builderPreviewUrl ? (
+                                        <iframe
+                                            title="Invoice PDF Preview"
+                                            src={builderPreviewUrl}
+                                            className="w-full h-full border-0"
+                                        />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                            Rendering PDF document...
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     </div>

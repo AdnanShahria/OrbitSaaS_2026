@@ -41,7 +41,10 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
                 auth: {
                     user: env.GMAIL_USER,
                     pass: env.GMAIL_APP_PASSWORD
-                }
+                },
+                connectionTimeout: 3000,
+                greetingTimeout: 3000,
+                socketTimeout: 3000,
             });
 
             const mailPayload: any = {
@@ -53,12 +56,17 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
             };
 
             if (attachments && attachments.length > 0) {
-                mailPayload.attachments = attachments.map(att => ({
-                    filename: att.filename,
-                    content: att.content,
-                    encoding: att.encoding || 'base64',
-                    contentType: att.contentType || 'application/pdf',
-                }));
+                mailPayload.attachments = attachments.map(att => {
+                    const commaIdx = att.content.indexOf(',');
+                    const clean = commaIdx !== -1 ? att.content.substring(commaIdx + 1).trim() : att.content.trim();
+                    const isBufferAvailable = typeof Buffer !== 'undefined';
+                    return {
+                        filename: att.filename,
+                        content: isBufferAvailable ? Buffer.from(clean, 'base64') : clean,
+                        encoding: isBufferAvailable ? undefined : 'base64',
+                        contentType: att.contentType || 'application/pdf',
+                    };
+                });
             }
 
             await transporter.sendMail(mailPayload);
@@ -111,12 +119,13 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
             };
 
             if (attachments && attachments.length > 0) {
-                const attachmentsBinary: Record<string, string> = {};
+                const attachmentsDict: Record<string, string> = {};
                 for (const att of attachments) {
-                    // SendPulse accepts raw base64 string
-                    attachmentsBinary[att.filename] = att.content.replace(/^data:[^;]+;base64,/, '');
+                    const commaIdx = att.content.indexOf(',');
+                    const clean = commaIdx !== -1 ? att.content.substring(commaIdx + 1).trim() : att.content.trim();
+                    attachmentsDict[att.filename] = clean;
                 }
-                spEmailObj.attachments_binary = attachmentsBinary;
+                spEmailObj.attachments = attachmentsDict;
             }
 
             // Send Email via REST API

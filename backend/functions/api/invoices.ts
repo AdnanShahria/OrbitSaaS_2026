@@ -43,21 +43,47 @@ async function ensureInvoiceTable(env: Env) {
         )
     `);
 
+    // Column migrations for existing tables created with older schemas
+    const migrations = [
+        `ALTER TABLE invoices ADD COLUMN project_name TEXT`,
+        `ALTER TABLE invoices ADD COLUMN payment_instructions TEXT`,
+        `ALTER TABLE invoices ADD COLUMN notes TEXT`,
+        `ALTER TABLE invoices ADD COLUMN paid_amount REAL DEFAULT 0`,
+        `ALTER TABLE invoices ADD COLUMN currency TEXT DEFAULT 'BDT'`,
+        `ALTER TABLE invoices ADD COLUMN email_subject TEXT`,
+        `ALTER TABLE invoices ADD COLUMN email_message TEXT`,
+        `ALTER TABLE invoices ADD COLUMN sent_at TEXT`,
+        `ALTER TABLE invoices ADD COLUMN sent_by TEXT`,
+        `ALTER TABLE invoices ADD COLUMN created_by TEXT`,
+        `ALTER TABLE invoices ADD COLUMN updated_by TEXT`,
+    ];
+
+    for (const sql of migrations) {
+        try {
+            await db.execute(sql);
+        } catch {
+            // Column already exists or table is fresh, safe to ignore
+        }
+    }
+
     // Create index for fast searching and sorting
     try {
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_invoices_created_at ON invoices(created_at DESC)`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_invoices_client_email ON invoices(client_email)`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_invoices_invoice_number ON invoices(invoice_number)`);
     } catch { /* skip */ }
 }
 
-// ─── Generate Next Sequential Invoice Number ───
+// ─── Generate Next Sequential Invoice Number (INV-YYYY-MM-XXXX) ───
 async function generateNextInvoiceNumber(env: Env): Promise<string> {
     const db = getDb(env);
     await ensureInvoiceTable(env);
 
-    const year = new Date().getFullYear();
-    const prefix = `INV-${year}-`;
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const prefix = `INV-${year}-${month}-`;
 
     const res = await db.execute({
         sql: `SELECT invoice_number FROM invoices WHERE invoice_number LIKE ? ORDER BY invoice_number DESC LIMIT 1`,
@@ -659,15 +685,18 @@ async function handleSendInvoice(request: Request, env: Env): Promise<Response> 
     const emailText = `Hello ${invoice.client_name},\n\nPlease find attached your invoice ${invoiceNum} for ${invoice.service_type || 'Services'}.\nTotal: ${invoice.total_amount} ${invoice.currency}\nDue: ${invoice.due_amount} ${invoice.currency}\n\n${message || ''}\n\nThank you,\nORBIT SaaS Team`;
 
     const attachments: any[] = [];
-    if (pdf_base64) {
-        // Strip data:application/pdf;base64, if present
-        const cleanBase64 = pdf_base64.replace(/^data:[^;]+;base64,/, '');
-        attachments.push({
-            filename: `${invoiceNum}.pdf`,
-            content: cleanBase64,
-            contentType: 'application/pdf',
-            encoding: 'base64',
-        });
+    if (pdf_base64 && typeof pdf_base64 === 'string') {
+        // Strip data URI prefix cleanly (e.g. data:application/pdf;filename=xxx;base64,...)
+        const commaIdx = pdf_base64.indexOf(',');
+        const cleanBase64 = commaIdx !== -1 ? pdf_base64.substring(commaIdx + 1).trim() : pdf_base64.trim();
+        if (cleanBase64.length > 0) {
+            attachments.push({
+                filename: `${invoiceNum}.pdf`,
+                content: cleanBase64,
+                contentType: 'application/pdf',
+                encoding: 'base64',
+            });
+        }
     }
 
     console.log(`[Invoices] Sending invoice ${invoiceNum} to ${targetEmail} with ${attachments.length} attachment(s)...`);
