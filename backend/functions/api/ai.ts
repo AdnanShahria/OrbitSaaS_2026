@@ -78,7 +78,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
     if (messages.length > MAX_MESSAGES) return jsonResponse({ error: `Too many messages (max ${MAX_MESSAGES})` }, request, 400);
     for (const msg of messages) {
         const m = msg as any;
-        if (m?.role === 'system') continue; // system messages carry context and are naturally long
+        if (m?.role === 'system' || m?.role === 'assistant') continue; // system/assistant messages can be long (AI-generated)
         if (typeof m?.content === 'string' && m.content.length > MAX_MESSAGE_LENGTH) {
             return jsonResponse({ error: `Message too long (max ${MAX_MESSAGE_LENGTH} characters)` }, request, 400);
         }
