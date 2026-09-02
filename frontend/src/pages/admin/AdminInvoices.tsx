@@ -375,6 +375,18 @@ export default function AdminInvoices() {
             console.error('PDF preview error:', e);
         }
 
+        if (!logoRef.current) {
+            loadLogoBase64().then(b64 => {
+                if (b64) {
+                    logoRef.current = b64;
+                    try {
+                        const pdfRes = generateInvoicePdf(inv, b64);
+                        setPdfPreviewUrl(pdfRes.getBlobUrl());
+                    } catch {}
+                }
+            });
+        }
+
         setEmailModalOpen(true);
     };
 
@@ -395,6 +407,10 @@ export default function AdminInvoices() {
         try {
             let pdfBase64 = '';
             if (emailForm.attachPdf) {
+                // Ensure logo is loaded before generating PDF
+                if (!logoRef.current) {
+                    logoRef.current = await loadLogoBase64();
+                }
                 const pdfRes = generateInvoicePdf(selectedInvoice, logoRef.current);
                 pdfBase64 = pdfRes.getBase64();
             }
@@ -459,6 +475,18 @@ export default function AdminInvoices() {
             const pdfRes = generateInvoicePdf(previewData, logoRef.current);
             setBuilderPreviewUrl(pdfRes.getBlobUrl());
             setBuilderPreviewOpen(true);
+
+            if (!logoRef.current) {
+                loadLogoBase64().then(b64 => {
+                    if (b64) {
+                        logoRef.current = b64;
+                        try {
+                            const updatedRes = generateInvoicePdf(previewData, b64);
+                            setBuilderPreviewUrl(updatedRes.getBlobUrl());
+                        } catch {}
+                    }
+                });
+            }
         } catch (e: any) {
             toast.error('Failed to generate preview: ' + e.message);
         }
@@ -1519,12 +1547,24 @@ export default function AdminInvoices() {
                                             </button>
                                         </div>
 
-                                        <button
-                                            onClick={() => handleDownloadPdf(selectedInvoice)}
-                                            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-muted-foreground hover:text-white transition-all"
-                                        >
-                                            <Download className="w-3.5 h-3.5" /> Download PDF
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            {activeEmailTab === 'pdf' && pdfPreviewUrl && (
+                                                <a
+                                                    href={pdfPreviewUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-muted-foreground hover:text-white transition-all"
+                                                >
+                                                    <ExternalLink className="w-3.5 h-3.5" /> Open Tab
+                                                </a>
+                                            )}
+                                            <button
+                                                onClick={() => handleDownloadPdf(selectedInvoice)}
+                                                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-muted-foreground hover:text-white transition-all"
+                                            >
+                                                <Download className="w-3.5 h-3.5" /> Download PDF
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Preview Container */}
@@ -1593,6 +1633,16 @@ export default function AdminInvoices() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    {builderPreviewUrl && (
+                                        <a
+                                            href={builderPreviewUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium text-muted-foreground hover:text-white border border-white/10 transition-all"
+                                        >
+                                            <ExternalLink className="w-3.5 h-3.5" /> Open Tab
+                                        </a>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={() => {

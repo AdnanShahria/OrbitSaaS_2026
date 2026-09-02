@@ -88,7 +88,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
         const result = await executeAiRequest(messages, env, {
             model: PRIMARY_AI_MODEL,
             temperature: 0.6,
-            max_tokens: 1200,
+            max_tokens: 500,
         });
 
         return jsonResponse({ success: true, content: result.content, source: result.source }, request);

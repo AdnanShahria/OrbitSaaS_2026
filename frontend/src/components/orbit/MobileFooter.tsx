@@ -81,7 +81,6 @@ export function MobileFooter() {
 
   const footerNavLinks = [
     { label: nav?.services || 'Services', href: '/services' },
-    { label: nav?.techStack || 'Tech Stack', href: '/techstack' },
     { label: nav?.projects || 'Projects', href: '/proj' },
     { label: nav?.leadership || 'Team', href: '/leadership' },
     { label: nav?.contact || 'Contact', href: '/contact' },

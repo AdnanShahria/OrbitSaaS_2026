@@ -497,11 +497,17 @@ export function generateInvoicePdf(invoice: InvoiceData, logoBase64?: string | n
         getBase64: (): string => {
             const dataUri = doc.output('datauristring');
             const commaIndex = dataUri.indexOf(',');
-            return commaIndex !== -1 ? dataUri.substring(commaIndex + 1).trim() : dataUri.trim();
+            const raw = commaIndex !== -1 ? dataUri.substring(commaIndex + 1) : dataUri;
+            return raw.trim().replace(/[\r\n\s]+/g, '');
         },
         getBlobUrl: (): string => {
-            const out = doc.output('bloburl');
-            return typeof out === 'string' ? out : out.toString();
+            try {
+                const blob = doc.output('blob');
+                return URL.createObjectURL(blob);
+            } catch {
+                const out = doc.output('bloburl');
+                return typeof out === 'string' ? out : out.toString();
+            }
         },
     };
 }

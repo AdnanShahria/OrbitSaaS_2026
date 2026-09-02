@@ -613,7 +613,7 @@ export function ProcessSection() {
           })}
         </div>
       </div>
-      <WaveDivider fill="#060606" />
+      <WaveDivider fill="#FFFFFF" />
     </section>
   );
 }

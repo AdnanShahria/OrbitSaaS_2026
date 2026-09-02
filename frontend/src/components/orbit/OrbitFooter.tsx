@@ -81,7 +81,6 @@ export function OrbitFooter() {
 
   const footerNavLinks = [
     { label: nav?.services || 'Services', href: '/services' },
-    { label: nav?.techStack || 'Tech Stack', href: '/techstack' },
     { label: nav?.whyUs || 'Why Us', href: '/why-us' },
     { label: nav?.projects || 'Projects', href: '/proj' },
     { label: nav?.leadership || 'Team', href: '/leadership' },

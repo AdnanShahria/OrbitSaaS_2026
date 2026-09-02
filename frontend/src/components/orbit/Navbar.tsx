@@ -10,7 +10,6 @@ const NAV_SECTIONS = [
   { path: '/', label: 'Home' },
   { path: '/services', label: 'Services' },
   { path: '/process', label: 'Process' },
-  { path: '/techstack', label: 'Tech Stack' },
   { path: '/why-us', label: 'Why Us' },
   { path: '/proj', label: 'Projects' },
   { path: '/achievements', label: 'Achievements' },
@@ -83,7 +82,7 @@ export function Navbar() {
         setScrolled(window.scrollY > 20);
 
         // Scroll Spy Logic
-        const sections = ['hero', 'services', 'process', 'techstack', 'why-us', 'projects', 'achievements', 'reviews', 'leadership', 'contact'];
+        const sections = ['hero', 'services', 'process', 'why-us', 'projects', 'achievements', 'reviews', 'leadership', 'contact'];
         for (let i = sections.length - 1; i >= 0; i--) {
           const id = sections[i];
           const element = document.getElementById(id);
@@ -128,7 +127,7 @@ export function Navbar() {
   }, []);
 
   // Sections that use Light Mode (Only on the main landing page flows)
-  const isLightMode = !isProjectPage && !isAchievementPage && ['services', 'project', 'achievements', 'leadership'].includes(activeSection);
+  const isLightMode = !isProjectPage && !isAchievementPage && ['services', 'why-us', 'project', 'achievements', 'leadership'].includes(activeSection);
 
   // Theme Variables
   const theme = {

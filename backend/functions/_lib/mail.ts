@@ -79,10 +79,14 @@ export async function sendMail(env: Env, options: MailOptions): Promise<boolean>
                 const attachmentsDict: Record<string, string> = {};
                 for (const att of attachments) {
                     const commaIdx = att.content.indexOf(',');
-                    const clean = commaIdx !== -1 ? att.content.substring(commaIdx + 1).trim() : att.content.trim();
+                    const clean = (commaIdx !== -1 ? att.content.substring(commaIdx + 1) : att.content)
+                        .trim()
+                        .replace(/[\r\n\s]+/g, '');
                     attachmentsDict[att.filename] = clean;
                 }
-                spEmailObj.attachments = attachmentsDict;
+                // SendPulse REST API requires attachments_binary for Base64-encoded binary files (PDFs, images)
+                // Using 'attachments' causes SendPulse to store raw Base64 ASCII text, corrupting binary files.
+                spEmailObj.attachments_binary = attachmentsDict;
             }
 
             // Send Email via REST API

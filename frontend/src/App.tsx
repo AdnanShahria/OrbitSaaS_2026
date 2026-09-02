@@ -296,7 +296,6 @@ function PublicSite() {
     const routeToId: Record<string, string> = {
       '/services': 'services',
       '/process': 'process',
-      '/techstack': 'techstack',
       '/why-us': 'why-us',
       '/proj': 'projects',
       '/project': 'projects',
@@ -347,7 +346,8 @@ function PublicSite() {
       <div id="hero" className="w-full !border-none section-wrapper"><Home /></div>
       <div id="services" className="w-full !border-none section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ServicesSection /></Suspense></div>
       <div id="process" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ProcessSection /></Suspense></div>
-      <div id="techstack" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><TechStackSection /></Suspense></div>
+      {/* Our Expertise / TechStack kept in codebase but hidden from client build/render */}
+      {/* <div id="techstack" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><TechStackSection /></Suspense></div> */}
       <div id="why-us" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><WhyUsSection /></Suspense></div>
       <div id="projects" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ProjectsSection /></Suspense></div>
       <div id="achievements" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><AchievementsSection /></Suspense></div>
@@ -425,7 +425,7 @@ export default function App() {
                         <PublicSite />
                       </VisitorGateway>
                     }>
-                      {['/', '/services', '/process', '/techstack', '/why-us', '/proj', '/project', '/achievements', '/reviews', '/leadership', '/contact'].map(path => (
+                      {['/', '/services', '/process', '/why-us', '/proj', '/project', '/achievements', '/reviews', '/leadership', '/contact'].map(path => (
                         <Route key={path} path={path} element={null} />
                       ))}
                       <Route path="*" element={<Navigate to="/" replace />} />

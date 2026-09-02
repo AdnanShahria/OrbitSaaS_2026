@@ -688,10 +688,13 @@ async function handleSendInvoice(request: Request, env: Env): Promise<Response> 
     if (pdf_base64 && typeof pdf_base64 === 'string') {
         // Strip data URI prefix cleanly (e.g. data:application/pdf;filename=xxx;base64,...)
         const commaIdx = pdf_base64.indexOf(',');
-        const cleanBase64 = commaIdx !== -1 ? pdf_base64.substring(commaIdx + 1).trim() : pdf_base64.trim();
+        const cleanBase64 = (commaIdx !== -1 ? pdf_base64.substring(commaIdx + 1) : pdf_base64)
+            .trim()
+            .replace(/[\r\n\s]+/g, '');
         if (cleanBase64.length > 0) {
+            const safeFileName = `${(invoiceNum || 'invoice').replace(/[^a-zA-Z0-9._-]/g, '_')}.pdf`;
             attachments.push({
-                filename: `${invoiceNum}.pdf`,
+                filename: safeFileName,
                 content: cleanBase64,
                 contentType: 'application/pdf',
                 encoding: 'base64',
