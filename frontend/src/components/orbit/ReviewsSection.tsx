@@ -6,7 +6,6 @@ import { Link } from 'react-router-dom';
 import { WaveDivider } from '@/components/ui/WaveDivider';
 import { getImageUrl, getFallbackUrl } from '@/lib/imageUrl';
 
-
 // ── WhatsApp Icon Component (Synced with Navbar) ──
 const WhatsAppIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -30,8 +29,8 @@ const SocialIcon = ({ type }: { type: string }) => {
     const Icon = icons[type.toLowerCase()] || Mail;
 
     return (
-        <div className="w-8 h-8 rounded-full border border-white/10 bg-white/[0.03] flex items-center justify-center text-gray-400 group-hover:border-[#22C55E]/40 group-hover:bg-[#22C55E]/5 transition-all duration-300 shadow-sm" title={type}>
-            <Icon size={16} className="w-4 h-4" />
+        <div className="w-8 h-8 rounded-full border border-zinc-200/80 bg-zinc-50 flex items-center justify-center text-zinc-600 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-300 shadow-xs" title={type}>
+            <Icon size={15} className="w-3.5 h-3.5" />
         </div>
     );
 };
@@ -44,31 +43,28 @@ export function ReviewsSection() {
     const showSocials = reviewsData.showSocials !== false;
 
     return (
-        <section id="reviews" className="relative min-h-[100dvh] bg-[#0A0A0A] overflow-hidden py-16 sm:py-24 flex flex-col justify-center">
-            {/* Ultra Premium Atmospheric Effects */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-[#22C55E]/[0.05] blur-[150px] rounded-full mix-blend-screen" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[800px] h-[800px] bg-[#FACC15]/[0.05] blur-[150px] rounded-full mix-blend-screen" />
+        <section id="reviews" className="relative min-h-[100dvh] bg-[#FAFAFC] overflow-hidden py-20 sm:py-28 flex flex-col justify-center text-zinc-900 selection:bg-zinc-900 selection:text-white">
+            {/* Ultra Premium Apple Atmosphere */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-emerald-500/[0.04] blur-[150px] rounded-full" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[800px] h-[800px] bg-amber-500/[0.03] blur-[150px] rounded-full" />
                 
-                {/* Subtle Cinematic Grid */}
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_10%,transparent_100%)]" />
-                
-                {/* Noise Texture for that premium matte finish */}
-                <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay" />
+                {/* Subtle Apple Grid Pattern */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.015)_1px,transparent_1px)] bg-[size:80px_80px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_10%,transparent_100%)]" />
             </div>
 
-            <div className="container relative z-10 px-5 sm:px-8 mx-auto">
+            <div className="max-w-[1400px] mx-auto px-6 lg:px-8 w-full relative z-10">
                 {/* Header */}
-                <div className="mb-12 sm:mb-16">
+                <div className="mb-14 sm:mb-18">
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         whileInView={{ opacity: 1, x: 0 }}
                         viewport={{ once: true }}
-                        transition={{ duration: 0.8 }}
-                        className="flex items-center gap-4 mb-6"
+                        transition={{ duration: 0.6 }}
+                        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-zinc-200/80 shadow-xs mb-6"
                     >
-                        <div className="w-10 h-[2px] bg-gradient-to-r from-[#22C55E] to-transparent" />
-                        <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#22C55E]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-800">
                            {reviewsData?.badge || 'Voices of Trust'}
                         </span>
                     </motion.div>
@@ -79,14 +75,14 @@ export function ReviewsSection() {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.8, delay: 0.1 }}
-                            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none text-white"
-                            style={{ fontFamily: "'Outfit', sans-serif" }}
+                            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none text-zinc-950"
+                            style={{ fontFamily: "var(--font-display)" }}
                         >
                             Masterpieces <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-300 to-gray-600 ml-[0.2em] relative inline-block">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-950 via-zinc-800 to-zinc-500 ml-[0.2em] relative inline-block">
                                 of Collaboration
                                 <motion.div 
-                                    className="absolute -bottom-2 left-0 h-[2px] bg-gradient-to-r from-[#22C55E]/50 to-transparent w-full"
+                                    className="absolute -bottom-2 left-0 h-[2px] bg-gradient-to-r from-emerald-500/60 to-transparent w-full"
                                     initial={{ scaleX: 0, originX: 0 }}
                                     whileInView={{ scaleX: 1 }}
                                     transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
@@ -99,7 +95,7 @@ export function ReviewsSection() {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.8, delay: 0.2 }}
-                            className="max-w-md text-gray-400 text-base leading-relaxed mb-1 font-light"
+                            className="max-w-md text-zinc-600 text-base leading-relaxed mb-1 font-normal"
                         >
                             {reviewsData?.subtitle || "Hear from the visionaries we've partnered with to redefine digital excellence."}
                         </motion.p>
@@ -112,13 +108,14 @@ export function ReviewsSection() {
                         {reviews.map((review: any, i: number) => (
                             <motion.div
                                 key={i}
-                                initial={{ opacity: 0, y: 40 }}
+                                initial={{ opacity: 0, y: 35 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: '-50px' }}
-                                transition={{ duration: 0.8, delay: i * 0.1, ease: [0.23, 1, 0.32, 1] }}
+                                transition={{ duration: 0.7, delay: i * 0.08, ease: [0.23, 1, 0.32, 1] }}
+                                whileHover={{ y: -6, transition: { type: "spring", stiffness: 400, damping: 25 } }}
                                 className="group relative h-full"
                             >
-                                <div className="h-full bg-white/[0.02] backdrop-blur-[40px] rounded-2xl border border-white/[0.08] p-8 flex flex-col transition-all duration-700 hover:border-[#FACC15]/40 hover:bg-white/[0.04] hover:-translate-y-2 shadow-2xl relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-[#22C55E]/50">
+                                <div className="h-full bg-white/90 backdrop-blur-xl rounded-2xl border border-zinc-200/80 p-8 flex flex-col transition-all duration-500 hover:border-emerald-500/40 hover:shadow-[0_20px_48px_rgba(0,0,0,0.07)] shadow-[0_4px_24px_rgba(0,0,0,0.03)] relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
                                     {review.projectId && (
                                         <Link 
                                             to={`/project/${review.projectId}`} 
@@ -128,63 +125,62 @@ export function ReviewsSection() {
                                     )}
                                     
                                     {/* Glass reflection gradient sweep */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+                                    <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
                                     
                                     {/* Oversized background Quote Icon */}
-                                    <Quote size={180} className="absolute -top-10 -right-10 text-white/[0.02] rotate-12 group-hover:rotate-0 transition-transform duration-1000 ease-out pointer-events-none" />
+                                    <Quote size={180} className="absolute -top-10 -right-10 text-zinc-900/[0.025] rotate-12 group-hover:rotate-0 transition-transform duration-1000 ease-out pointer-events-none" />
 
                                     <div className="relative z-10 flex flex-col h-full">
-                                        <div className="flex items-start justify-between mb-8">
-                                                <div className="flex items-center gap-1">
-                                                    {Array.from({ length: review.rating || 5 }, (_, si) => (
-                                                        <Star key={si} size={12} fill="#FACC15" color="#FACC15" className="opacity-90" />
-                                                    ))}
-                                                </div>
+                                        <div className="flex items-start justify-between mb-6">
+                                            <div className="flex items-center gap-1">
+                                                {Array.from({ length: review.rating || 5 }, (_, si) => (
+                                                    <Star key={si} size={14} fill="#F59E0B" color="#F59E0B" className="opacity-95" />
+                                                ))}
+                                            </div>
                                             
                                             {/* Project Badge */}
                                             {review.badgeName && (
-                                                <div className="px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-md">
-                                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#22C55E]">
+                                                <div className="px-3 py-1 rounded-full bg-emerald-50/80 border border-emerald-200/60 backdrop-blur-md">
+                                                    <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-emerald-800">
                                                         {review.badgeName}
                                                     </span>
                                                 </div>
                                             )}
                                         </div>
 
-                                        <p className="text-gray-300 text-[15px] leading-relaxed mb-8 font-light whitespace-pre-wrap">
+                                        <p className="text-zinc-700 text-[15px] leading-relaxed mb-8 font-normal whitespace-pre-wrap">
                                             "{review.text || review.review}"
                                         </p>
 
-                                        <div className="mt-auto pt-6 border-t border-white/[0.08] flex flex-col gap-5">
+                                        <div className="mt-auto pt-6 border-t border-zinc-100 flex flex-col gap-4">
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-3.5">
                                                     <div className="relative">
-                                                        {/* Avatar Glow Ring */}
-                                                        <div className="absolute inset-[-4px] rounded-full border border-[#22C55E]/20 group-hover:border-[#FACC15]/50 scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-500" />
+                                                        {/* Avatar Ring */}
+                                                        <div className="absolute inset-[-3px] rounded-full border border-emerald-400/40 scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-400" />
                                                         
                                                         {review.avatar ? (
-                                                            <div className="w-11 h-11 rounded-full overflow-hidden border border-white/10 relative z-10 bg-black">
-                                                                <img src={getImageUrl(review.avatar)} alt={review.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                                            <div className="w-11 h-11 rounded-full overflow-hidden border border-zinc-200 relative z-10 bg-zinc-100">
+                                                                <img src={getImageUrl(review.avatar)} alt={review.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                                     onError={(e) => {
                                                                         const fallback = getFallbackUrl(review.avatar);
                                                                         if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
                                                                     }} />
                                                             </div>
                                                         ) : (
-                                                            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center text-gray-500 relative z-10">
-                                                                <User size={18} className="opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                            <div className="w-11 h-11 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500 relative z-10">
+                                                                <User size={18} className="opacity-70 group-hover:opacity-100 transition-opacity" />
                                                             </div>
                                                         )}
-                                                        
                                                     </div>
                                                     <div>
-                                                        <div className="text-[17px] font-bold text-white group-hover:text-[#22C55E] transition-colors duration-500">
+                                                        <div className="text-[16px] font-bold text-zinc-950 group-hover:text-emerald-700 transition-colors duration-300">
                                                             {review.name}
                                                         </div>
-                                                        <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mt-1 flex items-center gap-2">
-                                                            <span className="opacity-80">{review.role}</span>
-                                                            <span className="w-1 h-1 rounded-full bg-[#22C55E]/40" />
-                                                            <span className="text-[#22C55E]/80 font-black">Verified Client</span>
+                                                        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mt-0.5 flex items-center gap-2">
+                                                            <span>{review.role}</span>
+                                                            <span className="w-1 h-1 rounded-full bg-emerald-500/60" />
+                                                            <span className="text-emerald-700 font-bold">Verified Client</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -202,34 +198,23 @@ export function ReviewsSection() {
                                                 )}
                                             </div>
 
-                                            <div className="flex items-center justify-center mt-2">
-                                                {review.projectId && (
-                                                    <div className="flex items-center gap-1.5 opacity-40 group-hover:opacity-100 transition-all duration-500">
-                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FACC15]">Explore Project</span>
-                                                        <div className="w-6 h-6 rounded-full bg-[#FACC15]/10 border border-[#FACC15]/20 flex items-center justify-center">
-                                                            <ArrowUpRight size={12} className="text-[#FACC15] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-500" />
+                                            {review.projectId && (
+                                                <div className="flex items-center justify-center pt-2">
+                                                    <div className="flex items-center gap-1.5 opacity-60 group-hover:opacity-100 transition-all duration-300">
+                                                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-700">Explore Project</span>
+                                                        <div className="w-5 h-5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center">
+                                                            <ArrowUpRight size={11} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300" />
                                                         </div>
                                                     </div>
-                                                )}
-                                            </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                    
-                                    {/* Directional Interactive Glow */}
-                                    <div className="absolute -inset-px opacity-0 group-hover:opacity-100 transition-opacity duration-1000 z-0 pointer-events-none rounded-2xl" 
-                                         style={{ background: 'radial-gradient(400px circle at top right, rgba(250, 204, 21, 0.1), transparent 40%)' }} 
-                                    />
-                                    <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-[#22C55E]/[0.1] opacity-0 group-hover:opacity-100 blur-[50px] rounded-full transition-opacity duration-1000 pointer-events-none z-0" />
                                 </div>
                             </motion.div>
                         ))}
                     </div>
                 </AnimatePresence>
-                
-                <div className="mt-16 flex justify-center w-full">
-
-                </div>
-
             </div>
             <WaveDivider fill="#FAFAFA" />
         </section>

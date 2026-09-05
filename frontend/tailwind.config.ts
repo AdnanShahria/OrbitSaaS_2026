@@ -19,12 +19,11 @@ export default {
     },
     extend: {
       fontFamily: {
-        bagel: ['Bagel Fat One', 'cursive'],
+        space: ['"Space Grotesk"', 'sans-serif'],
+        jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
         poppins: ['Poppins', 'sans-serif'],
-        caladea: ['Caladea', 'serif'],
-        abril: ['"Abril Fatface"', 'cursive'],
-        garamond: ['"Cormorant Garamond"', 'serif'],
-        playfair: ['"Playfair Display"', 'serif'],
+        display: ['"Space Grotesk"', 'sans-serif'],
+        body: ['"Plus Jakarta Sans"', 'sans-serif'],
       },
       colors: {
         border: "var(--border)",

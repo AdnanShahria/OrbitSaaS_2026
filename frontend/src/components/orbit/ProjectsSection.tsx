@@ -199,9 +199,6 @@ export function ProjectsSection() {
 
     return (
         <section id="projects" className="py-16 sm:py-20 bg-[#FDFBF7] relative overflow-hidden" style={{ overflowAnchor: 'none' }}>
-            <Helmet>
-                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-            </Helmet>
 
             {/* Ambient Background Elements */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
@@ -209,7 +206,7 @@ export function ProjectsSection() {
                 <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-[#FACC15]/[0.03] rounded-full blur-[140px] translate-y-1/2" />
             </div>
 
-            <div className="max-w-7xl mx-auto px-5 sm:px-8 relative z-10">
+            <div className="max-w-[1400px] mx-auto px-6 lg:px-8 w-full relative z-10">
                 {/* Section Header */}
                 <div className="mb-10 sm:mb-14">
                     <motion.div
@@ -232,7 +229,7 @@ export function ProjectsSection() {
                             viewport={{ once: true }}
                             transition={{ duration: 0.8, delay: 0.1 }}
                             className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none text-gray-900"
-                            style={{ fontFamily: "'Outfit', sans-serif" }}
+                            style={{ fontFamily: "var(--font-display)" }}
                         >
                             All <span className="text-gray-300">Projects</span>
                         </motion.h2>
@@ -289,7 +286,7 @@ export function ProjectsSection() {
                         <button
                             onClick={() => setVisibleCount(prev => prev + 3)}
                             className="group relative px-8 py-4 bg-white text-gray-900 border border-[#22C55E]/20 font-bold rounded-xl hover:border-[#22C55E]/60 transition-all duration-300 shadow-sm hover:shadow-[0_10px_40px_rgba(34,197,94,0.1)] overflow-hidden"
-                            style={{ fontFamily: "'Outfit', sans-serif" }}
+                            style={{ fontFamily: "var(--font-body)" }}
                         >
                             <span className="relative z-10">Explore More Projects</span>
                             <div className="absolute inset-0 -translate-x-full group-hover:translate-x-0 bg-[#22C55E]/5 transition-transform duration-500 ease-out" />
@@ -299,7 +296,7 @@ export function ProjectsSection() {
                 
                 {items.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-24 text-center">
-                        <span className="text-4xl font-extrabold tracking-tight text-gray-200" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        <span className="text-4xl font-extrabold tracking-tight text-gray-200" style={{ fontFamily: "var(--font-display)" }}>
                             No Projects
                         </span>
                         <p className="text-sm text-gray-400 mt-2">No projects found in this category.</p>
@@ -307,7 +304,7 @@ export function ProjectsSection() {
                 )}
             </div>
 
-            <WaveDivider fill="#0A0A0A" />
+            <WaveDivider fill="#FFFFFF" />
         </section>
     );
 }

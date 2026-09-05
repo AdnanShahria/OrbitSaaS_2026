@@ -43,9 +43,9 @@ export function NetworkCanvas() {
       constructor(width: number, height: number) {
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        // Slow, elegant floating
-        this.vx = (Math.random() - 0.5) * 0.6;
-        this.vy = (Math.random() - 0.5) * 0.6;
+        // Slow, elegant, calm floating
+        this.vx = (Math.random() - 0.5) * 0.2;
+        this.vy = (Math.random() - 0.5) * 0.2;
         this.radius = Math.random() * 2 + 1;
         this.colorIndex = Math.random() > 0.5 ? 0 : 1;
       }
@@ -72,8 +72,8 @@ export function NetworkCanvas() {
       particles = [];
       // Adjust density based on container size
       const particleCount = Math.floor((logicalWidth * logicalHeight) / 10000);
-      // Cap particles to ensure performance
-      const maxParticles = Math.min(particleCount, isLowEnd ? 40 : 120);
+      // Cap particles to ensure performance (further reduced for low-end)
+      const maxParticles = Math.min(particleCount, isLowEnd ? 25 : 100);
       for (let i = 0; i < maxParticles; i++) {
         particles.push(new Particle(logicalWidth, logicalHeight));
       }

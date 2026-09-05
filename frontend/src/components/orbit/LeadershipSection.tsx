@@ -150,7 +150,7 @@ export function LeadershipSection() {
         </svg>
       </div>
 
-      <div className="section-container relative z-10">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 w-full relative z-10 py-16 sm:py-24">
         {/* Header */}
         <div className="text-center mb-20">
           <motion.div
@@ -171,8 +171,8 @@ export function LeadershipSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="text-5xl md:text-7xl font-normal tracking-tight text-[#1A1A1A] mb-6 mb-16"
-            style={{ fontFamily: "'Abril Fatface', serif" }}
+            className="text-5xl md:text-7xl font-bold tracking-tight text-[#1A1A1A] mb-6 mb-16"
+            style={{ fontFamily: "var(--font-display)" }}
           >
             {t?.title || 'Meet Our Team'}
           </motion.h2>
@@ -183,7 +183,7 @@ export function LeadershipSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.2 }}
             className="max-w-2xl mx-auto text-lg text-slate-600/90 leading-relaxed font-medium"
-            style={{ fontFamily: "'Outfit', sans-serif" }}
+            style={{ fontFamily: "var(--font-body)" }}
           >
             {t?.subtitle || 'Bringing together decades of expertise in Cloudflare architectures, SaaS scalability, and high-conversion design.'}
           </motion.p>
@@ -260,7 +260,7 @@ export function LeadershipSection() {
                     </div>
                   </div>
 
-                <h3 className="text-lg sm:text-2xl text-[#1A1A1A] mb-1 sm:mb-2 text-center leading-tight" style={{ fontFamily: "'Abril Fatface', serif" }}>
+                <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1 sm:mb-2 text-center leading-tight" style={{ fontFamily: "var(--font-display)" }}>
                   {member.name}
                 </h3>
                 <p 
@@ -319,7 +319,7 @@ export function LeadershipSection() {
           >
             <p 
               className="text-xl md:text-3xl font-medium text-amber-900/80 leading-relaxed italic" 
-              style={{ fontFamily: "'Outfit', sans-serif" }}
+              style={{ fontFamily: "var(--font-body)" }}
             >
               "{t.tagline}"
             </p>
@@ -327,7 +327,7 @@ export function LeadershipSection() {
         )}
 
       </div>
-      <WaveDivider fill="#050505" />
+      <WaveDivider fill="#FFFFFF" />
     </section>
   );
 }

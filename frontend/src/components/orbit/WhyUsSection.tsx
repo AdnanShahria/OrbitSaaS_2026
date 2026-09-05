@@ -275,7 +275,7 @@ export function WhyUsSection() {
         <div className="absolute top-[-30%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-b from-indigo-50/50 via-zinc-50/20 to-transparent blur-3xl" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 relative z-10">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 w-full relative z-10">
         
         {/* ── Section Header ── */}
         <div className="max-w-3xl mx-auto text-center mb-16 sm:mb-20">
@@ -296,7 +296,7 @@ export function WhyUsSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-zinc-950 leading-[1.1] mb-5"
-            style={{ fontFamily: "'Outfit', sans-serif" }}
+            style={{ fontFamily: "var(--font-display)" }}
           >
             {t?.heading || t?.title || (lang === 'bn' ? 'দ্য অরবিট সুবিধা' : 'The ORBIT Advantage')}
           </motion.h2>
@@ -315,7 +315,7 @@ export function WhyUsSection() {
         </div>
 
         {/* ── 4 Primary Advantages (Apple Bento Grid) ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 w-full">
           {items.map((item: any, idx: number) => {
             const VisualComponent = BENTO_VISUALS[idx % BENTO_VISUALS.length];
             

@@ -355,7 +355,7 @@ const PerformanceMetric = React.memo(({ label, value, sub1, sub2 }: { label: str
    HOME — Electric Left-Aligned Redesign
    ═══════════════════════════════════════════════════════════ */
 
-const phrases = [
+const DEFAULT_PHRASES = [
   "SCALABLE REALITIES",
   "REAL IMPACT",
   "MEASURABLE GROWTH",
@@ -363,37 +363,21 @@ const phrases = [
   "INTELLIGENT SYSTEMS"
 ];
 
-export function Home() {
-  const { content } = useContent();
-  const { lang } = useLang();
-  const navigate = useNavigate();
-  const prefersReducedMotion = useReducedMotion();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isMobile = useIsMobile();
-  const { phase } = useOrchestration();
-
-  const t = (content[lang] as any)?.hero;
-  const stats = (content[lang] as any)?.stats?.items || [];
-
-  const title = t?.title || 'Building the Future with Agentic Intelligence';
-  const tagline = t?.tagline || 'Leading the AI Revolution';
-  const subtitle = t?.subtitle || 'From concept to scale, we engineer high-performance software and autonomous AI agents.';
-  const cta = t?.cta || 'Get Started';
-  const learnMore = t?.learnMore || 'Our Services';
-
-  // Typewriter effect state — only start after phase 1
+/* Memoized typewriter subcomponent: keeps typing re-renders (every 50-150ms)
+   isolated so the entire Home component, cards, and canvas do NOT re-render */
+const HeroTypewriter = React.memo(({ phrases, phase }: { phrases: string[]; phase: number }) => {
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [typingSpeed, setTypingSpeed] = useState(150);
-  const [showCtaOptions, setShowCtaOptions] = useState(false);
+
+  const activePhrases = phrases && phrases.length > 0 ? phrases : DEFAULT_PHRASES;
 
   useEffect(() => {
-    // Don't start typewriter until phase 1 (title is visible)
     if (phase < 1) return;
 
     const handleTyping = () => {
-      const currentPhrase = phrases[phraseIndex];
+      const currentPhrase = activePhrases[phraseIndex % activePhrases.length];
       
       if (!isDeleting) {
         setDisplayText(currentPhrase.substring(0, displayText.length + 1));
@@ -408,18 +392,70 @@ export function Home() {
         
         if (displayText === "") {
           setIsDeleting(false);
-          setPhraseIndex((prev) => (prev + 1) % phrases.length);
+          setPhraseIndex((prev) => (prev + 1) % activePhrases.length);
         }
       }
     };
 
     const timer = setTimeout(handleTyping, typingSpeed);
     return () => clearTimeout(timer);
-  }, [displayText, isDeleting, phraseIndex, typingSpeed, phase]);
+  }, [displayText, isDeleting, phraseIndex, typingSpeed, phase, activePhrases]);
+
+  return (
+    <div className="text-[1.6rem] sm:text-[2.2rem] md:text-[4rem] lg:text-[3.5rem] xl:text-[4.5rem] relative inline-flex items-center min-h-[1.15em] mt-1 lg:mt-2 whitespace-nowrap overflow-visible">
+      <span
+        className="leading-none"
+        style={{
+          background: 'linear-gradient(to right, #F59E0B, #A855F7, #EC4899)',
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          color: 'transparent',
+          display: 'inline-block',
+          paddingRight: '0.05em'
+        }}
+      >
+        {displayText}
+      </span>
+      <motion.span
+        animate={{ opacity: [1, 0] }}
+        transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+        className="inline-block w-[2px] md:w-[4px] h-[0.9em] bg-violet-400 ml-2"
+      />
+    </div>
+  );
+});
+
+export function Home() {
+  const { content } = useContent();
+  const { lang } = useLang();
+  const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isMobile = useIsMobile();
+  const { phase } = useOrchestration();
+
+  const t = (content[lang] as any)?.hero;
+  const stats = (content[lang] as any)?.stats?.items || [];
+
+  const titlePrefix = t?.titlePrefix || t?.title || 'Turning Ideas into';
+  const rawPhrases = t?.phrases;
+  const phrases = Array.isArray(rawPhrases) && rawPhrases.length > 0
+    ? rawPhrases
+    : typeof rawPhrases === 'string' && rawPhrases.trim()
+      ? rawPhrases.split(',').map((s: string) => s.trim()).filter(Boolean)
+      : DEFAULT_PHRASES;
+
+  const tagline = t?.tagline || 'Launch at Zero _ Scale to Orbit 🚀';
+  const subtitle = t?.subtitle || 'From concept to scale, we engineer high-performance software and autonomous AI agents.';
+  const cta = t?.cta || 'Get Started';
+  const learnMore = t?.learnMore || 'Our Services';
+  const whatsappNumber = t?.whatsappNumber || '8801853452264';
+  const contactEmail = t?.contactEmail || 'contact@orbitsaas.com';
+
+  const [showCtaOptions, setShowCtaOptions] = useState(false);
 
   useThunderboltCanvas(canvasRef, prefersReducedMotion);
-
-  const titleText = "Turning Ideas into";
 
   return (
     <section 
@@ -459,7 +495,7 @@ export function Home() {
       />
 
       {/* ── Grid Layout ── */}
-      <div className="w-full max-w-none mx-auto px-4 sm:px-6 relative z-10 pt-4 md:pt-0 pb-12 overflow-x-hidden">
+      <div className="w-full max-w-[1400px] mx-auto px-6 lg:px-8 relative z-10 pt-4 md:pt-0 pb-12 overflow-x-hidden">
         <div className="grid lg:grid-cols-12 gap-8 lg:gap-16 xl:gap-24 2xl:gap-32 items-center relative">
           
           {/* Left Side: Content */}
@@ -500,7 +536,7 @@ export function Home() {
               >
                 {/* Line 1: Static Title — phase 1, staggered words */}
                 <div className="text-[2rem] leading-[1.1] md:text-[5rem] lg:text-[4rem] xl:text-[5.2rem] flex flex-wrap lg:flex-nowrap lg:whitespace-nowrap items-center mb-1">
-                  {titleText.split(' ').map((word, i) => (
+                  {titlePrefix.split(' ').map((word: string, i: number) => (
                     <motion.span
                       key={i}
                       className="inline-block mr-[0.25em]"
@@ -515,27 +551,7 @@ export function Home() {
                 </div>
                 
                 {/* Line 2: Dynamic Phrases — visible with phase 1, typewriter starts at phase 1 */}
-                <div className="text-[1.6rem] sm:text-[2.2rem] md:text-[4rem] lg:text-[3.5rem] xl:text-[4.5rem] relative inline-flex items-center min-h-[1.1em] mt-1 lg:mt-2 whitespace-nowrap">
-                  <span
-                    className="leading-none"
-                    style={{
-                      background: 'linear-gradient(to right, #F59E0B, #A855F7, #EC4899)',
-                      WebkitBackgroundClip: 'text',
-                      backgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      color: 'transparent',
-                      display: 'inline-block',
-                      paddingRight: '0.05em'
-                    }}
-                  >
-                    {displayText}
-                  </span>
-                  <motion.span
-                    animate={{ opacity: [1, 0] }}
-                    transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-                    className="inline-block w-[2px] md:w-[4px] h-[0.9em] bg-violet-400 ml-2"
-                  />
-                </div>
+                <HeroTypewriter phrases={phrases} phase={phase} />
               </h1>
 
               {/* Subtitle, stats bar, and CTA buttons — phase 2 */}
@@ -617,7 +633,7 @@ export function Home() {
                           className="flex items-center gap-2 md:gap-3 h-full overflow-hidden"
                         >
                           <a
-                            href="https://wa.me/8801853452264"
+                            href={`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="h-full px-5 md:px-6 bg-[#25D366] text-white text-sm md:text-base font-bold rounded-xl hover:brightness-110 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap shadow-[0_0_20px_rgba(37,211,102,0.3)]"
@@ -625,7 +641,7 @@ export function Home() {
                             WhatsApp
                           </a>
                           <a
-                            href="https://mail.google.com/mail/?view=cm&fs=1&to=contact@orbitsaas.com"
+                            href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(contactEmail)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="h-full px-5 md:px-6 bg-indigo-500 text-white text-sm md:text-base font-bold rounded-xl hover:bg-indigo-400 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap shadow-[0_0_20px_rgba(99,102,241,0.3)]"
@@ -658,9 +674,9 @@ export function Home() {
             </motion.div>
           </div>
 
-          {/* Right Side: Flashy Cards — SKIP entirely on mobile & wait for phase 2 */}
-          {!isMobile && phase >= 2 && (
-            <div className="lg:col-span-5 xl:col-span-4 hidden lg:block">
+          {/* Right Side: Flashy Cards — Keep column in grid layout to prevent CLS */}
+          {!isMobile && (
+            <div className={`lg:col-span-5 xl:col-span-4 hidden lg:block transition-opacity duration-1000 ${phase >= 2 ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
               <div className="relative h-[620px] w-full">
                 {/* Card 1: Agentic AI - Top Right */}
                 <div className="absolute top-[2%] right-0 z-10 transition-all duration-500">

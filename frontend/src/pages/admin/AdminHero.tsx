@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { SectionHeader, LangToggle, SaveButton, TextField, ErrorAlert, useSectionEditor, JsonPanel, ColorField } from '@/components/admin/EditorComponents';
+import { SectionHeader, LangToggle, SaveButton, TextField, ErrorAlert, useSectionEditor, JsonPanel } from '@/components/admin/EditorComponents';
+import { RichText } from '@/components/ui/RichText';
 import {
     Globe, Bot, Zap, Smartphone, ShoppingCart, Rocket, Code, Database, Shield, Cloud,
     Cpu, Monitor, Wifi, Mail, Camera, Music, Heart, Star, Target, Briefcase,
     Award, BookOpen, Users, BarChart3, Sparkles, Layers, Settings2, Eye, Palette, Brain, Wrench,
-    ChevronDown
+    Activity, ChevronDown, MessageSquare, ArrowRight
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -18,9 +19,9 @@ const Bullseye = ({ className, style }: { className?: string; style?: React.CSSP
     </svg>
 );
 
-// ─── Icon Registry (same as Services/WhyUs) ───
+// ─── Icon Registry ───
 const ICON_MAP: Record<string, LucideIcon | any> = {
-    Globe, Bot, Zap, Smartphone, ShoppingCart, Rocket, Code, Database, Shield, Cloud,
+    Activity, Globe, Bot, Zap, Smartphone, ShoppingCart, Rocket, Code, Database, Shield, Cloud,
     Cpu, Monitor, Wifi, Mail, Camera, Music, Heart, Star, Target, Briefcase,
     Award, BookOpen, Users, BarChart3, Sparkles, Layers, Settings2, Eye, Palette, Brain, Wrench,
     Bullseye
@@ -67,106 +68,121 @@ function IconPicker({ label, value, onChange }: { label: string; value: string; 
     );
 }
 
+const DEFAULT_PHRASES_EN = [
+    'SCALABLE REALITIES',
+    'REAL IMPACT',
+    'MEASURABLE GROWTH',
+    'POWERFUL SOLUTIONS',
+    'INTELLIGENT SYSTEMS'
+];
+
 export default function AdminHero() {
     const { lang, setLang, saving, saved, error, getData, save } = useSectionEditor('hero');
+
+    // Headlines
     const [tagline, setTagline] = useState('');
-    const [tagline2, setTagline2] = useState('');
-    const [title, setTitle] = useState('');
+    const [titlePrefix, setTitlePrefix] = useState('');
+    const [phrasesText, setPhrasesText] = useState('');
     const [subtitle, setSubtitle] = useState('');
+
+    // Call To Actions
     const [cta, setCta] = useState('');
     const [learnMore, setLearnMore] = useState('');
+    const [whatsappNumber, setWhatsappNumber] = useState('');
+    const [contactEmail, setContactEmail] = useState('');
 
-    // Icons for tagline
-    const [taglineIcon1, setTaglineIcon1] = useState('Bullseye');
-    const [taglineIcon2, setTaglineIcon2] = useState('Rocket');
+    // Feature Cards (Right side on desktop)
+    const [feature1Title, setFeature1Title] = useState('Agentic AI nodes');
+    const [feature1Icon, setFeature1Icon] = useState('Activity');
+    const [f1Step1, setF1Step1] = useState('DISCOVERY');
+    const [f1Step2, setF1Step2] = useState('AGENT_INIT');
+    const [f1Step3, setF1Step3] = useState('EXECUTION');
+    const [f1Step4, setF1Step4] = useState('OPTIMIZE');
 
-    // Theme Customization
-    const [taglineColor, setTaglineColor] = useState('');
-    const [titleColor, setTitleColor] = useState('');
-    const [ctaGradientStart, setCtaGradientStart] = useState('');
-    const [ctaGradientEnd, setCtaGradientEnd] = useState('');
+    const [feature2Title, setFeature2Title] = useState('Conversational AI');
+    const [feature2Icon, setFeature2Icon] = useState('Cpu');
+    const [f2Query, setF2Query] = useState('How can I automate my business workflow?');
+    const [f2Response, setF2Response] = useState('I can deploy Multi-Agent systems to...');
+    const [f2FooterLeft, setF2FooterLeft] = useState('Custom Trained LLM');
+    const [f2FooterRight, setF2FooterRight] = useState('Active');
 
-    const [feature1Title, setFeature1Title] = useState('Build & run processes with AI');
-    const [feature1Icon, setFeature1Icon] = useState('Bot');
-    const [feature2Title, setFeature2Title] = useState('Tasks optimized for the field');
-    const [feature2Icon, setFeature2Icon] = useState('Smartphone');
-    const [feature3Title, setFeature3Title] = useState('Track and report on efficiency');
-    const [feature3Icon, setFeature3Icon] = useState('BarChart3');
-
-    // Detailed Card Content
-    const [f1Step1, setF1Step1] = useState('');
-    const [f1Step2, setF1Step2] = useState('');
-    const [f1Step3, setF1Step3] = useState('');
-    const [f1Step4, setF1Step4] = useState('');
-
-    const [f2Query, setF2Query] = useState('');
-    const [f2Response, setF2Response] = useState('');
-    const [f2FooterLeft, setF2FooterLeft] = useState('');
-    const [f2FooterRight, setF2FooterRight] = useState('');
-
-    const [f3UptimeLabel, setF3UptimeLabel] = useState('');
-    const [f3UptimeValue, setF3UptimeValue] = useState('');
-    const [f3Latency, setF3Latency] = useState('');
-    const [f3Edge, setF3Edge] = useState('');
+    const [feature3Title, setFeature3Title] = useState('Enterprise Solutions');
+    const [feature3Icon, setFeature3Icon] = useState('Zap');
+    const [f3UptimeLabel, setF3UptimeLabel] = useState('Uptime');
+    const [f3UptimeValue, setF3UptimeValue] = useState('99.9%');
+    const [f3Latency, setF3Latency] = useState('Latency: 0.8ms');
+    const [f3Edge, setF3Edge] = useState('Global Edge');
 
     useEffect(() => {
         const d = getData();
         if (d) {
             setTagline(d.tagline || '');
-            setTagline2(d.tagline2 || '');
-            setTitle(d.title || '');
+            setTitlePrefix(d.titlePrefix || d.title || 'Turning Ideas into');
+
+            const loadedPhrases = Array.isArray(d.phrases) && d.phrases.length > 0
+                ? d.phrases
+                : typeof d.phrases === 'string' && d.phrases.trim()
+                    ? d.phrases.split(',').map((s: string) => s.trim()).filter(Boolean)
+                    : DEFAULT_PHRASES_EN;
+            setPhrasesText(loadedPhrases.join('\n'));
+
             setSubtitle(d.subtitle || '');
-            setCta(d.cta || '');
-            setLearnMore(d.learnMore || '');
-
-            setTaglineIcon1(d.taglineIcon1 || 'Bullseye');
-            setTaglineIcon2(d.taglineIcon2 || 'Rocket');
-
-            // Defaults for colors
-            setTaglineColor(d.taglineColor || '#00F5FF');
-            setTitleColor(d.titleColor || '#FF00A8');
-            setCtaGradientStart(d.ctaGradientStart || '#6c5ce7');
-            setCtaGradientEnd(d.ctaGradientEnd || '#3b82f6');
+            setCta(d.cta || 'Get Started');
+            setLearnMore(d.learnMore || 'Our Services');
+            setWhatsappNumber(d.whatsappNumber || '8801853452264');
+            setContactEmail(d.contactEmail || 'contact@orbitsaas.com');
 
             // Features
-            setFeature1Title(d.feature1Title || 'Build & run processes with AI');
-            setFeature1Icon(d.feature1Icon || 'Bot');
-            setFeature2Title(d.feature2Title || 'Tasks optimized for the field');
-            setFeature2Icon(d.feature2Icon || 'Smartphone');
-            setFeature3Title(d.feature3Title || 'Track and report on efficiency');
-            setFeature3Icon(d.feature3Icon || 'BarChart3');
+            setFeature1Title(d.feature1Title || 'Agentic AI nodes');
+            setFeature1Icon(d.feature1Icon || 'Activity');
+            const steps = d.feature1Steps || ['DISCOVERY', 'AGENT_INIT', 'EXECUTION', 'OPTIMIZE'];
+            setF1Step1(steps[0] || 'DISCOVERY');
+            setF1Step2(steps[1] || 'AGENT_INIT');
+            setF1Step3(steps[2] || 'EXECUTION');
+            setF1Step4(steps[3] || 'OPTIMIZE');
 
-            // Detailed Card Content
-            const steps = d.feature1Steps || [];
-            setF1Step1(steps[0] || '');
-            setF1Step2(steps[1] || '');
-            setF1Step3(steps[2] || '');
-            setF1Step4(steps[3] || '');
+            setFeature2Title(d.feature2Title || 'Conversational AI');
+            setFeature2Icon(d.feature2Icon || 'Cpu');
+            setF2Query(d.feature2Query || 'How can I automate my business workflow?');
+            setF2Response(d.feature2Response || 'I can deploy Multi-Agent systems to...');
+            setF2FooterLeft(d.feature2FooterLeft || 'Custom Trained LLM');
+            setF2FooterRight(d.feature2FooterRight || 'Active');
 
-            setF2Query(d.feature2Query || '');
-            setF2Response(d.feature2Response || '');
-            setF2FooterLeft(d.feature2FooterLeft || '');
-            setF2FooterRight(d.feature2FooterRight || '');
-
-            setF3UptimeLabel(d.feature3UptimeLabel || '');
-            setF3UptimeValue(d.feature3UptimeValue || '');
-            setF3Latency(d.feature3Latency || '');
-            setF3Edge(d.feature3Edge || '');
+            setFeature3Title(d.feature3Title || 'Enterprise Solutions');
+            setFeature3Icon(d.feature3Icon || 'Zap');
+            setF3UptimeLabel(d.feature3UptimeLabel || 'Uptime');
+            setF3UptimeValue(d.feature3UptimeValue || '99.9%');
+            setF3Latency(d.feature3Latency || 'Latency: 0.8ms');
+            setF3Edge(d.feature3Edge || 'Global Edge');
         }
     }, [getData]);
 
+    const parsedPhrases = phrasesText
+        .split(/[\n,]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
     const currentPayload = {
-        tagline, tagline2, title, subtitle, cta, learnMore,
-        taglineIcon1, taglineIcon2,
-        taglineColor, titleColor, ctaGradientStart, ctaGradientEnd,
-        feature1Title, feature1Icon,
-        feature2Title, feature2Icon,
-        feature3Title, feature3Icon,
+        tagline,
+        title: titlePrefix,
+        titlePrefix,
+        phrases: parsedPhrases.length > 0 ? parsedPhrases : DEFAULT_PHRASES_EN,
+        subtitle,
+        cta,
+        learnMore,
+        whatsappNumber,
+        contactEmail,
+        feature1Title,
+        feature1Icon,
         feature1Steps: [f1Step1, f1Step2, f1Step3, f1Step4],
+        feature2Title,
+        feature2Icon,
         feature2Query: f2Query,
         feature2Response: f2Response,
         feature2FooterLeft: f2FooterLeft,
         feature2FooterRight: f2FooterRight,
+        feature3Title,
+        feature3Icon,
         feature3UptimeLabel: f3UptimeLabel,
         feature3UptimeValue: f3UptimeValue,
         feature3Latency: f3Latency,
@@ -176,101 +192,205 @@ export default function AdminHero() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
-                <SectionHeader title="Hero Section" description="Edit content and branding colors" />
+                <SectionHeader title="Hero Section" description="Manage headlines, dynamic typewriter phrases, CTAs, and 3D visual card content." />
                 <LangToggle lang={lang} setLang={setLang} />
             </div>
             <ErrorAlert message={error} />
 
-            <div className="grid gap-6 md:grid-cols-2">
-                {/* Content */}
-                <div className="space-y-4 bg-card rounded-xl p-4 md:p-6 border border-border">
+            <div className="grid gap-6 lg:grid-cols-12">
+                {/* Left Column: Headlines & Content (7 Cols) */}
+                <div className="lg:col-span-7 space-y-5 bg-card rounded-xl p-4 md:p-6 border border-border">
                     <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2">
-                        📝 Content
+                        📝 Headline &amp; Text Content
                     </h3>
-                    <TextField label="Tagline (Row 1)" value={tagline} onChange={setTagline} lang={lang} />
-                    <TextField label="Tagline (Row 2 — Mobile)" value={tagline2} onChange={setTagline2} lang={lang} />
 
-                    {/* Tagline Icon Pickers */}
-                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/40">
-                        <IconPicker label="🎯 Icon Before Tagline" value={taglineIcon1} onChange={setTaglineIcon1} />
-                        <IconPicker label="🚀 Icon After Tagline" value={taglineIcon2} onChange={setTaglineIcon2} />
+                    {/* Tagline Pill Badge */}
+                    <div>
+                        <TextField label="Tagline (Glowing Pill Badge)" value={tagline} onChange={setTagline} lang={lang} />
+                        <p className="text-[11px] text-muted-foreground mt-1">Appears at the top of the hero in the glowing pill badge (e.g. <code>Launch at Zero _ Scale to Orbit 🚀</code>).</p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground -mt-1">These animated SVG icons appear before and after the tagline text.</p>
 
-                    <TextField label="Title" value={title} onChange={setTitle} lang={lang} />
-                    <TextField label="Subtitle" value={subtitle} onChange={setSubtitle} multiline lang={lang} />
-                    <p className="text-xs text-muted-foreground -mt-2 ml-1">💡 Select text → use toolbar: <code className="bg-muted px-1 rounded text-[11px]">B</code> bold, <code className="bg-muted px-1 rounded text-[11px]">Card</code> pill, <code className="bg-muted px-1 rounded text-[11px]">B+Green</code>, or <code className="bg-muted px-1 rounded text-[11px]">B+White</code></p>
-                    <TextField label="CTA Button Text" value={cta} onChange={setCta} lang={lang} />
-                    <TextField label="Learn More Button Text" value={learnMore} onChange={setLearnMore} lang={lang} />
+                    {/* Main Title Prefix (Line 1) */}
+                    <div>
+                        <TextField label="Title Line 1 (Static Heading)" value={titlePrefix} onChange={setTitlePrefix} lang={lang} />
+                        <p className="text-[11px] text-muted-foreground mt-1">The bold static text on line 1 of the title (e.g. <code>Turning Ideas into</code>).</p>
+                    </div>
+
+                    {/* Typewriter Rotating Phrases (Line 2) */}
+                    <div>
+                        <label className="text-xs font-medium text-muted-foreground block mb-1">
+                            Title Line 2 (Dynamic Rotating Phrases — Typewriter)
+                        </label>
+                        <textarea
+                            value={phrasesText}
+                            onChange={(e) => setPhrasesText(e.target.value)}
+                            rows={4}
+                            placeholder="SCALABLE REALITIES&#10;REAL IMPACT&#10;MEASURABLE GROWTH&#10;POWERFUL SOLUTIONS&#10;INTELLIGENT SYSTEMS"
+                            className="w-full rounded-lg bg-background border border-border p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                            Enter one phrase per line (or separated by commas). These cycle sequentially in vibrant amber-purple gradient text.
+                        </p>
+                    </div>
+
+                    {/* Subtitle */}
+                    <div>
+                        <TextField label="Hero Subtitle" value={subtitle} onChange={setSubtitle} multiline lang={lang} />
+                        <p className="text-xs text-muted-foreground -mt-2 ml-1">
+                            💡 Text formatting: <code className="bg-muted px-1 rounded text-[11px]">**text**</code> bold, <code className="bg-muted px-1 rounded text-[11px]">&lt;&lt;text&gt;&gt;</code> gradient, <code className="bg-muted px-1 rounded text-[11px]">((text))</code> badge, <code className="bg-muted px-1 rounded text-[11px]">==text==</code> green highlight.
+                        </p>
+                    </div>
                 </div>
 
-                {/* Colors */}
-                <div className="space-y-6 bg-card rounded-xl p-4 md:p-6 border border-border">
-                    <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2">
-                        🎨 Theme Customization
-                    </h3>
+                {/* Right Column: CTA Buttons & Live Preview (5 Cols) */}
+                <div className="lg:col-span-5 space-y-5 flex flex-col">
+                    {/* CTAs */}
+                    <div className="bg-card rounded-xl p-4 md:p-6 border border-border space-y-4">
+                        <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2">
+                            ⚡ Call-to-Action &amp; Direct Contact
+                        </h3>
 
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <ColorField label="Tagline Accent" value={taglineColor} onChange={setTaglineColor} />
-                            <ColorField label="Title Highlight" value={titleColor} onChange={setTitleColor} />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <TextField label="Primary CTA Text" value={cta} onChange={setCta} lang={lang} />
+                            <TextField label="Secondary Button Text" value={learnMore} onChange={setLearnMore} lang={lang} />
                         </div>
 
-                        <div className="pt-4 border-t border-border">
-                            <label className="text-sm font-bold text-foreground block mb-3 uppercase tracking-wider">CTA Button Gradient</label>
-                            <div className="grid grid-cols-2 gap-4">
-                                <ColorField label="Gradient Start" value={ctaGradientStart} onChange={setCtaGradientStart} />
-                                <ColorField label="Gradient End" value={ctaGradientEnd} onChange={setCtaGradientEnd} />
+                        <div className="pt-2 border-t border-border/40 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <TextField label="WhatsApp Number" value={whatsappNumber} onChange={setWhatsappNumber} />
+                                <p className="text-[10px] text-muted-foreground mt-0.5">e.g. <code>8801853452264</code></p>
                             </div>
-                            <div
-                                className="mt-4 h-12 rounded-xl shadow-lg flex items-center justify-center text-white font-bold text-sm"
-                                style={{ background: `linear-gradient(to right, ${ctaGradientStart}, ${ctaGradientEnd})` }}
-                            >
-                                Live Preview
+                            <div>
+                                <TextField label="Contact Email" value={contactEmail} onChange={setContactEmail} />
+                                <p className="text-[10px] text-muted-foreground mt-0.5">e.g. <code>contact@orbitsaas.com</code></p>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Live Preview Card */}
+                    <div className="bg-[#0B0B0F] rounded-xl p-5 border border-white/10 shadow-2xl flex-1 flex flex-col justify-between relative overflow-hidden">
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-[10px] font-mono tracking-widest text-white/40 uppercase">LIVE PREVIEW</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">General User View</span>
+                        </div>
+
+                        <div className="space-y-4 relative z-10">
+                            {/* Pill Badge */}
+                            <div>
+                                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-[9px] font-black tracking-widest uppercase text-indigo-300">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                                    {tagline || 'Launch at Zero _ Scale to Orbit 🚀'}
+                                </span>
+                            </div>
+
+                            {/* Headline */}
+                            <div>
+                                <div className="text-xl sm:text-2xl font-black text-white leading-tight">
+                                    {titlePrefix || 'Turning Ideas into'}
+                                </div>
+                                <div
+                                    className="text-lg sm:text-xl font-black leading-tight mt-0.5"
+                                    style={{
+                                        background: 'linear-gradient(to right, #F59E0B, #A855F7, #EC4899)',
+                                        WebkitBackgroundClip: 'text',
+                                        backgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        color: 'transparent',
+                                        display: 'inline-block'
+                                    }}
+                                >
+                                    {parsedPhrases[0] || 'SCALABLE REALITIES'}
+                                    <span className="inline-block w-1.5 h-4 bg-violet-400 ml-1.5 animate-pulse" />
+                                </div>
+                            </div>
+
+                            {/* Subtitle */}
+                            <div className="text-xs text-white/60 leading-relaxed max-h-24 overflow-y-auto pr-1">
+                                <RichText text={subtitle || 'From concept to scale, we engineer high-performance software and autonomous AI agents.'} />
+                            </div>
+
+                            {/* CTA Buttons */}
+                            <div className="flex items-center gap-2 pt-2">
+                                <div className="px-4 py-2 bg-white text-black font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-[0_0_15px_rgba(255,255,255,0.15)]">
+                                    <span>{cta || 'Get Started'}</span>
+                                    <Zap size={12} className="fill-current text-indigo-600" />
+                                </div>
+                                <div className="px-3 py-2 bg-white/5 border border-white/10 text-white font-bold text-xs rounded-lg flex items-center gap-1">
+                                    <span>{learnMore || 'Our Services'}</span>
+                                    <ArrowRight size={12} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Background subtle glow */}
+                        <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
                     </div>
                 </div>
             </div>
 
-            {/* Feature Cards */}
+            {/* Feature Flash Cards (Desktop Right Column Cards) */}
             <div className="space-y-4 bg-card rounded-xl p-4 md:p-6 border border-border">
-                <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2">
-                    ✨ Feature Flash Cards
-                </h3>
-                <p className="text-xs text-muted-foreground -mt-2 mb-2">The three floating geometric glassmorphic cards on the right side of the hero section.</p>
+                <div>
+                    <h3 className="font-semibold text-foreground mb-0.5 flex items-center gap-2">
+                        ✨ 3D Feature Flash Cards (Desktop Right Side)
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                        These are the three interactive glassmorphic cards floating beside the hero text on desktop screens.
+                    </p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-3 p-4 border border-border/50 rounded-lg bg-background/50">
-                        <h4 className="text-sm font-bold opacity-70">Card 1 (Top)</h4>
-                        <TextField label="Title" value={feature1Title} onChange={setFeature1Title} lang={lang} />
-                        <IconPicker label="Icon" value={feature1Icon} onChange={setFeature1Icon} />
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                            <TextField label="Step 1" value={f1Step1} onChange={setF1Step1} lang={lang} />
-                            <TextField label="Step 2" value={f1Step2} onChange={setF1Step2} lang={lang} />
-                            <TextField label="Step 3" value={f1Step3} onChange={setF1Step3} lang={lang} />
-                            <TextField label="Step 4" value={f1Step4} onChange={setF1Step4} lang={lang} />
+                    {/* Card 1: Agentic AI */}
+                    <div className="space-y-3 p-4 border border-border/50 rounded-xl bg-background/50">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-400">Card 1 (Top Right)</h4>
+                            <span className="text-[10px] bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/20">Agentic AI</span>
                         </div>
-                    </div>
-                    <div className="space-y-3 p-4 border border-border/50 rounded-lg bg-background/50">
-                        <h4 className="text-sm font-bold opacity-70">Card 2 (Middle)</h4>
-                        <TextField label="Title" value={feature2Title} onChange={setFeature2Title} lang={lang} />
-                        <IconPicker label="Icon" value={feature2Icon} onChange={setFeature2Icon} />
-                        <div className="space-y-2 mt-2">
-                            <TextField label="User Query" value={f2Query} onChange={setF2Query} lang={lang} />
-                            <TextField label="Bot Response" value={f2Response} onChange={setF2Response} lang={lang} />
+                        <TextField label="Card Title" value={feature1Title} onChange={setFeature1Title} lang={lang} />
+                        <IconPicker label="Icon" value={feature1Icon} onChange={setFeature1Icon} />
+                        <div className="space-y-2 mt-2 pt-2 border-t border-border/40">
+                            <label className="text-[11px] font-medium text-muted-foreground block">Workflow Sequence Steps (4 nodes)</label>
                             <div className="grid grid-cols-2 gap-2">
-                                <TextField label="Footer Left" value={f2FooterLeft} onChange={setF2FooterLeft} lang={lang} />
-                                <TextField label="Footer Right" value={f2FooterRight} onChange={setF2FooterRight} lang={lang} />
+                                <TextField label="Step 1" value={f1Step1} onChange={setF1Step1} lang={lang} />
+                                <TextField label="Step 2" value={f1Step2} onChange={setF1Step2} lang={lang} />
+                                <TextField label="Step 3" value={f1Step3} onChange={setF1Step3} lang={lang} />
+                                <TextField label="Step 4" value={f1Step4} onChange={setF1Step4} lang={lang} />
                             </div>
                         </div>
                     </div>
-                    <div className="space-y-3 p-4 border border-border/50 rounded-lg bg-background/50">
-                        <h4 className="text-sm font-bold opacity-70">Card 3 (Bottom)</h4>
-                        <TextField label="Title" value={feature3Title} onChange={setFeature3Title} lang={lang} />
+
+                    {/* Card 2: Conversational AI */}
+                    <div className="space-y-3 p-4 border border-border/50 rounded-xl bg-background/50">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400">Card 2 (Middle)</h4>
+                            <span className="text-[10px] bg-cyan-500/10 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/20">Chatbot Node</span>
+                        </div>
+                        <TextField label="Card Title" value={feature2Title} onChange={setFeature2Title} lang={lang} />
+                        <IconPicker label="Icon" value={feature2Icon} onChange={setFeature2Icon} />
+                        <div className="space-y-2 mt-2 pt-2 border-t border-border/40">
+                            <TextField label="Simulated User Query" value={f2Query} onChange={setF2Query} lang={lang} />
+                            <TextField label="Simulated Bot Response" value={f2Response} onChange={setF2Response} lang={lang} />
+                            <div className="grid grid-cols-2 gap-2">
+                                <TextField label="Footer Tag Left" value={f2FooterLeft} onChange={setF2FooterLeft} lang={lang} />
+                                <TextField label="Footer Tag Right" value={f2FooterRight} onChange={setF2FooterRight} lang={lang} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card 3: Enterprise Solutions */}
+                    <div className="space-y-3 p-4 border border-border/50 rounded-xl bg-background/50">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400">Card 3 (Bottom)</h4>
+                            <span className="text-[10px] bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded border border-amber-500/20">Performance</span>
+                        </div>
+                        <TextField label="Card Title" value={feature3Title} onChange={setFeature3Title} lang={lang} />
                         <IconPicker label="Icon" value={feature3Icon} onChange={setFeature3Icon} />
-                        <div className="space-y-2 mt-2">
-                            <TextField label="Metric Label" value={f3UptimeLabel} onChange={setF3UptimeLabel} lang={lang} />
-                            <TextField label="Metric Value" value={f3UptimeValue} onChange={setF3UptimeValue} lang={lang} />
+                        <div className="space-y-2 mt-2 pt-2 border-t border-border/40">
+                            <div className="grid grid-cols-2 gap-2">
+                                <TextField label="Metric Label" value={f3UptimeLabel} onChange={setF3UptimeLabel} lang={lang} />
+                                <TextField label="Metric Value" value={f3UptimeValue} onChange={setF3UptimeValue} lang={lang} />
+                            </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <TextField label="Subtext 1" value={f3Latency} onChange={setF3Latency} lang={lang} />
                                 <TextField label="Subtext 2" value={f3Edge} onChange={setF3Edge} lang={lang} />
@@ -288,39 +408,41 @@ export default function AdminHero() {
                     data={currentPayload}
                     onImport={(parsed) => {
                         setTagline(parsed.tagline || '');
-                        setTagline2(parsed.tagline2 || '');
-                        setTitle(parsed.title || '');
+                        setTitlePrefix(parsed.titlePrefix || parsed.title || 'Turning Ideas into');
+                        const importedPhrases = Array.isArray(parsed.phrases)
+                            ? parsed.phrases
+                            : typeof parsed.phrases === 'string'
+                                ? parsed.phrases.split(',').map((s: string) => s.trim()).filter(Boolean)
+                                : DEFAULT_PHRASES_EN;
+                        setPhrasesText(importedPhrases.join('\n'));
+
                         setSubtitle(parsed.subtitle || '');
-                        setCta(parsed.cta || '');
-                        setLearnMore(parsed.learnMore || '');
-                        setTaglineIcon1(parsed.taglineIcon1 || 'Bullseye');
-                        setTaglineIcon2(parsed.taglineIcon2 || 'Rocket');
-                        setTaglineColor(parsed.taglineColor || '#00F5FF');
-                        setTitleColor(parsed.titleColor || '#FF00A8');
-                        setCtaGradientStart(parsed.ctaGradientStart || '#6c5ce7');
-                        setCtaGradientEnd(parsed.ctaGradientEnd || '#3b82f6');
-                        setFeature1Title(parsed.feature1Title || 'Build & run processes with AI');
-                        setFeature1Icon(parsed.feature1Icon || 'Bot');
-                        setFeature2Title(parsed.feature2Title || 'Tasks optimized for the field');
-                        setFeature2Icon(parsed.feature2Icon || 'Smartphone');
-                        setFeature3Title(parsed.feature3Title || 'Track and report on efficiency');
-                        setFeature3Icon(parsed.feature3Icon || 'BarChart3');
+                        setCta(parsed.cta || 'Get Started');
+                        setLearnMore(parsed.learnMore || 'Our Services');
+                        setWhatsappNumber(parsed.whatsappNumber || '8801853452264');
+                        setContactEmail(parsed.contactEmail || 'contact@orbitsaas.com');
 
+                        setFeature1Title(parsed.feature1Title || 'Agentic AI nodes');
+                        setFeature1Icon(parsed.feature1Icon || 'Activity');
                         const steps = parsed.feature1Steps || [];
-                        setF1Step1(steps[0] || '');
-                        setF1Step2(steps[1] || '');
-                        setF1Step3(steps[2] || '');
-                        setF1Step4(steps[3] || '');
+                        setF1Step1(steps[0] || 'DISCOVERY');
+                        setF1Step2(steps[1] || 'AGENT_INIT');
+                        setF1Step3(steps[2] || 'EXECUTION');
+                        setF1Step4(steps[3] || 'OPTIMIZE');
 
-                        setF2Query(parsed.feature2Query || '');
-                        setF2Response(parsed.feature2Response || '');
-                        setF2FooterLeft(parsed.feature2FooterLeft || '');
-                        setF2FooterRight(parsed.feature2FooterRight || '');
+                        setFeature2Title(parsed.feature2Title || 'Conversational AI');
+                        setFeature2Icon(parsed.feature2Icon || 'Cpu');
+                        setF2Query(parsed.feature2Query || 'How can I automate my business workflow?');
+                        setF2Response(parsed.feature2Response || 'I can deploy Multi-Agent systems to...');
+                        setF2FooterLeft(parsed.feature2FooterLeft || 'Custom Trained LLM');
+                        setF2FooterRight(parsed.feature2FooterRight || 'Active');
 
-                        setF3UptimeLabel(parsed.feature3UptimeLabel || '');
-                        setF3UptimeValue(parsed.feature3UptimeValue || '');
-                        setF3Latency(parsed.feature3Latency || '');
-                        setF3Edge(parsed.feature3Edge || '');
+                        setFeature3Title(parsed.feature3Title || 'Enterprise Solutions');
+                        setFeature3Icon(parsed.feature3Icon || 'Zap');
+                        setF3UptimeLabel(parsed.feature3UptimeLabel || 'Uptime');
+                        setF3UptimeValue(parsed.feature3UptimeValue || '99.9%');
+                        setF3Latency(parsed.feature3Latency || 'Latency: 0.8ms');
+                        setF3Edge(parsed.feature3Edge || 'Global Edge');
                     }}
                 />
             </div>

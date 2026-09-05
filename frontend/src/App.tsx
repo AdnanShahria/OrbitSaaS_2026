@@ -109,7 +109,7 @@ function OrchestrationProvider({ children }: { children: React.ReactNode }) {
 // Lazy load public sections
 const StatsSection = lazy(() => import('./components/orbit/StatsSection').then(m => ({ default: m.StatsSection })));
 const ServicesSection = lazy(() => import('./components/orbit/ServicesSection').then(m => ({ default: m.ServicesSection })));
-const ProcessSection = lazy(() => import('./components/orbit/ProcessSection').then(m => ({ default: m.ProcessSection })));
+// const ProcessSection = lazy(() => import('./components/orbit/ProcessSection').then(m => ({ default: m.ProcessSection })));
 const TechStackSection = lazy(() => import('./components/orbit/TechStackSection').then(m => ({ default: m.TechStackSection })));
 const WhyUsSection = lazy(() => import('./components/orbit/WhyUsSection').then(m => ({ default: m.WhyUsSection })));
 const ProjectsSection = lazy(() => import('./components/orbit/ProjectsSection').then(m => ({ default: m.ProjectsSection })));
@@ -295,7 +295,6 @@ function PublicSite() {
     // Map existing paths to section IDs
     const routeToId: Record<string, string> = {
       '/services': 'services',
-      '/process': 'process',
       '/why-us': 'why-us',
       '/proj': 'projects',
       '/project': 'projects',
@@ -345,7 +344,8 @@ function PublicSite() {
     <div className="flex flex-col w-full min-h-screen">
       <div id="hero" className="w-full !border-none section-wrapper"><Home /></div>
       <div id="services" className="w-full !border-none section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ServicesSection /></Suspense></div>
-      <div id="process" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ProcessSection /></Suspense></div>
+      {/* How We Transform Your Vision / ProcessSection kept in codebase but hidden from client build/render */}
+      {/* <div id="process" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ProcessSection /></Suspense></div> */}
       {/* Our Expertise / TechStack kept in codebase but hidden from client build/render */}
       {/* <div id="techstack" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><TechStackSection /></Suspense></div> */}
       <div id="why-us" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><WhyUsSection /></Suspense></div>
@@ -425,7 +425,7 @@ export default function App() {
                         <PublicSite />
                       </VisitorGateway>
                     }>
-                      {['/', '/services', '/process', '/why-us', '/proj', '/project', '/achievements', '/reviews', '/leadership', '/contact'].map(path => (
+                      {['/', '/services', '/why-us', '/proj', '/project', '/achievements', '/reviews', '/leadership', '/contact'].map(path => (
                         <Route key={path} path={path} element={null} />
                       ))}
                       <Route path="*" element={<Navigate to="/" replace />} />

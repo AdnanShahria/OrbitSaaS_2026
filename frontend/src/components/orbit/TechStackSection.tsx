@@ -953,7 +953,7 @@ function drawScene(
     
     ctx.save();
     ctx.fillStyle = `rgba(212, 175, 55, ${alpha})`;
-    ctx.font = 'bold 28px "Abril Fatface", serif';
+    ctx.font = 'bold 28px "Space Grotesk", sans-serif';
     ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 4;
@@ -1201,7 +1201,7 @@ export function TechStackSection() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.1 }}
                 className="text-4xl sm:text-7xl font-black text-white tracking-tighter"
-                style={{ fontFamily: "'Abril Fatface', serif" }}
+                style={{ fontFamily: "var(--font-display)" }}
               >
                 {t?.title || 'Our Expertise'}
               </motion.h2>
@@ -1306,7 +1306,7 @@ export function TechStackSection() {
           );
         })}
       </div>
-      <WaveDivider fill="#060606" />
+      <WaveDivider fill="#FFFFFF" />
     </section>
   );
 }

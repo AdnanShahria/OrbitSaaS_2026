@@ -9,7 +9,6 @@ import orbitLogo from '@/assets/OrbitLogo.png';
 const NAV_SECTIONS = [
   { path: '/', label: 'Home' },
   { path: '/services', label: 'Services' },
-  { path: '/process', label: 'Process' },
   { path: '/why-us', label: 'Why Us' },
   { path: '/proj', label: 'Projects' },
   { path: '/achievements', label: 'Achievements' },
@@ -21,7 +20,6 @@ const NAV_SECTIONS = [
 const PATH_TO_SECTION: Record<string, string> = {
   '/': 'hero',
   '/services': 'services',
-  '/process': 'process',
   '/techstack': 'tech',
   '/why-us': 'why-us',
   '/proj': 'project',
@@ -82,7 +80,7 @@ export function Navbar() {
         setScrolled(window.scrollY > 20);
 
         // Scroll Spy Logic
-        const sections = ['hero', 'services', 'process', 'why-us', 'projects', 'achievements', 'reviews', 'leadership', 'contact'];
+        const sections = ['hero', 'services', 'why-us', 'projects', 'achievements', 'reviews', 'leadership', 'contact'];
         for (let i = sections.length - 1; i >= 0; i--) {
           const id = sections[i];
           const element = document.getElementById(id);
@@ -126,22 +124,21 @@ export function Navbar() {
     return () => window.removeEventListener('orbit-chatbot-state-change', handleChatbotState);
   }, []);
 
-  // Sections that use Light Mode (Only on the main landing page flows)
-  const isLightMode = !isProjectPage && !isAchievementPage && ['services', 'why-us', 'project', 'achievements', 'leadership'].includes(activeSection);
+  // Sections that use Light Mode (All sections on main landing page except hero)
+  const isLightMode = !isProjectPage && !isAchievementPage && activeSection !== 'hero';
 
   // Theme Variables
   const theme = {
     bg: isLightMode
-        ? scrolled ? 'rgba(243, 239, 224, 0.95)' : 'rgba(243, 239, 224, 0.9)'
-        : scrolled ? 'rgba(6, 6, 8, 0.8)' : 'rgba(10, 10, 12, 0.25)',
+        ? scrolled ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.85)'
+        : scrolled ? 'rgba(6, 6, 8, 0.85)' : 'rgba(10, 10, 12, 0.35)',
     border: isLightMode
-        ? 'rgba(163, 123, 16, 0.12)'
-        : scrolled ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.12)',
-    text: isLightMode ? '#000000' : '#FFFFFF',
-    textMuted: isLightMode ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.6)',
+        ? scrolled ? 'rgba(0, 0, 0, 0.08)' : 'rgba(0, 0, 0, 0.06)'
+        : scrolled ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+    text: isLightMode ? '#09090B' : '#FFFFFF',
+    textMuted: isLightMode ? 'rgba(24, 24, 27, 0.7)' : 'rgba(255, 255, 255, 0.65)',
     accent: '#10B981', // Emerald 500
-    glass: isLightMode ? 'backdrop-blur-[32px]' : 'backdrop-blur-[40px]',
-    violetBorder: 'rgba(167, 139, 250, 0.3)' // Thin violet border
+    glass: isLightMode ? 'backdrop-blur-xl' : 'backdrop-blur-2xl',
   };
 
   return (
@@ -155,12 +152,12 @@ export function Navbar() {
           initial={{ clipPath: 'inset(0 100% 0 0)', opacity: 0.5 }}
           animate={{ clipPath: 'inset(0 0% 0 0)', opacity: 1 }}
           transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-          className={`relative w-full px-2 sm:px-4 py-1 border rounded-b-2xl ${theme.glass} backdrop-saturate-[180%]`}
+          className={`relative w-full py-1.5 border-b rounded-b-2xl ${theme.glass} backdrop-saturate-[180%] transition-colors duration-500`}
           style={{
             backgroundColor: theme.bg,
-            borderColor: theme.violetBorder,
+            borderColor: theme.border,
             boxShadow: isLightMode
-              ? '0 10px 30px -10px rgba(0, 0, 0, 0.05)'
+              ? '0 4px 20px -2px rgba(0, 0, 0, 0.04)'
               : '0 10px 30px -15px rgba(0,0,0,0.5)'
           }}
         >
@@ -172,7 +169,7 @@ export function Navbar() {
             className="absolute inset-0 bg-gradient-to-r from-transparent via-[#10B981]/20 to-transparent pointer-events-none z-0 rounded-b-2xl"
           />
 
-          <div className="flex items-center justify-between max-w-[1400px] mx-auto w-full relative z-10">
+          <div className="flex items-center justify-between max-w-[1400px] mx-auto w-full px-6 lg:px-8 relative z-10">
             {/* Logo area - Lefty side fade and slide in */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -202,8 +199,8 @@ export function Navbar() {
                   </div>
                 </div>
                 <span
-                  className="font-normal tracking-[0.1em] text-lg sm:text-xl transition-all duration-500 group-hover:tracking-[0.15em] relative"
-                  style={{ color: theme.text, fontFamily: "'Abril Fatface', serif" }}
+                  className="font-black tracking-tight text-lg sm:text-xl transition-all duration-500 relative"
+                  style={{ color: theme.text, fontFamily: "var(--font-display)" }}
                 >
                   OrbitSaaS
                   <motion.div
@@ -226,7 +223,7 @@ export function Navbar() {
                       exit={{ opacity: 0, y: -10 }}
                       className="flex items-center gap-3"
                     >
-                      <span className="text-[11px] font-bold text-primary tracking-tighter uppercase truncate max-w-[400px]" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                      <span className="text-[11px] font-bold text-primary tracking-tighter uppercase truncate max-w-[400px]" style={{ fontFamily: "var(--font-body)" }}>
                         {projectTitle}
                       </span>
                     </motion.div>
@@ -257,7 +254,7 @@ export function Navbar() {
                       <motion.span
                         className={`relative z-10 transition-colors duration-500 text-[10px] font-medium tracking-tighter uppercase`}
                         style={{
-                          fontFamily: "'Outfit', sans-serif",
+                          fontFamily: "var(--font-body)",
                           color: isContact ? '#FFFFFF' : theme.textMuted
                         }}
                       >
@@ -292,7 +289,7 @@ export function Navbar() {
                       <motion.span 
                         className={`relative z-10 transition-colors duration-500 text-[10px] sm:text-[11px] font-bold tracking-tighter uppercase whitespace-nowrap flex overflow-hidden`}
                         style={{ 
-                          fontFamily: "'Outfit', sans-serif",
+                          fontFamily: "var(--font-body)",
                           color: isActive 
                             ? '#059669' // Emerald for active text
                             : theme.textMuted
@@ -339,7 +336,7 @@ export function Navbar() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all group"
                   >
                     <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
-                    <span className="text-[9px] font-bold tracking-widest uppercase" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                    <span className="text-[9px] font-bold tracking-widest uppercase" style={{ fontFamily: "var(--font-body)" }}>
                       Back
                     </span>
                   </button>
@@ -352,9 +349,13 @@ export function Navbar() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 0.75, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => toggleLang()}
-                className="hidden sm:flex items-center justify-center min-w-[2.8rem] h-7 sm:h-8 px-2.5 rounded-full border border-emerald-500/30 bg-[#10B981]/5 text-[#10B981] backdrop-blur-md text-[10px] font-black uppercase tracking-widest transition-all duration-500 hover:bg-[#10B981] hover:border-[#10B981] hover:text-white shadow-lg hover:shadow-emerald-500/20 active:scale-95"
+                className={`hidden sm:flex items-center justify-center min-w-[2.8rem] h-7 sm:h-8 px-2.5 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all duration-300 shadow-xs active:scale-95 ${
+                  isLightMode
+                    ? 'border-zinc-200/90 bg-white/90 text-zinc-800 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700'
+                    : 'border-emerald-500/30 bg-[#10B981]/5 text-[#10B981] hover:bg-[#10B981] hover:border-[#10B981] hover:text-white'
+                }`}
                 style={{
-                  fontFamily: "'Abril Fatface', serif"
+                  fontFamily: "var(--font-display)"
                 }}
               >
                 {lang === 'en' ? 'BN' : 'EN'}
@@ -370,16 +371,16 @@ export function Navbar() {
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 10 }}
-                      className="flex lg:hidden items-center gap-3 px-3 sm:px-4 py-1.5 rounded-full border backdrop-blur-md"
+                      className="flex lg:hidden items-center gap-2 px-3 sm:px-3.5 py-1 rounded-full border backdrop-blur-md"
                       style={{ 
-                        backgroundColor: isLightMode ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)',
-                        borderColor: isLightMode ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'
+                        backgroundColor: isLightMode ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                        borderColor: isLightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)'
                       }}
                     >
-                      <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       <span
                         className="text-[8px] sm:text-[9px] font-black uppercase tracking-tighter truncate max-w-[80px]"
-                        style={{ color: theme.text, fontFamily: "'Outfit', sans-serif" }}
+                        style={{ color: theme.text, fontFamily: "var(--font-body)" }}
                       >
                         {isProjectPage ? projectTitle : (t?.nav?.[activeSection === 'tech' ? 'techStack' : activeSection === 'project' ? 'projects' : activeSection] || activeSection)}
                       </span>
@@ -400,16 +401,20 @@ export function Navbar() {
                   onClick={() => {
                     window.open(whatsappLink, '_blank');
                   }}
-                  className="group relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border backdrop-blur-md transition-all duration-500 hover:text-white"
+                  className={`group relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-all duration-300 shadow-xs ${
+                    isLightMode
+                      ? 'border-emerald-500/40 bg-emerald-50/80 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600'
+                      : 'backdrop-blur-md hover:text-white border-white/10'
+                  }`}
                 >
                   {/* Outer pulsating ring */}
-                  <div className="absolute inset-0 rounded-full border animate-ping opacity-20 whatsapp-ping-anim" style={{ animationDuration: '3s' }} />
+                  <div className={`absolute inset-0 rounded-full border animate-ping opacity-20 ${isLightMode ? 'border-emerald-500' : 'whatsapp-ping-anim'}`} style={{ animationDuration: '3s' }} />
 
-                  {/* Button Background Base (to receive animation) */}
-                  <div className="absolute inset-0 rounded-full whatsapp-theme-anim transition-all duration-300" />
+                  {/* Button Background Base (to receive animation on dark mode) */}
+                  {!isLightMode && <div className="absolute inset-0 rounded-full whatsapp-theme-anim transition-all duration-300" />}
 
                   {/* Subtle inner wiggle on hover */}
-                  <WhatsAppIcon className="relative z-10 w-4 h-4 sm:w-[18px] sm:h-[18px] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 whatsapp-theme-anim" />
+                  <WhatsAppIcon className={`relative z-10 w-4 h-4 sm:w-[18px] sm:h-[18px] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 ${!isLightMode ? 'whatsapp-theme-anim' : ''}`} />
                 </motion.button>
               </div>
 
@@ -420,7 +425,7 @@ export function Navbar() {
                 transition={{ duration: 0.5, delay: 0.3 }}
                 className="lg:hidden relative z-[1001] w-8 h-8 flex items-center justify-center rounded-full transition-colors"
                 onClick={() => setMobileOpen(!mobileOpen)}
-                style={{ color: mobileOpen ? '#FFFFFF' : theme.text }}
+                style={{ color: mobileOpen ? (isLightMode ? '#09090B' : '#FFFFFF') : theme.text }}
               >
                 <div className="flex flex-col gap-1.5 items-end">
                   <motion.span
@@ -478,7 +483,7 @@ export function Navbar() {
                       className="text-2xl sm:text-4xl transition-all duration-300 hover:translate-x-4"
                       style={{
                         color: isLightMode ? '#1a1a1a' : '#ffffff',
-                        fontFamily: "'Abril Fatface', serif"
+                        fontFamily: "var(--font-display)"
                       }}
                     >
                       Projects
@@ -515,7 +520,7 @@ export function Navbar() {
                             className={`text-2xl sm:text-4xl transition-all duration-300 hover:translate-x-4`}
                             style={{
                               color: theme.text,
-                              fontFamily: "'Abril Fatface', serif"
+                              fontFamily: "var(--font-display)"
                             }}
                           >
                             {label}
@@ -545,7 +550,7 @@ export function Navbar() {
                             className={`text-2xl sm:text-4xl transition-all duration-300 ${isActive ? 'text-emerald-500' : 'hover:translate-x-4'}`}
                             style={{
                               color: !isActive ? (isLightMode ? '#1a1a1a' : '#ffffff') : undefined,
-                              fontFamily: "'Abril Fatface', serif"
+                              fontFamily: "var(--font-display)"
                             }}
                           >
                             {label}

@@ -935,7 +935,7 @@ export function ServicesSection({ embedded }: { embedded?: boolean }) {
         <div className="absolute -bottom-[20%] right-[15%] w-[700px] h-[700px] rounded-full bg-orange-600/5 blur-[150px]" />
       </div>
 
-      <div className="section-container relative z-10 max-w-[1280px] mx-auto px-6 lg:px-8 w-full">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 w-full relative z-10 py-16 sm:py-24">
         
         {/* Section Header: 2-Column layout to utilize horizontal space and save vertical height */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-12 mb-10 md:mb-12">
@@ -1031,7 +1031,7 @@ export function ServicesSection({ embedded }: { embedded?: boolean }) {
         </motion.div>
         
       </div>
-      <WaveDivider fill="var(--bg-dark)" />
+      <WaveDivider fill="#FFFFFF" />
     </Wrapper>
   );
 }

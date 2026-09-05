@@ -201,7 +201,6 @@ export default function ProjectsPage() {
         <div ref={containerRef} className="min-h-screen bg-[#FDFBF7] text-gray-900 selection:bg-[#22C55E]/10 overflow-x-hidden">
             <Helmet>
                 <title>Project Archive | ORBIT SaaS</title>
-                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
             </Helmet>
             <Navbar />
             <main className="relative pt-32 sm:pt-40 pb-32">
@@ -235,7 +234,7 @@ export default function ProjectsPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 1, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
                             className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] text-gray-900 mb-10"
-                            style={{ fontFamily: "'Outfit', sans-serif" }}
+                            style={{ fontFamily: "var(--font-display)" }}
                         >
                             All <span className="text-gray-300">Projects</span>
                         </motion.h1>
@@ -284,7 +283,7 @@ export default function ProjectsPage() {
                     {/* Empty State */}
                     {items.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-40 text-center">
-                            <span className="text-6xl font-extrabold tracking-tight text-white/5" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                            <span className="text-6xl font-extrabold tracking-tight text-white/5" style={{ fontFamily: "var(--font-display)" }}>
                                 No Projects
                             </span>
                             <p className="text-sm text-white/20 mt-4">No projects found in this category.</p>
