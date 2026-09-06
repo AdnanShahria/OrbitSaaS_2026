@@ -3,13 +3,14 @@ export type Lang = 'en' | 'bn';
 export interface LeadershipMember {
   name: string;
   role: string;
+  subDetail?: string;
+  badge?: string;
   bio?: string;
   image?: string;
   order: number;
+  hidden?: boolean;
   socials?: {
-    linkedin?: { enabled: boolean; url: string };
-    twitter?: { enabled: boolean; url: string };
-    email?: { enabled: boolean; url: string };
+    [key: string]: { enabled: boolean; url: string };
   };
 }
 

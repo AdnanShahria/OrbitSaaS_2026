@@ -8,12 +8,8 @@ import {
   Cpu,
   Smartphone,
   ShoppingCart,
-  Globe,
-  ArrowRight,
-  ChevronRight,
-  Sparkles
+  Globe
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { RichText } from '@/components/ui/RichText';
 import { WaveDivider } from '@/components/ui/WaveDivider';
 
@@ -596,19 +592,21 @@ const PWAVisual = () => (
 /* ──────────── Service Visual Dispatcher ──────────── */
 const SERVICE_VISUALS = [WebDesignVisual, ChatbotVisual, AutomationVisual, MobileAppVisual, EcommerceVisual, PWAVisual];
 
-const ServiceVisual = ({ index }: { index: number }) => {
+const ServiceVisual = ({ index, isCompactMobile }: { index: number; isCompactMobile?: boolean }) => {
   const Visual = SERVICE_VISUALS[index % SERVICE_VISUALS.length];
   const visualRef = useRef<HTMLDivElement>(null);
 
   const handleVisualEnter = () => {
+    if (isCompactMobile) return;
     const el = visualRef.current;
     if (!el) return;
-    el.style.transform = 'scale(1.06) translateY(-2px)';
-    el.style.boxShadow = '0 12px 36px -8px rgba(16,185,129,0.2), 0 0 0 2px var(--nav-accent)';
+    el.style.transform = 'scale(1.05) translateY(-2px)';
+    el.style.boxShadow = '0 10px 30px -8px rgba(16,185,129,0.2), 0 0 0 2px var(--nav-accent)';
     el.style.borderColor = 'transparent';
   };
 
   const handleVisualLeave = () => {
+    if (isCompactMobile) return;
     const el = visualRef.current;
     if (!el) return;
     el.style.transform = 'scale(1) translateY(0px)';
@@ -621,14 +619,14 @@ const ServiceVisual = ({ index }: { index: number }) => {
       ref={visualRef}
       onMouseEnter={handleVisualEnter}
       onMouseLeave={handleVisualLeave}
-      className="w-full h-full min-h-[85px] sm:min-h-[120px] md:min-h-0 bg-white rounded-xl sm:rounded-2xl border-2 border-blue-400/80 overflow-hidden relative flex items-center justify-center shrink-0 cursor-pointer shadow-[0_4px_12px_rgba(59,130,246,0.15),inset_0_0_20px_rgba(59,130,246,0.05)]"
+      className={`w-full h-full ${isCompactMobile ? 'min-h-[65px]' : 'min-h-[75px] md:min-h-0'} bg-white rounded-xl border-2 border-blue-400/80 overflow-hidden relative flex items-center justify-center shrink-0 ${isCompactMobile ? '' : 'cursor-pointer'} shadow-[0_3px_10px_rgba(59,130,246,0.12),inset_0_0_15px_rgba(59,130,246,0.04)]`}
       style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s ease, border-color 0.3s ease' }}
     >
-      <div className="scale-[0.58] sm:scale-[0.75] md:scale-95 lg:scale-110 transition-transform duration-500">
+      <div className={isCompactMobile ? "scale-[0.44] transition-transform duration-300" : "scale-[0.62] sm:scale-[0.7] md:scale-[0.78] lg:scale-[0.88] transition-transform duration-500"}>
         <Visual />
       </div>
       {/* Inner shine on hover */}
-      <div className="visual-inner-shine absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 to-white/0 pointer-events-none transition-all duration-300" />
+      <div className="visual-inner-shine absolute inset-0 rounded-xl bg-gradient-to-br from-white/0 to-white/0 pointer-events-none transition-all duration-300" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#EBE8E0]/10 to-transparent pointer-events-none opacity-20 mix-blend-multiply" />
     </div>
   );
@@ -805,7 +803,63 @@ const CardCanvasBackground = ({ index }: { index: number }) => {
   );
 };
 
-/* ─────────────────────── Bento Card with 3D Hover ─────────────────────── */
+/* ─────────────────────── Mobile Marquee Card (Full Content) ─────────────────────── */
+function MobileServiceMarqueeCard({
+  item,
+  index,
+}: {
+  item: { title?: string; desc?: string; id?: string | number; [key: string]: unknown };
+  index: number;
+}) {
+  const Icon = SERVICE_ICONS[index % SERVICE_ICONS.length];
+  const theme = SERVICE_THEMES[index % SERVICE_THEMES.length];
+
+  return (
+    <div
+      className={`relative w-[300px] sm:w-[330px] min-h-[175px] sm:min-h-[185px] shrink-0 mr-3 rounded-2xl bg-white/95 border-2 border-[#d8d3c7] ${theme.hoverBg} p-3.5 sm:p-4 flex flex-col justify-between overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] select-none`}
+      style={{
+        '--card-glow': theme.glow,
+      } as any}
+    >
+      {/* Decorative subtle bottom accent line */}
+      <div 
+        className="absolute bottom-0 left-3 right-3 h-[2px] opacity-70"
+        style={{ background: `linear-gradient(to right, transparent, ${theme.accent}, transparent)` }}
+      />
+
+      {/* Title & Icon Header */}
+      <div className="flex items-start gap-2 mb-2 shrink-0">
+        <div className={`flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md border shadow-2xs mt-0.5 ${theme.bg} ${theme.border} ${theme.icon}`}>
+          <Icon size={13} className="sm:w-3.5 sm:h-3.5" strokeWidth={2.2} />
+        </div>
+        <h4 
+          className={`text-[13px] sm:text-[14px] leading-snug font-bold bg-clip-text text-transparent bg-gradient-to-r ${theme.text}`}
+          style={{ 
+            fontFamily: 'var(--font-display)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}
+        >
+          {item.title}
+        </h4>
+      </div>
+
+      {/* Body: Full Description + Compact Visual */}
+      <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-h-0">
+        <div className="flex-1 min-w-0 pr-1">
+          <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-600 font-normal" style={{ fontFamily: 'var(--font-body)' }}>
+            <RichText text={item.desc} />
+          </p>
+        </div>
+        <div className="shrink-0 w-[72px] h-[72px] sm:w-[78px] sm:h-[78px] self-center">
+          <ServiceVisual index={index} isCompactMobile />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────── Desktop Bento Card with 3D Hover (Compact) ─────────────────────── */
 function BentoCard({
   item,
   index,
@@ -824,9 +878,9 @@ function BentoCard({
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * -6;
-    const rotateY = ((x - centerX) / centerX) * 6;
-    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+    const rotateX = ((y - centerY) / centerY) * -5;
+    const rotateY = ((x - centerX) / centerX) * 5;
+    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-3px)`;
 
     // Move the shine effect
     const shine = card.querySelector('.card-shine') as HTMLElement;
@@ -848,12 +902,13 @@ function BentoCard({
   return (
     <motion.div
       ref={cardRef}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.6, ease: [0.25, 1, 0.5, 1] }}
+      initial={{ opacity: 0, y: 15 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.08, duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className={`group relative overflow-hidden rounded-[2rem] bg-white/95 backdrop-blur-2xl border-2 border-[#d8d3c7] ${SERVICE_THEMES[index % SERVICE_THEMES.length].hoverBg} p-5 md:p-6 md:min-h-[240px] flex flex-col justify-between cursor-default shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)]`}
+      className={`group relative overflow-hidden rounded-2xl lg:rounded-[1.6rem] bg-white/95 backdrop-blur-2xl border-2 border-[#d8d3c7] ${SERVICE_THEMES[index % SERVICE_THEMES.length].hoverBg} p-4 sm:p-4.5 md:p-4.5 lg:p-5 md:min-h-[170px] lg:min-h-[185px] flex flex-col justify-between cursor-default shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_16px_45px_-12px_rgba(0,0,0,0.08)]`}
       style={{ 
         transition: 'transform 0.15s ease-out, border-color 0.4s, box-shadow 0.4s', 
         willChange: 'transform',
@@ -864,7 +919,7 @@ function BentoCard({
       <CardCanvasBackground index={index} />
 
       {/* Shine overlay — follows cursor */}
-      <div className="card-shine absolute inset-0 pointer-events-none z-20 rounded-[2rem]" style={{ transition: 'background 0.15s ease-out' }} />
+      <div className="card-shine absolute inset-0 pointer-events-none z-20 rounded-2xl lg:rounded-[1.6rem]" style={{ transition: 'background 0.15s ease-out' }} />
 
       {/* Decorative Glow */}
       <div 
@@ -881,12 +936,12 @@ function BentoCard({
       {/* Refined Layout: Title top, Content row below */}
       <div className="flex flex-col relative z-10 h-full">
         {/* Title row - Full width */}
-        <div className="flex items-center gap-2 sm:gap-3 mb-3 md:mb-4">
-          <div className={`flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg sm:rounded-xl shadow-sm border ${SERVICE_THEMES[index % SERVICE_THEMES.length].bg} ${SERVICE_THEMES[index % SERVICE_THEMES.length].border} ${SERVICE_THEMES[index % SERVICE_THEMES.length].icon} group-hover:shadow-[0_0_12px_var(--card-glow)] transition-shadow duration-500`}>
-            <Icon size={16} className="sm:w-5 sm:h-5" strokeWidth={2} />
+        <div className="flex items-center gap-2.5 mb-2.5">
+          <div className={`flex h-7 w-7 md:h-8 md:w-8 shrink-0 items-center justify-center rounded-lg shadow-2xs border ${SERVICE_THEMES[index % SERVICE_THEMES.length].bg} ${SERVICE_THEMES[index % SERVICE_THEMES.length].border} ${SERVICE_THEMES[index % SERVICE_THEMES.length].icon} group-hover:shadow-[0_0_10px_var(--card-glow)] transition-shadow duration-500`}>
+            <Icon size={15} strokeWidth={2} />
           </div>
           <h3 
-            className={`text-base sm:text-lg md:text-xl leading-tight font-bold bg-clip-text text-transparent bg-gradient-to-r ${SERVICE_THEMES[index % SERVICE_THEMES.length].text} transition-all duration-500 group-hover:scale-[1.02] origin-left`} 
+            className={`text-[15px] sm:text-[16px] md:text-[17px] leading-tight font-bold bg-clip-text text-transparent bg-gradient-to-r ${SERVICE_THEMES[index % SERVICE_THEMES.length].text} transition-all duration-500 group-hover:scale-[1.01] origin-left`} 
             style={{ 
               fontFamily: 'var(--font-display)',
               WebkitBackgroundClip: 'text',
@@ -898,14 +953,14 @@ function BentoCard({
         </div>
 
         {/* Content row: Responsive Layout */}
-        <div className="flex flex-row md:grid md:grid-cols-[1fr_200px] lg:grid-cols-[1fr_240px] gap-4 sm:gap-6 items-start md:items-stretch flex-grow">
-          <div className="flex-grow min-w-0">
-            <p className="text-[11px] sm:text-[13px] md:text-[14px] leading-relaxed text-slate-500" style={{ fontFamily: 'var(--font-body)' }}>
+        <div className="grid md:grid-cols-[1fr_150px] lg:grid-cols-[1fr_180px] gap-3 md:gap-4 items-stretch flex-grow">
+          <div className="flex-grow min-w-0 flex flex-col justify-center">
+            <p className="text-[12px] md:text-[12.5px] lg:text-[13px] leading-relaxed text-slate-500" style={{ fontFamily: 'var(--font-body)' }}>
               <RichText text={item.desc} />
             </p>
           </div>
 
-          <div className="shrink-0 w-[95px] h-[95px] sm:w-[130px] sm:h-[130px] md:w-full md:h-full">
+          <div className="shrink-0 w-full h-[105px] lg:h-[120px]">
             <ServiceVisual index={index} />
           </div>
         </div>
@@ -918,15 +973,36 @@ function BentoCard({
 export function ServicesSection({ embedded }: { embedded?: boolean }) {
   const { content } = useContent();
   const { lang } = useLang();
-  const navigate = useNavigate();
   type ContentServices = { items?: Array<{ title?: string; desc?: string; id?: string | number; [key: string]: unknown }>; heading?: string; sub?: string };
   const t = (content[lang] as { services?: ContentServices })?.services;
   const allItems = t?.items || [];
 
+  const defaultFallbackItems = [
+    { title: 'Full Stack Web Design & Development', desc: 'End-to-end websites and web apps — from pixel-perfect UI/UX design to robust backend systems.' },
+    { title: 'Custom AI Chatbots & Agents', desc: 'Intelligent, 24/7 conversational agents fine-tuned to your business knowledge base.' },
+    { title: 'AI Automation & Workflows', desc: 'Streamline operations with smart AI-driven pipelines, autonomous agents, and integrations.' },
+    { title: 'Mobile App Development', desc: 'Native and cross-platform iOS & Android mobile apps built with Flutter and React Native.' },
+    { title: 'eCommerce & Enterprise Platforms', desc: 'High-converting online stores and scalable enterprise solutions with secure payments.' },
+    { title: 'PWA & Advanced Web Apps', desc: 'Offline-first, installable progressive web apps offering lightning-fast native-like performance.' },
+  ];
+
+  const resolvedItems = allItems.length >= 6 ? allItems.slice(0, 6) : [
+    ...allItems,
+    ...defaultFallbackItems.slice(allItems.length, 6)
+  ];
+
+  // Separate into 1st 3 cards and next 3 cards
+  const row1Items = resolvedItems.slice(0, 3);
+  const row2Items = resolvedItems.slice(3, 6);
+
+  // Duplicated arrays for infinite, seamless mobile marquee loop
+  const row1MarqueeItems = [...row1Items, ...row1Items, ...row1Items, ...row1Items];
+  const row2MarqueeItems = [...row2Items, ...row2Items, ...row2Items, ...row2Items];
+
   const Wrapper = embedded ? 'div' : 'section';
 
   return (
-    <Wrapper id="services" className="relative w-full min-h-[100dvh] overflow-visible bg-[#FAFAFA] pb-4 pt-10 md:pt-14 md:pb-6 z-10 flex flex-col items-center !border-none">
+    <Wrapper id="services" className="relative w-full overflow-visible bg-[#FAFAFA] pb-2 pt-6 md:pt-8 md:pb-4 z-10 flex flex-col items-center !border-none">
       
       {/* Background Decorators - Luxury Beige organic glows */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
@@ -935,17 +1011,17 @@ export function ServicesSection({ embedded }: { embedded?: boolean }) {
         <div className="absolute -bottom-[20%] right-[15%] w-[700px] h-[700px] rounded-full bg-orange-600/5 blur-[150px]" />
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 w-full relative z-10 py-16 sm:py-24">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 py-6 sm:py-8 md:py-10">
         
-        {/* Section Header: 2-Column layout to utilize horizontal space and save vertical height */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-12 mb-10 md:mb-12">
+        {/* Section Header: Compact 2-Column layout */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-10 mb-5 md:mb-7">
           <div className="max-w-2xl text-left">
             <motion.h2 
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="text-4xl md:text-[3rem] font-extrabold text-[#1E293B] tracking-tight leading-[1.05]"
+              className="text-3xl sm:text-4xl md:text-[2.5rem] font-extrabold text-[#1E293B] tracking-tight leading-[1.08]"
               style={{ fontFamily: 'var(--font-display)' }}
             >
               {t?.heading || 'End-to-end digital solutions that scale.'}
@@ -959,76 +1035,79 @@ export function ServicesSection({ embedded }: { embedded?: boolean }) {
              transition={{ delay: 0.2 }}
              className="max-w-md text-left"
           >
-            <p className="text-base md:text-[1.05rem] text-slate-500 leading-relaxed md:pb-2" style={{ fontFamily: 'var(--font-body)' }}>
+            <p className="text-sm sm:text-base md:text-[1.02rem] text-slate-500 leading-relaxed md:pb-1" style={{ fontFamily: 'var(--font-body)' }}>
               {t?.sub || 'We combine strategic design with cutting-edge engineering to build products that dominate.'}
             </p>
           </motion.div>
         </div>
 
-        {/* ────── Dynamic Bento Grid Layout ────── */}
-        <div className="flex flex-col gap-4 pb-6">
-          {Array.from({ length: Math.ceil((allItems.length || 6) / 2) }).map((_, rowIndex) => {
-             // Fallback items if array is empty
-             const rowItems = allItems.length > 0 ? allItems.slice(rowIndex * 2, rowIndex * 2 + 2) : [
-                { title: `Service ${rowIndex * 2 + 1}`, desc: 'Placeholder description.' },
-                { title: `Service ${rowIndex * 2 + 2}`, desc: 'Placeholder description.' }
-             ];
+        {/* ────── Mobile Marquee Rows (Mobile Only: 2 Rows of 3 Cards) ────── */}
+        <div className="block md:hidden w-full overflow-hidden space-y-3 pb-2 pt-1">
+          {/* Row 1: Cards 0, 1, 2 — Smooth Left Scroll */}
+          <div 
+            className="relative overflow-hidden w-full"
+            style={{
+              maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)'
+            }}
+          >
+            <div 
+              className="marquee-track flex items-stretch hover:[animation-play-state:paused] active:[animation-play-state:paused]"
+              style={{ '--marquee-speed': '32s' } as React.CSSProperties}
+            >
+              {row1MarqueeItems.map((item, idx) => (
+                <MobileServiceMarqueeCard
+                  key={`row1-${idx}`}
+                  item={item}
+                  index={idx % 3}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Row 2: Cards 3, 4, 5 — Smooth Right Scroll (Reverse) */}
+          <div 
+            className="relative overflow-hidden w-full"
+            style={{
+              maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)'
+            }}
+          >
+            <div 
+              className="marquee-track-reverse flex items-stretch hover:[animation-play-state:paused] active:[animation-play-state:paused]"
+              style={{ '--marquee-speed': '36s' } as React.CSSProperties}
+            >
+              {row2MarqueeItems.map((item, idx) => (
+                <MobileServiceMarqueeCard
+                  key={`row2-${idx}`}
+                  item={item}
+                  index={3 + (idx % 3)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ────── Desktop Dynamic Bento Grid Layout (Desktop Only: Compact 6 Cards) ────── */}
+        <div className="hidden md:flex flex-col gap-3.5 pb-2">
+          {Array.from({ length: Math.ceil((resolvedItems.length || 6) / 2) }).map((_, rowIndex) => {
+             const rowItems = resolvedItems.slice(rowIndex * 2, rowIndex * 2 + 2);
              if (rowItems.length === 0) return null;
              
              // Alternating ratio logic: 53/47 then 47/53 then 53/47
              const gridClass = rowIndex % 2 === 0 
-                ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-[53fr_47fr]" 
-                : "grid-cols-1 md:grid-cols-2 lg:grid-cols-[47fr_53fr]";
+                ? "grid-cols-2 lg:grid-cols-[53fr_47fr]" 
+                : "grid-cols-2 lg:grid-cols-[47fr_53fr]";
 
               return (
-               <div key={rowIndex} className={`grid ${gridClass} gap-4`}>
-                 {rowItems.map((item: { title?: string; desc?: string; id?: string | number; [key: string]: unknown }, colIndex: number) => (
+               <div key={rowIndex} className={`grid ${gridClass} gap-3.5`}>
+                 {rowItems.map((item, colIndex) => (
                    <BentoCard key={(item.id as string | number) || (item.title as string) || colIndex} item={item} index={rowIndex * 2 + colIndex} />
                  ))}
                </div>
              );
           })}
         </div>
-        
-        {/* ────── Premium Unified Button Row ────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.3, duration: 0.8 }}
-          className="w-full flex flex-col md:flex-row items-center justify-between gap-6 mt-8 md:mt-10 pt-6"
-        >
-          {/* Left: Aesthetic Get Early Access CTA */}
-          <button
-            onClick={() => {
-              const el = document.getElementById('contact');
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth' });
-              } else {
-                navigate('/contact');
-              }
-            }}
-            className="order-1 md:order-1 group relative px-12 py-5 bg-[#0e0e10] text-white rounded-[2rem] font-bold text-base md:text-lg border border-white/10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.4)] transition-all duration-500 hover:scale-[1.02] active:scale-95 overflow-hidden cursor-pointer"
-          >
-            {/* Agent Skills Background Glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-            
-            {/* Shimmer effect */}
-            <motion.div 
-              animate={{ x: ['-100%', '200%'] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.08] to-transparent skew-x-12" 
-            />
-            
-            <span className="relative z-10 flex items-center gap-4">
-              <Sparkles className="w-5 h-5 text-emerald-400 group-hover:animate-spin-slow" />
-              {lang === 'en' ? 'Get Early Access' : 'এক্সক্লুসিভ অ্যাক্সেস নিন'}
-              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-2" />
-            </span>
-          </button>
-
-
-        </motion.div>
         
       </div>
       <WaveDivider fill="#FFFFFF" />

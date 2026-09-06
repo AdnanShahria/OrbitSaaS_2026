@@ -47,11 +47,13 @@ type SocialsMap = { [K in SocialPlatform]?: SocialEntry };
 interface LocalizedMember {
     name: string;
     role: string;
+    subDetail?: string;
     bio: string;
 }
 
 interface UnifiedMember {
     image: string;
+    badge?: string;
     order: number;
     hidden?: boolean;
     en: LocalizedMember;
@@ -70,10 +72,11 @@ const makeDefaultSocials = (): SocialsMap => {
 
 const DEFAULT_MEMBER: UnifiedMember = {
     image: '',
+    badge: '',
     order: 0,
     hidden: false,
-    en: { name: '', role: '', bio: '' },
-    bn: { name: '', role: '', bio: '' },
+    en: { name: '', role: '', subDetail: '', bio: '' },
+    bn: { name: '', role: '', subDetail: '', bio: '' },
     socials: makeDefaultSocials(),
 };
 
@@ -283,19 +286,28 @@ function MemberEditor({
                     onChange={(url) => update({ ...item, image: url })}
                 />
 
-                <div className="max-w-[120px]">
-                    <label className="text-sm font-medium text-foreground block mb-1.5">
-                        Display Order
-                    </label>
-                    <input
-                        type="number"
-                        min={0}
-                        value={item.order}
-                        onChange={(e) =>
-                            update({ ...item, order: parseInt(e.target.value) || 0 })
-                        }
-                        className="w-full bg-secondary rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border"
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label className="text-sm font-medium text-foreground block mb-1.5">
+                            Display Order
+                        </label>
+                        <input
+                            type="number"
+                            min={0}
+                            value={item.order}
+                            onChange={(e) =>
+                                update({ ...item, order: parseInt(e.target.value) || 0 })
+                            }
+                            className="w-full bg-secondary rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border"
+                        />
+                    </div>
+                    <div>
+                        <TextField
+                            label="Photo Badge / Status (e.g. O+, Lead, Core)"
+                            value={item.badge || ''}
+                            onChange={(v) => update({ ...item, badge: v })}
+                        />
+                    </div>
                 </div>
                 
                 <ToggleField
@@ -360,12 +372,24 @@ function MemberEditor({
                         lang={tab}
                     />
                     <TextField
-                        label={tab === 'en' ? 'Role / Title' : 'পদবি'}
+                        label={tab === 'en' ? 'Role / Title (e.g. PRESIDENT)' : 'পদবি'}
                         value={item[tab].role}
                         onChange={(v) => updateLoc(tab, 'role', v)}
                         lang={tab}
                     />
-
+                    <TextField
+                        label={tab === 'en' ? 'Sub-Detail (e.g. CSE-22 · 2024-2025)' : 'বিভাগ / সময়কাল'}
+                        value={item[tab].subDetail || ''}
+                        onChange={(v) => updateLoc(tab, 'subDetail', v)}
+                        lang={tab}
+                    />
+                    <TextField
+                        label={tab === 'en' ? 'About / Bio (Shown in Read Bio popup)' : 'জীবনবৃত্তান্ত (Read Bio পপআপে প্রদর্শিত)'}
+                        value={item[tab].bio || ''}
+                        onChange={(v) => updateLoc(tab, 'bio', v)}
+                        multiline
+                        lang={tab}
+                    />
                 </div>
             </div>
         </div>
@@ -424,10 +448,11 @@ export default function AdminLeadership() {
             }
             merged.push({
                 image: en.image || bn.image || '',
+                badge: en.badge || bn.badge || '',
                 order: en.order ?? bn.order ?? i + 1,
                 hidden: en.hidden ?? bn.hidden ?? false,
-                en: { name: en.name || '', role: en.role || '', bio: en.bio || '' },
-                bn: { name: bn.name || '', role: bn.role || '', bio: bn.bio || '' },
+                en: { name: en.name || '', role: en.role || '', subDetail: en.subDetail || '', bio: en.bio || '' },
+                bn: { name: bn.name || '', role: bn.role || '', subDetail: bn.subDetail || '', bio: bn.bio || '' },
                 socials: mergedSocials,
             });
         }
@@ -450,7 +475,9 @@ export default function AdminLeadership() {
             const enMembers = sorted.map((m) => ({
                 name: m.en.name,
                 role: m.en.role,
+                subDetail: m.en.subDetail,
                 bio: m.en.bio,
+                badge: m.badge,
                 image: m.image,
                 order: m.order,
                 hidden: m.hidden,
@@ -460,7 +487,9 @@ export default function AdminLeadership() {
             const bnMembers = sorted.map((m) => ({
                 name: m.bn.name,
                 role: m.bn.role,
+                subDetail: m.bn.subDetail,
                 bio: m.bn.bio,
+                badge: m.badge,
                 image: m.image,
                 order: m.order,
                 hidden: m.hidden,
@@ -633,6 +662,8 @@ export default function AdminLeadership() {
                         members: members.map(m => ({
                             name: m.en.name,
                             role: m.en.role,
+                            subDetail: m.en.subDetail,
+                            badge: m.badge,
                             bio: m.en.bio,
                             image: m.image,
                             order: m.order,
@@ -647,6 +678,8 @@ export default function AdminLeadership() {
                         members: members.map(m => ({
                             name: m.bn.name,
                             role: m.bn.role,
+                            subDetail: m.bn.subDetail,
+                            badge: m.badge,
                             bio: m.bn.bio,
                             image: m.image,
                             order: m.order,
@@ -680,10 +713,11 @@ export default function AdminLeadership() {
                         }
                         merged.push({
                             image: en.image || bn.image || '',
+                            badge: en.badge || bn.badge || '',
                             order: en.order ?? bn.order ?? i + 1,
                             hidden: en.hidden ?? bn.hidden ?? false,
-                            en: { name: en.name || '', role: en.role || '', bio: en.bio || '' },
-                            bn: { name: bn.name || '', role: bn.role || '', bio: bn.bio || '' },
+                            en: { name: en.name || '', role: en.role || '', subDetail: en.subDetail || '', bio: en.bio || '' },
+                            bn: { name: bn.name || '', role: bn.role || '', subDetail: bn.subDetail || '', bio: bn.bio || '' },
                             socials: mergedSocials,
                         });
                     }

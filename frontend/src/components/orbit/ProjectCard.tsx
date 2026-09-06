@@ -154,13 +154,19 @@ export function ProjectCard({ item, routeId, isHovered, onMouseEnter, onMouseLea
             <div className="p-3.5 sm:p-5 flex flex-col flex-grow">
                 <div className="mb-2">
                     <Link to={`/project/${routeId}`}>
-                        <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 leading-tight">
+                        <h3 
+                            className="text-lg sm:text-xl md:text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 leading-tight"
+                            style={{ fontFamily: "var(--font-display)" }}
+                        >
                             {item.title}
                         </h3>
                     </Link>
                 </div>
 
-                <p className="text-muted-foreground/80 text-[11px] sm:text-xs leading-relaxed mb-3 line-clamp-2 flex-grow">
+                <p 
+                    className="text-muted-foreground/80 text-[11px] sm:text-xs leading-relaxed mb-3 line-clamp-2 flex-grow font-normal"
+                    style={{ fontFamily: "var(--font-body)" }}
+                >
                     {shortDesc}
                 </p>
 

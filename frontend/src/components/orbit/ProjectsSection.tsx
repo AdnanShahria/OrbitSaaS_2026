@@ -142,11 +142,17 @@ function CinematicCard({ item, i, routeId }: { item: ProjectItem; i: number; rou
                         ))}
                     </div>
 
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight tracking-tight group-hover:text-[#22C55E] transition-colors duration-500 mb-2">
+                    <h3 
+                        className="text-lg sm:text-xl font-bold text-gray-900 leading-tight tracking-tight group-hover:text-[#22C55E] transition-colors duration-500 mb-2"
+                        style={{ fontFamily: "var(--font-display)" }}
+                    >
                         {item.title}
                     </h3>
 
-                    <p className="text-gray-500 text-sm leading-relaxed line-clamp-3">
+                    <p 
+                        className="text-gray-500 text-sm leading-relaxed line-clamp-3 font-normal"
+                        style={{ fontFamily: "var(--font-body)" }}
+                    >
                         {item.desc?.replace(/<[^>]*>?/gm, '').substring(0, 200)}
                     </p>
                 </div>
