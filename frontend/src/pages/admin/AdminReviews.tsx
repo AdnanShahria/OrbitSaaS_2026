@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { SectionHeader, LangToggle, SaveButton, TextField, ToggleField, ErrorAlert, useSectionEditor, JsonPanel } from '@/components/admin/EditorComponents';
-import { Star, Plus, Trash2, ChevronUp, ChevronDown, Mail, MessageCircle, ShoppingBag, Briefcase, Globe, AtSign, Hash, Instagram, Facebook, Twitter, Linkedin, Github } from 'lucide-react';
+import { Star, Plus, Trash2, ChevronUp, ChevronDown, Mail, MessageCircle, ShoppingBag, Briefcase, Globe, AtSign, Hash, Instagram, Facebook, Twitter, Linkedin, Github, Upload, User } from 'lucide-react';
 import { useContent } from '@/contexts/ContentContext';
+import { uploadImage } from '@/lib/imageUpload';
+import { getImageUrl } from '@/lib/imageUrl';
+import { toast } from 'sonner';
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -161,6 +164,82 @@ export default function AdminReviews() {
         );
     };
 
+    const ReviewAvatarField = ({ avatar, onChange }: { avatar: string; onChange: (url: string) => void }) => {
+        const [uploading, setUploading] = useState(false);
+
+        const handleFile = async (file: File) => {
+            if (!file.type.startsWith('image/')) {
+                toast.error('Please select an image file');
+                return;
+            }
+            setUploading(true);
+            const toastId = toast.loading('Uploading avatar...');
+            try {
+                const url = await uploadImage(file, 'reviews');
+                onChange(url);
+                toast.success('Avatar uploaded!', { id: toastId });
+            } catch (err) {
+                console.error(err);
+                toast.error('Upload failed', { id: toastId });
+            } finally {
+                setUploading(false);
+            }
+        };
+
+        return (
+            <div>
+                <label className="text-sm font-medium text-foreground block mb-1.5">
+                    Reviewer Avatar
+                </label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="relative w-11 h-11 rounded-full overflow-hidden border border-border flex-shrink-0 bg-secondary/50 group flex items-center justify-center">
+                        {avatar ? (
+                            <>
+                                <img
+                                    src={getImageUrl(avatar)}
+                                    alt="Reviewer"
+                                    className="w-full h-full object-cover"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => onChange('')}
+                                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                                    title="Remove photo"
+                                >
+                                    <Trash2 className="w-4 h-4 text-white" />
+                                </button>
+                            </>
+                        ) : (
+                            <User className="w-5 h-5 text-muted-foreground" />
+                        )}
+                    </div>
+
+                    <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
+                        <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 border border-emerald-500/30 text-xs font-semibold cursor-pointer transition-colors shrink-0">
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>{uploading ? 'Uploading...' : avatar ? 'Change Photo' : 'Upload Photo'}</span>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={uploading}
+                                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+                            />
+                        </label>
+
+                        <input
+                            type="text"
+                            value={avatar}
+                            onChange={(e) => onChange(e.target.value)}
+                            placeholder="Paste avatar URL..."
+                            className="flex-1 rounded-lg bg-secondary border border-border px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const currentPayload = { title, subtitle, items, showSocials };
 
     return (
@@ -251,7 +330,7 @@ export default function AdminReviews() {
                                 </div>
                             </div>
                         </div>
-                        <TextField label="Avatar URL" value={item.avatar} onChange={(v) => updateItem(idx, 'avatar', v)} />
+                        <ReviewAvatarField avatar={item.avatar} onChange={(v) => updateItem(idx, 'avatar', v)} />
 
                         {/* Rating Stars */}
                         <div>

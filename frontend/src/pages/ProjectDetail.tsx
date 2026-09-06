@@ -150,7 +150,7 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                                     onDragEnd={handleDragEnd}
                                     draggable="false"
                                     loading="eager"
-                                    fetchPriority="high"
+                                    {...({ fetchpriority: 'high' })}
                                     className="absolute inset-0 w-full h-full object-contain bg-black/5 touch-pan-y no-browser-trigger"
                                     alt={`${title} - slide ${currentIndex + 1}`}
                                     onError={(e) => {

@@ -151,7 +151,7 @@ export function ImageWithSkeleton({ src, alt, className, showSkeleton = true, pr
                     onError={handleImageError}
                     loading={priority ? 'eager' : 'lazy'}
                     decoding="async"
-                    fetchPriority={priority ? 'high' : 'auto'}
+                    {...(priority ? { fetchpriority: 'high' } : {})}
                     className={`w-full h-full transition-all duration-700 ${isLoaded && !hasError ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.02]'}`}
                     style={{ objectFit: 'cover', position: 'relative', zIndex: isLoaded ? 30 : 10 }}
                 />

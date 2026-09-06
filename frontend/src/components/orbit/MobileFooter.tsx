@@ -105,20 +105,16 @@ export function MobileFooter() {
   ];
 
   return (
-    <div className="w-full bg-[#D4A017] relative">
-      <footer className="relative overflow-hidden bg-[#F8F9FA] border-t-2 border-[#D4A017] rounded-t-[28px] shadow-[0_-4px_25px_rgba(212,160,23,0.18)] pb-5 pt-7 w-full animate-fade-in text-zinc-900">
-        {/* Corner Golden Glow Elements */}
-        <div className="absolute -top-10 -left-10 w-24 h-24 bg-[#D4A017]/25 rounded-full blur-xl pointer-events-none" />
-        <div className="absolute -top-10 -right-10 w-24 h-24 bg-[#D4A017]/25 rounded-full blur-xl pointer-events-none" />
-
+    <div className="w-full bg-white relative">
+      <footer className="relative overflow-hidden bg-[#F8F9FA] border-t border-zinc-200/90 rounded-t-[26px] shadow-[0_-4px_20px_rgba(0,0,0,0.03)] pb-5 pt-7 w-full animate-fade-in text-zinc-900">
         {/* Premium Background Elements */}
         <div className="absolute inset-0 pointer-events-none select-none">
           <div className="absolute top-0 left-1/4 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[80px] opacity-70" />
-          <div className="absolute bottom-0 right-1/4 w-[200px] h-[200px] bg-amber-500/5 rounded-full blur-[80px] opacity-60" />
+          <div className="absolute bottom-0 right-1/4 w-[200px] h-[200px] bg-zinc-400/5 rounded-full blur-[80px] opacity-50" />
         </div>
 
-        {/* Subtle glow highlight on top border */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4/5 h-[1.5px] bg-gradient-to-r from-transparent via-[#D4A017] to-transparent" />
+        {/* Subtle highlight on top border */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4/5 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
       
       <div className="px-4 relative z-10 flex flex-col gap-4">
         

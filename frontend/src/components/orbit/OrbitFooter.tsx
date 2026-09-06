@@ -106,20 +106,16 @@ export function OrbitFooter() {
   ];
 
   return (
-    <div className="w-full bg-[#D4A017] relative">
-      <footer className="relative overflow-hidden bg-[#F8F9FA] border-t-2 border-[#D4A017] rounded-t-[40px] md:rounded-t-[50px] shadow-[0_-10px_35px_rgba(212,160,23,0.18)] pt-10 pb-6 w-full animate-fade-in text-zinc-900">
-        {/* Corner Golden Glow Elements */}
-        <div className="absolute -top-12 -left-12 w-28 h-28 bg-[#D4A017]/25 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -top-12 -right-12 w-28 h-28 bg-[#D4A017]/25 rounded-full blur-2xl pointer-events-none" />
-
+    <div className="w-full bg-white relative">
+      <footer className="relative overflow-hidden bg-[#F8F9FA] border-t border-zinc-200/90 rounded-t-[36px] md:rounded-t-[44px] shadow-[0_-4px_25px_rgba(0,0,0,0.03)] pt-10 pb-6 w-full animate-fade-in text-zinc-900">
         {/* Premium Ambient Elements */}
         <div className="absolute inset-0 pointer-events-none select-none">
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] opacity-70" />
-          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[100px] opacity-60" />
+          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-zinc-400/5 rounded-full blur-[100px] opacity-50" />
         </div>
 
-        {/* Subtle glow highlight on top border */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4/5 h-[2px] bg-gradient-to-r from-transparent via-[#D4A017] to-transparent" />
+        {/* Subtle highlight on top border */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4/5 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
         
         <div className="max-w-[1400px] mx-auto px-6 lg:px-8 w-full relative z-10">
 
