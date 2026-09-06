@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { parseImageUrl, type ImageUrl } from '@/lib/imageUrl';
 
-interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
-    src: ImageUrl | string;
+interface SafeImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src'> {
+    src: ImageUrl | string | null | undefined;
     priority?: boolean;
 }
 
@@ -53,7 +53,7 @@ export function SafeImage({ src, priority = false, alt, className, ...props }: S
                 className={className}
                 onError={handleError}
                 loading={priority ? 'eager' : 'lazy'}
-                fetchpriority={priority ? 'high' : 'auto'}
+                fetchPriority={priority ? 'high' : 'auto'}
                 {...props}
             />
         </>

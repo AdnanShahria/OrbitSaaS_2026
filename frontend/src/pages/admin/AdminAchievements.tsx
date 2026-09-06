@@ -50,7 +50,7 @@ function MultiImageUpload({ images, onChange, title }: { images: any[]; onChange
             e.preventDefault(); e.stopPropagation(); setUploading(true);
             const toastId = toast.loading('Uploading pasted image...');
             try { 
-                const urls: string[] = []; 
+                const urls: any[] = []; 
                 for (let i = 0; i < imageFiles.length; i += 3) {
                     const batch = imageFiles.slice(i, i + 3);
                     const batchUrls = await Promise.all(batch.map(f => uploadImage(f, 'achievements')));

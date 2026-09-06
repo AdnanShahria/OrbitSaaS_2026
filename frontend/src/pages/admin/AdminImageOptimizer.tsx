@@ -44,7 +44,7 @@ function replaceImageUrlsInObject(data: any, replacements: Map<string, ImageUrl>
                 const oldPrimary = getImageUrl(oldKey);
                 const newPrimary = getImageUrl(newVal);
                 if (oldPrimary && newPrimary && modified.includes(oldPrimary)) {
-                    modified = modified.replaceAll(oldPrimary, newPrimary);
+                    modified = modified.split(oldPrimary).join(newPrimary);
                 }
             }
             return modified;

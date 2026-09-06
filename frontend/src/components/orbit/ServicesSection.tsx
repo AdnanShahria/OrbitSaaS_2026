@@ -1102,7 +1102,7 @@ export function ServicesSection({ embedded }: { embedded?: boolean }) {
               return (
                <div key={rowIndex} className={`grid ${gridClass} gap-3.5`}>
                  {rowItems.map((item, colIndex) => (
-                   <BentoCard key={(item.id as string | number) || (item.title as string) || colIndex} item={item} index={rowIndex * 2 + colIndex} />
+                   <BentoCard key={((item as any).id as string | number) || (item.title as string) || colIndex} item={item} index={rowIndex * 2 + colIndex} />
                  ))}
                </div>
              );

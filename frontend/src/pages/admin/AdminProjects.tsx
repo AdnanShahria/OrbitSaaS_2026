@@ -85,7 +85,7 @@ function MultiImageUpload({ images, onChange, title }: { images: any[]; onChange
             setUploading(true);
             const toastId = toast.loading(`Uploading pasted image...`);
             try {
-                const newUrls: string[] = [];
+                const newUrls: any[] = [];
                 const CONCURRENCY = 3;
                 for (let i = 0; i < imageFiles.length; i += CONCURRENCY) {
                     const batch = imageFiles.slice(i, i + CONCURRENCY);

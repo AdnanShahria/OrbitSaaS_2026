@@ -3,7 +3,7 @@ import { SectionHeader, LangToggle, SaveButton, TextField, ToggleField, ErrorAle
 import { Star, Plus, Trash2, ChevronUp, ChevronDown, Mail, MessageCircle, ShoppingBag, Briefcase, Globe, AtSign, Hash, Instagram, Facebook, Twitter, Linkedin, Github, Upload, User } from 'lucide-react';
 import { useContent } from '@/contexts/ContentContext';
 import { uploadImage } from '@/lib/imageUpload';
-import { getImageUrl } from '@/lib/imageUrl';
+import { getImageUrl, type ImageUrl } from '@/lib/imageUrl';
 import { toast } from 'sonner';
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -15,7 +15,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 interface ReviewItem {
     name: string;
     role: string;
-    avatar: string;
+    avatar: ImageUrl;
     rating: number;
     text: string;
     projectId: string;
@@ -164,7 +164,7 @@ export default function AdminReviews() {
         );
     };
 
-    const ReviewAvatarField = ({ avatar, onChange }: { avatar: string; onChange: (url: string) => void }) => {
+    const ReviewAvatarField = ({ avatar, onChange }: { avatar: ImageUrl; onChange: (url: ImageUrl) => void }) => {
         const [uploading, setUploading] = useState(false);
 
         const handleFile = async (file: File) => {
@@ -229,7 +229,7 @@ export default function AdminReviews() {
 
                         <input
                             type="text"
-                            value={avatar}
+                            value={typeof avatar === 'string' ? avatar : (avatar?.primary || '')}
                             onChange={(e) => onChange(e.target.value)}
                             placeholder="Paste avatar URL..."
                             className="flex-1 rounded-lg bg-secondary border border-border px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
