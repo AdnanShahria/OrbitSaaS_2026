@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { useDevicePerformance } from '@/hooks/use-performance';
 
-export function NetworkCanvas() {
+export function NetworkCanvas({ className = "" }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const prefersReducedMotion = useReducedMotion();
   const { isLowEnd, maxDpr } = useDevicePerformance();
@@ -38,16 +38,17 @@ export function NetworkCanvas() {
       vx: number;
       vy: number;
       radius: number;
-      colorIndex: number;
+      colorType: number; // 0: Emerald Green, 1: Mint/Teal, 2: Cyan
 
       constructor(width: number, height: number) {
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        // Slow, elegant, calm floating
-        this.vx = (Math.random() - 0.5) * 0.2;
-        this.vy = (Math.random() - 0.5) * 0.2;
-        this.radius = Math.random() * 2 + 1;
-        this.colorIndex = Math.random() > 0.5 ? 0 : 1;
+        // Calm, elegant floating
+        this.vx = (Math.random() - 0.5) * 0.22;
+        this.vy = (Math.random() - 0.5) * 0.22;
+        this.radius = Math.random() * 1.8 + 1.1;
+        const r = Math.random();
+        this.colorType = r < 0.5 ? 0 : r < 0.8 ? 1 : 2;
       }
 
       update(width: number, height: number) {
@@ -59,11 +60,24 @@ export function NetworkCanvas() {
       }
 
       draw(ctx: CanvasRenderingContext2D) {
+        ctx.save();
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        // Colors: Indigo or Cyan
-        ctx.fillStyle = this.colorIndex === 0 ? 'rgba(99, 102, 241, 0.8)' : 'rgba(6, 182, 212, 0.8)';
+        if (this.colorType === 0) {
+          ctx.fillStyle = 'rgba(52, 211, 153, 0.88)';
+          ctx.shadowColor = 'rgba(16, 185, 129, 0.65)';
+          ctx.shadowBlur = 6;
+        } else if (this.colorType === 1) {
+          ctx.fillStyle = 'rgba(45, 212, 191, 0.85)';
+          ctx.shadowColor = 'rgba(20, 184, 166, 0.55)';
+          ctx.shadowBlur = 5;
+        } else {
+          ctx.fillStyle = 'rgba(6, 182, 212, 0.82)';
+          ctx.shadowColor = 'rgba(6, 182, 212, 0.55)';
+          ctx.shadowBlur = 5;
+        }
         ctx.fill();
+        ctx.restore();
       }
     }
 
@@ -71,9 +85,10 @@ export function NetworkCanvas() {
       resize();
       particles = [];
       // Adjust density based on container size
-      const particleCount = Math.floor((logicalWidth * logicalHeight) / 10000);
-      // Cap particles to ensure performance (further reduced for low-end)
-      const maxParticles = Math.min(particleCount, isLowEnd ? 25 : 100);
+      const particleCount = Math.floor((logicalWidth * logicalHeight) / 14000);
+      const isMobile = logicalWidth < 768;
+      // Cap particles to ensure buttery 60fps performance on all devices
+      const maxParticles = Math.min(particleCount, isLowEnd ? 20 : (isMobile ? 32 : 75));
       for (let i = 0; i < maxParticles; i++) {
         particles.push(new Particle(logicalWidth, logicalHeight));
       }
@@ -87,22 +102,23 @@ export function NetworkCanvas() {
         particles[i].update(logicalWidth, logicalHeight);
       }
 
-      // Draw connections first (so they are behind the nodes)
+      // Draw connections first (behind nodes)
+      const maxDistance = logicalWidth < 768 ? 105 : 125;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
-          if (distance < 120) {
+          if (distance < maxDistance) {
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
             
-            const opacity = 1 - distance / 120;
-            // Mix of purple and indigo for lines
-            ctx.strokeStyle = `rgba(139, 92, 246, ${opacity * 0.35})`; 
-            ctx.lineWidth = 1;
+            const opacity = (1 - distance / maxDistance) * 0.35;
+            // Greeny mesh lines
+            ctx.strokeStyle = `rgba(16, 185, 129, ${opacity})`; 
+            ctx.lineWidth = distance < 55 ? 1.1 : 0.8;
             ctx.stroke();
           }
         }
@@ -130,7 +146,7 @@ export function NetworkCanvas() {
   return (
     <canvas 
       ref={canvasRef} 
-      className="w-full h-full"
+      className={`w-full h-full pointer-events-none ${className}`}
       style={{ display: 'block' }}
     />
   );

@@ -125,7 +125,7 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                 transition={{ duration: 0.6 }}
                 className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-8"
             >
-                <div className="relative w-full aspect-video bg-muted/10 rounded-2xl overflow-hidden border border-border group">
+                <div className="relative w-full aspect-video bg-zinc-100 rounded-2xl sm:rounded-3xl overflow-hidden border border-zinc-200/90 shadow-[0_12px_40px_-15px_rgba(0,0,0,0.08)] group">
                     {/* Main Media */}
                     <div className={`absolute inset-0 ${currentMedia.type === 'image' ? 'cursor-pointer' : ''}`} onClick={currentMedia.type === 'image' ? openLightbox : undefined}>
                         {currentMedia.type === 'video' ? (
@@ -165,13 +165,14 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
 
                 {/* Premium Navigation & Dots Indicator */}
                 {media.length > 1 && (
-                    <div className="flex justify-center items-center gap-2 sm:gap-6 mt-8 relative z-10 px-4">
+                    <div className="flex justify-center items-center gap-2 sm:gap-6 mt-6 relative z-10 px-4">
                         {/* Premium Backward Button */}
                         <button
                             onClick={(e) => { e.stopPropagation(); paginate(-1); }}
-                            className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-border bg-card text-foreground hover:bg-muted transition-colors shrink-0"
+                            className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-zinc-200/90 bg-white text-zinc-700 hover:text-zinc-950 hover:bg-zinc-50 shadow-xs hover:shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
+                            aria-label="Previous image"
                         >
-                            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                            <ChevronLeft className="w-5 h-5" />
                         </button>
 
                         <div className="flex justify-center flex-wrap gap-2.5 max-w-[70%] sm:max-w-none">
@@ -184,8 +185,8 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                                         setCurrentIndex(idx);
                                     }}
                                     className={`h-2 sm:h-2.5 rounded-full transition-all duration-300 shrink-0 ${idx === currentIndex
-                                        ? 'bg-primary w-8 sm:w-10'
-                                        : 'bg-white/20 hover:bg-white/40 w-2 sm:w-2.5'
+                                        ? 'bg-emerald-600 w-8 sm:w-10'
+                                        : 'bg-zinc-300 hover:bg-zinc-400 w-2 sm:w-2.5'
                                         }`}
                                     title={item.type === 'video' ? 'Video' : `Image ${idx + 1}`}
                                 />
@@ -195,9 +196,10 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                         {/* Premium Forward Button */}
                         <button
                             onClick={(e) => { e.stopPropagation(); paginate(1); }}
-                            className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-border bg-card text-foreground hover:bg-muted transition-colors shrink-0"
+                            className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-zinc-200/90 bg-white text-zinc-700 hover:text-zinc-950 hover:bg-zinc-50 shadow-xs hover:shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
+                            aria-label="Next image"
                         >
-                            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                            <ChevronRight className="w-5 h-5" />
                         </button>
                     </div>
                 )}
@@ -350,34 +352,31 @@ function CollapsibleCards({ blocks }: { blocks: string[] }) {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.3 + i * 0.08 }}
-                        className="rounded-xl sm:rounded-2xl border border-border bg-card overflow-hidden"
+                        className="rounded-2xl border border-zinc-200/90 bg-white overflow-hidden shadow-2xs hover:shadow-md transition-all duration-300 mb-4"
                     >
-                        {/* Clickable heading bar - Default flat design */}
+                        {/* Clickable heading bar */}
                         <button
                             type="button"
                             onClick={() => toggle(i)}
-                            className={`w-full flex items-center gap-4 px-6 sm:px-8 py-5 sm:py-6 text-left transition-colors duration-300 relative group/toggle ${isExpanded ? 'bg-muted/50' : 'hover:bg-muted/30'
-                                }`}
+                            className={`w-full flex items-center gap-4 px-6 sm:px-8 py-5 text-left transition-colors duration-200 cursor-pointer ${isExpanded ? 'bg-zinc-50/70' : 'hover:bg-zinc-50/40'}`}
                         >
                             <div className="relative flex-shrink-0 group-hover/toggle:scale-105 transition-transform duration-300">
-                                {/* Main circle */}
-                                <div
-                                    className="relative flex items-center justify-center w-9 h-9 rounded-full border border-border bg-muted"
-                                >
+                                <div className="relative flex items-center justify-center w-9 h-9 rounded-full border border-emerald-500/20 bg-emerald-50 text-emerald-600">
                                     <ChevronDown
-                                        className={`w-4 h-4 text-primary transition-transform duration-300 ${isExpanded ? '' : '-rotate-90'}`}
+                                        className={`w-4 h-4 text-emerald-600 transition-transform duration-300 ${isExpanded ? '' : '-rotate-90'}`}
                                     />
                                 </div>
                             </div>
 
                             <div className="flex flex-col gap-1 min-w-0">
                                 <h3
-                                    className="text-lg sm:text-2xl font-bold tracking-tight text-foreground transition-colors duration-300 group-hover/toggle:text-primary"
+                                    className="text-lg sm:text-xl font-bold tracking-tight text-zinc-950 transition-colors duration-200"
+                                    style={{ fontFamily: "var(--font-display)" }}
                                 >
                                     {label}
                                 </h3>
                                 {!isExpanded && preview && (
-                                    <span className="text-sm text-muted-foreground/50 truncate font-medium tracking-wide">{preview}…</span>
+                                    <span className="text-sm text-zinc-400 truncate font-normal">{preview}…</span>
                                 )}
                             </div>
                         </button>
@@ -389,10 +388,10 @@ function CollapsibleCards({ blocks }: { blocks: string[] }) {
                                     animate={{ height: 'auto', opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
                                     transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                                    className="overflow-hidden"
+                                    className="overflow-hidden border-t border-zinc-100"
                                 >
                                     <div
-                                        className="px-5 sm:px-8 pb-5 sm:pb-7 pt-2 text-muted-foreground text-base sm:text-lg leading-relaxed space-y-4"
+                                        className="px-6 sm:px-8 pb-6 sm:pb-8 pt-4 text-zinc-600 text-sm sm:text-base leading-relaxed space-y-4"
                                     >
                                         <RichText text={stripHtml(bodyHtml)} />
                                     </div>
@@ -475,14 +474,11 @@ function SuggestedProjectCard({ item, routeId }: { item: any, routeId: string })
     return (
         <Link
             to={`/project/${routeId}`}
-            className="group relative flex gap-4 rounded-2xl overflow-hidden border border-black/[0.05] bg-white p-3 transition-all duration-500 hover:-translate-y-1 hover:bg-[#FAFAFA] hover:border-[#22C55E]/30 hover:shadow-[0_15px_30px_-10px_rgba(34,197,94,0.15)]"
+            className="group relative flex gap-3.5 rounded-2xl overflow-hidden border border-zinc-200/80 bg-white p-3 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/40 hover:shadow-[0_12px_28px_rgba(16,185,129,0.08)] shadow-2xs"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* Premium Glow on Hover */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#22C55E]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
-            <div className="relative w-28 sm:w-36 flex-shrink-0 aspect-video rounded-xl overflow-hidden bg-gray-100 border border-black/[0.05]">
+            <div className="relative w-24 sm:w-28 flex-shrink-0 aspect-[16/10] rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200/60">
                 <AnimatePresence mode="popLayout">
                     <motion.div
                         key={currentImage + "_wrapper"}
@@ -500,15 +496,12 @@ function SuggestedProjectCard({ item, routeId }: { item: any, routeId: string })
                         />
                     </motion.div>
                 </AnimatePresence>
-                <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform [transition-duration:1.2s] ease-in-out bg-gradient-to-r from-transparent via-black/[0.05] to-transparent" />
-                </div>
             </div>
             <div className="flex flex-col justify-center min-w-0 z-10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#22C55E] mb-1.5 line-clamp-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1 line-clamp-1">
                     {itemCats.slice(0, 2).join(' · ')}
                 </span>
-                <h3 className="font-display text-sm font-bold text-gray-900 group-hover:text-black transition-colors line-clamp-2 leading-snug">
+                <h3 className="font-display text-xs sm:text-sm font-bold text-zinc-900 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-snug">
                     {item.title}
                 </h3>
             </div>
@@ -553,15 +546,15 @@ export default function ProjectDetail() {
 
     if (!project || idx < 0 || baseItem?.hidden) {
         return (
-            <div className="min-h-[100dvh] bg-background text-foreground">
+            <div className="min-h-[100dvh] bg-[#FDFBF7] text-zinc-900">
                 <Navbar />
                 <div className="flex flex-col items-center justify-center py-40 px-4">
                     <Helmet>
                         <title>Project Not Found | Orbit SaaS</title>
                         <meta name="robots" content="noindex" />
                     </Helmet>
-                    <h1 className="text-3xl font-bold mb-4">Project Not Found</h1>
-                    <Link to="/#projects" className="text-primary hover:underline flex items-center gap-2">
+                    <h1 className="text-3xl font-bold mb-4 font-display">Project Not Found</h1>
+                    <Link to="/#projects" className="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-2">
                         <ArrowLeft className="w-4 h-4" /> Back to Projects
                     </Link>
                 </div>
@@ -590,8 +583,12 @@ export default function ProjectDetail() {
 
 
     return (
-        <div className="min-h-[100dvh] relative bg-background text-foreground">
-            {/* Removed Neon Background Decorations */}
+        <div className="min-h-[100dvh] relative bg-[#FDFBF7] text-zinc-900 selection:bg-zinc-900 selection:text-white">
+            {/* Ambient Apple Lighting Effect */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden select-none" aria-hidden="true">
+                <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-emerald-100/30 rounded-full blur-[130px] -translate-y-1/2" />
+                <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] bg-amber-100/25 rounded-full blur-[140px]" />
+            </div>
             <Helmet>
                 <title data-rh="true">{seoTitle}</title>
                 <meta data-rh="true" name="description" content={seoDesc} />
@@ -625,39 +622,23 @@ export default function ProjectDetail() {
 
 
 
-                        {/* Project Title Card — Default flat style */}
+                        {/* Project Title Card */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.05 }}
-                            className="rounded-2xl border border-border bg-card px-6 sm:px-10 py-6 sm:py-8 mb-6 relative overflow-hidden group/title"
+                            className="rounded-2xl sm:rounded-3xl border border-zinc-200/90 bg-white/95 backdrop-blur-xl px-6 sm:px-10 py-7 sm:py-9 mb-8 relative overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.03)] text-center"
                         >
-                            {/* Title — Centered */}
-                            <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight leading-snug text-foreground mb-5 relative z-10 text-center max-w-4xl mx-auto">
-                                {project.title}
-                            </h1>
+                            {/* Top row: Breadcrumb + Share Button */}
+                            <div className="flex items-center justify-between gap-4 mb-4">
+                                <Link
+                                    to="/#projects"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 hover:bg-emerald-50 text-zinc-600 hover:text-emerald-700 border border-zinc-200/80 text-xs font-semibold transition-colors group/back shadow-2xs"
+                                >
+                                    <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover/back:-translate-x-0.5" />
+                                    <span>All Projects</span>
+                                </Link>
 
-                            {/* Tags + Categories combined */}
-                            <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
-                                {(project.categories || (project.category ? [project.category] : [])).map((cat: string, ci: number) => (
-                                    <span
-                                        key={`cat-${ci}`}
-                                        className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-[11px] sm:text-xs font-bold uppercase tracking-wider border border-primary/20"
-                                    >
-                                        {cat}
-                                    </span>
-                                ))}
-                                {project.tags && project.tags.map((tag: string, j: number) => (
-                                    <span
-                                        key={`tag-${j}`}
-                                        className="px-3 py-1.5 rounded-full bg-secondary text-muted-foreground text-[11px] sm:text-xs font-medium border border-border"
-                                    >
-                                        {tag}
-                                    </span>
-                                ))}
-                            </div>
-                            
-                            <div className="absolute bottom-4 right-4 z-20">
                                 <button 
                                     onClick={async () => {
                                         const url = currentUrl;
@@ -672,10 +653,36 @@ export default function ProjectDetail() {
                                         }
                                     }}
                                     title={isCopied ? 'Copied!' : 'Share'}
-                                    className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500/20 transition-all duration-300 shadow-sm"
+                                    className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-100 hover:bg-emerald-50 text-zinc-600 hover:text-emerald-700 border border-zinc-200/80 transition-all shadow-2xs cursor-pointer"
+                                    aria-label="Share"
                                 >
-                                    {isCopied ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />}
+                                    {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
                                 </button>
+                            </div>
+
+                            {/* Title — Centered */}
+                            <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-snug text-zinc-950 mb-4 max-w-4xl mx-auto">
+                                {project.title}
+                            </h1>
+
+                            {/* Tags + Categories combined */}
+                            <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
+                                {(project.categories || (project.category ? [project.category] : [])).map((cat: string, ci: number) => (
+                                    <span
+                                        key={`cat-${ci}`}
+                                        className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] sm:text-xs font-bold uppercase tracking-wider border border-emerald-200/80 shadow-2xs"
+                                    >
+                                        {cat}
+                                    </span>
+                                ))}
+                                {project.tags && project.tags.map((tag: string, j: number) => (
+                                    <span
+                                        key={`tag-${j}`}
+                                        className="px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 text-[11px] sm:text-xs font-medium border border-zinc-200/80"
+                                    >
+                                        {tag}
+                                    </span>
+                                ))}
                             </div>
                         </motion.div>
 
@@ -702,16 +709,16 @@ export default function ProjectDetail() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.4 }}
-                                className="mt-10"
+                                className="mt-8 flex justify-start"
                             >
                                 <a
                                     href={ensureAbsoluteUrl(project.link)}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all"
+                                    className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-sm shadow-[0_10px_25px_-5px_rgba(0,0,0,0.2)] hover:shadow-lg transition-all active:scale-95 group"
                                 >
-                                    <ExternalLink className="w-4 h-4" />
-                                    Visit Live Project
+                                    <span>Visit Live Project</span>
+                                    <ExternalLink className="w-4 h-4 text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                 </a>
                             </motion.div>
                         )}
@@ -757,9 +764,9 @@ export default function ProjectDetail() {
                                         if (projectReviews.length === 0) return null;
                                         return (
                                             <div className="mb-2">
-                                                <div className="flex items-center gap-2 mb-6">
-                                                    <div className="w-8 h-1 bg-primary rounded-full" />
-                                                    <h2 className="font-display text-xl font-bold text-foreground">Client Reviews</h2>
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <div className="w-6 h-[2px] bg-emerald-500 rounded-full" />
+                                                    <h2 className="font-display text-lg font-bold text-zinc-950">Client Reviews</h2>
                                                 </div>
                                                 <div className="flex flex-col gap-4">
                                                     {projectReviews.map((review: any, ri: number) => (
@@ -768,31 +775,28 @@ export default function ProjectDetail() {
                                                             initial={{ opacity: 0, y: 10 }}
                                                             animate={{ opacity: 1, y: 0 }}
                                                             transition={{ delay: 0.1 * ri }}
-                                                            className="relative group p-5 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md transition-all duration-500 hover:bg-white/[0.06] hover:border-primary/30 overflow-hidden"
+                                                            className="relative group p-5 rounded-2xl border border-zinc-200/80 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:border-emerald-500/40 hover:shadow-md transition-all duration-300 overflow-hidden"
                                                         >
-                                                            {/* Background Glow */}
-                                                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                                                            
                                                             {/* Top row: Stars */}
-                                                            <div className="flex gap-1 mb-4">
+                                                            <div className="flex gap-1 mb-3">
                                                                 {Array.from({ length: 5 }).map((_, si) => (
-                                                                    <Star key={si} className={`w-3.5 h-3.5 ${si < (review.rating || 5) ? 'text-primary fill-primary' : 'text-white/10'}`} />
+                                                                    <Star key={si} className={`w-3.5 h-3.5 ${si < (review.rating || 5) ? 'text-amber-500 fill-amber-500' : 'text-zinc-200'}`} />
                                                                 ))}
                                                             </div>
 
                                                             <blockquote className="relative">
-                                                                <p className="text-muted-foreground text-sm leading-relaxed mb-5 italic font-medium">
+                                                                <p className="text-zinc-600 text-sm leading-relaxed mb-4 italic font-normal">
                                                                     "{review.text}"
                                                                 </p>
                                                             </blockquote>
 
-                                                            <div className="flex items-center gap-3 pt-4 border-t border-white/[0.05]">
-                                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                                                            <div className="flex items-center gap-3 pt-3.5 border-t border-zinc-100">
+                                                                <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs flex items-center justify-center">
                                                                     {review.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                                                                 </div>
                                                                 <div className="min-w-0">
-                                                                    <span className="font-bold text-foreground text-sm block truncate">{review.name}</span>
-                                                                    <span className="text-primary/70 text-[11px] font-medium uppercase tracking-wider">{review.role}</span>
+                                                                    <span className="font-bold text-zinc-950 text-sm block truncate">{review.name}</span>
+                                                                    <span className="text-emerald-700 text-[11px] font-semibold uppercase tracking-wider">{review.role}</span>
                                                                 </div>
                                                             </div>
                                                         </motion.div>
@@ -801,7 +805,7 @@ export default function ProjectDetail() {
                                             </div>
                                         );
                                     })()}
-                                    <h2 className="font-display text-lg font-bold text-foreground mb-4 mt-8">More Projects</h2>
+                                    <h2 className="font-display text-lg font-bold text-zinc-950 mb-4 mt-8">More Projects</h2>
                                     <div className="flex flex-col gap-3">
                                         {suggested.map((item: any) => {
                                             const routeId = item._id || item._originalIndex;

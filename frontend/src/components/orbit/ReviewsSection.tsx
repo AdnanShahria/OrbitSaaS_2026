@@ -80,7 +80,7 @@ export function ReviewsSection() {
     const showTrustCard = displayedReviews.length % 3 !== 0;
 
     return (
-        <section id="reviews" className="relative min-h-[auto] bg-[#FAFAFC] overflow-hidden pt-10 sm:pt-14 pb-12 sm:pb-16 flex flex-col justify-center text-zinc-900 selection:bg-zinc-900 selection:text-white">
+        <section id="reviews" className="relative min-h-[auto] bg-[#FDFBF7] overflow-hidden pt-10 sm:pt-14 pb-12 sm:pb-16 flex flex-col justify-center text-zinc-900 selection:bg-zinc-900 selection:text-white">
             {/* Ultra Premium Apple Atmosphere */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden select-none" aria-hidden="true">
                 <div className="absolute top-[-10%] left-[-10%] w-[650px] h-[650px] bg-emerald-500/[0.035] blur-[140px] rounded-full" />

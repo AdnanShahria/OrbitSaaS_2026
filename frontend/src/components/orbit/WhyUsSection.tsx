@@ -717,7 +717,7 @@ export function WhyUsSection() {
   return (
     <section 
       id="why-us" 
-      className="relative bg-white text-zinc-900 pt-8 sm:pt-10 pb-16 sm:pb-20 overflow-hidden selection:bg-zinc-900 selection:text-white"
+      className="relative bg-[#FDFBF7] text-zinc-900 pt-8 sm:pt-10 pb-12 sm:pb-16 overflow-hidden selection:bg-zinc-900 selection:text-white"
     >
       {/* Ambient Lighting Effect */}
       <div className="absolute top-0 inset-x-0 h-96 pointer-events-none overflow-hidden select-none -z-10">
@@ -904,9 +904,6 @@ export function WhyUsSection() {
         </div>
 
       </div>
-
-      {/* Smooth Wave Transition into #FDFBF7 (Projects Section) */}
-      <WaveDivider fill="#FDFBF7" />
     </section>
   );
 }

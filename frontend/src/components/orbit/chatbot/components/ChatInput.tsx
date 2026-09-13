@@ -6,7 +6,7 @@ export function ChatInput() {
 
   return (
     <div className="chatbot-input-area shrink-0 relative font-poppins">
-      <div className={`px-4 py-3 pb-6 md:pb-3 ${suggestions.length > 0 && !isLoading ? 'pt-2' : ''} flex gap-2.5 items-center bg-[#0d0d16]/95 border-t border-white/10 transition-opacity ${showEmailPrompt ? 'opacity-40 pointer-events-none' : ''}`}>
+      <div className={`px-4 py-3 pb-6 md:pb-3 ${suggestions.length > 0 && !isLoading ? 'pt-2' : ''} flex gap-2.5 items-center bg-white/[0.03] backdrop-blur-md border-t border-white/[0.08] transition-opacity ${showEmailPrompt ? 'opacity-40 pointer-events-none' : ''}`}>
         <div className="relative flex-1 group">
           <input
             value={input}
@@ -24,7 +24,7 @@ export function ChatInput() {
             disabled={isLoading}
             enterKeyHint="send"
             autoFocus={false}
-            className="w-full bg-[#0b1313]/90 border border-emerald-500/35 rounded-xl px-4 py-2.5 text-base md:text-[14.5px] text-foreground placeholder:text-muted-foreground/70 outline-none font-poppins shadow-[0_0_16px_rgba(16,185,129,0.16)] ring-1 ring-emerald-400/20 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/40 focus:shadow-[0_0_24px_rgba(16,185,129,0.38),0_0_10px_rgba(52,211,153,0.25)] disabled:opacity-50 transition-all duration-200"
+            className="w-full bg-white/[0.05] border border-emerald-500/35 rounded-xl px-4 py-2.5 text-base md:text-[14.5px] text-white placeholder:text-white/40 outline-none font-poppins shadow-[0_0_16px_rgba(16,185,129,0.12)] ring-1 ring-emerald-400/20 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/40 focus:shadow-[0_0_24px_rgba(16,185,129,0.3)] disabled:opacity-50 transition-all duration-200"
           />
         </div>
         <button

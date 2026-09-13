@@ -117,7 +117,7 @@ export function AchievementsSection() {
     const visibleItems = items.slice(0, visibleCount);
 
     return (
-        <section id="achievements" className="py-14 sm:py-20 bg-white relative overflow-hidden text-zinc-900 selection:bg-zinc-900 selection:text-white" style={{ overflowAnchor: 'none' }}>
+        <section id="achievements" className="py-14 sm:py-20 bg-[#FDFBF7] relative overflow-hidden text-zinc-900 selection:bg-zinc-900 selection:text-white" style={{ overflowAnchor: 'none' }}>
             {/* Ambient Apple Lighting Effect */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
                 <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gradient-to-br from-emerald-100/35 via-zinc-50/15 to-transparent rounded-full blur-[130px] -translate-y-1/2" />
@@ -229,8 +229,6 @@ export function AchievementsSection() {
                     </div>
                 )}
             </div>
-
-            <WaveDivider fill="#FAFAFC" />
         </section>
     );
 }

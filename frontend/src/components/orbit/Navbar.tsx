@@ -61,8 +61,16 @@ export function Navbar() {
       return item?.title || 'Project';
   })() : null;
 
+  // Find achievement title if on achievement page
+  const achievementId = isAchievementPage ? location.pathname.split('/').pop() : null;
+  const achievementTitle = isAchievementPage ? (() => {
+      const items = (content[lang] as any).achievements?.items || [];
+      const item = items.find((a: any, i: number) => a.id === achievementId || String(i) === achievementId);
+      return item?.title || 'Milestone';
+  })() : null;
+
   // Default to the correct matched section, fallback to hero
-  const matchedSection = isProjectPage ? 'project' : PATH_TO_SECTION[location.pathname] || 'hero';
+  const matchedSection = isProjectPage ? 'project' : isAchievementPage ? 'achievements' : PATH_TO_SECTION[location.pathname] || 'hero';
   const [activeSection, setActiveSection] = useState(matchedSection);
   
   const whatsappNumber = t?.contact?.whatsapp || '+8801853452264';
@@ -124,8 +132,8 @@ export function Navbar() {
     return () => window.removeEventListener('orbit-chatbot-state-change', handleChatbotState);
   }, []);
 
-  // Sections that use Light Mode (All sections on main landing page except hero)
-  const isLightMode = !isProjectPage && !isAchievementPage && activeSection !== 'hero';
+  // Sections that use Light Mode (All sections on main landing page except hero, plus detail pages)
+  const isLightMode = activeSection !== 'hero';
 
   // Theme Variables
   const theme = {
@@ -214,7 +222,7 @@ export function Navbar() {
 
             {/* Desktop Navigation - Staggered from Left to Right */}
             <div className="hidden lg:flex flex-1 items-center justify-center gap-4 xl:gap-6 transition-all duration-300">
-              {isProjectPage ? (
+              {(isProjectPage || isAchievementPage) ? (
                 <AnimatePresence>
                   {scrolled && (
                     <motion.div
@@ -223,8 +231,8 @@ export function Navbar() {
                       exit={{ opacity: 0, y: -10 }}
                       className="flex items-center gap-3"
                     >
-                      <span className="text-[11px] font-bold text-primary tracking-tighter uppercase truncate max-w-[400px]" style={{ fontFamily: "var(--font-body)" }}>
-                        {projectTitle}
+                      <span className="text-[11px] font-bold text-emerald-600 tracking-tighter uppercase truncate max-w-[400px]" style={{ fontFamily: "var(--font-body)" }}>
+                        {projectTitle || achievementTitle}
                       </span>
                     </motion.div>
                   )}
@@ -323,8 +331,8 @@ export function Navbar() {
 
             {/* Right Side Actions - Premium sequence at the end of sweep */}
             <div className="flex items-center gap-2 sm:gap-4">
-              {/* Project Back Navigation (Desktop only, beside toggle) */}
-              {isProjectPage && (
+              {/* Back Navigation (Desktop only, beside toggle) */}
+              {(isProjectPage || isAchievementPage) && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.85 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -332,8 +340,8 @@ export function Navbar() {
                   className="hidden lg:flex items-center gap-3 mr-1"
                 >
                   <button
-                    onClick={() => navigate('/proj')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all group"
+                    onClick={() => navigate(isProjectPage ? '/#projects' : '/#achievements')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all group shadow-2xs cursor-pointer"
                   >
                     <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
                     <span className="text-[9px] font-bold tracking-widest uppercase" style={{ fontFamily: "var(--font-body)" }}>
@@ -365,7 +373,7 @@ export function Navbar() {
               <div className="flex items-center gap-2">
                 {/* Active Page Indicator (Shown only on relevant subpages) */}
                 <AnimatePresence mode="wait">
-                  {activeSection !== 'hero' && !isProjectPage && (
+                  {activeSection !== 'hero' && !isProjectPage && !isAchievementPage && (
                     <motion.div
                       key={activeSection}
                       initial={{ opacity: 0, x: 10 }}
@@ -382,7 +390,7 @@ export function Navbar() {
                         className="text-[8px] sm:text-[9px] font-black uppercase tracking-tighter truncate max-w-[80px]"
                         style={{ color: theme.text, fontFamily: "var(--font-body)" }}
                       >
-                        {isProjectPage ? projectTitle : (t?.nav?.[activeSection === 'tech' ? 'techStack' : activeSection === 'project' ? 'projects' : activeSection] || activeSection)}
+                        {isProjectPage ? projectTitle : isAchievementPage ? achievementTitle : (t?.nav?.[activeSection === 'tech' ? 'techStack' : activeSection === 'project' ? 'projects' : activeSection] || activeSection)}
                       </span>
                     </motion.div>
                   )}

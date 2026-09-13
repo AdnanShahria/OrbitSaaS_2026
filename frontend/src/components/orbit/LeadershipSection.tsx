@@ -277,7 +277,7 @@ export function LeadershipSection() {
   };
 
   return (
-    <section className="relative overflow-hidden pt-3 sm:pt-5 pb-8 sm:pb-12 bg-[#FAFAFA]">
+    <section className="relative overflow-hidden pt-3 sm:pt-5 pb-8 sm:pb-12 bg-[#FDFBF7]">
       {/* Decorative Subtle Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-amber-100/25 rounded-full blur-[100px] -translate-y-1/2" />

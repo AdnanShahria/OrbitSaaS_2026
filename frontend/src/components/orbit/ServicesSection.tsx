@@ -1110,7 +1110,7 @@ export function ServicesSection({ embedded }: { embedded?: boolean }) {
         </div>
         
       </div>
-      <WaveDivider fill="#FFFFFF" />
+      <WaveDivider fill="#FDFBF7" />
     </Wrapper>
   );
 }

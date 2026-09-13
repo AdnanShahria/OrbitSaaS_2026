@@ -8,7 +8,7 @@ export function ChatMessageList() {
   const { messages, chatLang, setChatLang, isLoading, messagesEndRef } = useChatContext();
 
   return (
-    <div className="chatbot-messages-area font-poppins flex-1 min-h-0 overflow-y-auto p-4 space-y-3 bg-background/40 md:bg-card/40 md:max-h-[500px] relative">
+    <div className="chatbot-messages-area font-poppins flex-1 min-h-0 overflow-y-auto p-4 space-y-3 bg-transparent md:max-h-[500px] relative">
       <div className="space-y-3">
         {/* Initial Selection Flow */}
         {messages.length === 0 && !isLoading && (
@@ -17,7 +17,7 @@ export function ChatMessageList() {
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
                 <Zap className="w-4 h-4 text-primary" />
               </div>
-              <div className="bg-muted border border-border rounded-xl rounded-tl-none px-3 py-2 text-xs text-foreground max-w-[85%] leading-relaxed">
+              <div className="bg-white/[0.06] border border-white/[0.1] rounded-xl rounded-tl-none px-3.5 py-2.5 text-xs text-foreground max-w-[85%] leading-relaxed backdrop-blur-md shadow-sm">
                 <p className="font-bold mb-1 uppercase tracking-widest text-[10px] text-primary">
                   {chatLang === 'bn' ? 'স্বাগতম!' : 'Welcome!'}
                 </p>
@@ -29,13 +29,13 @@ export function ChatMessageList() {
             <div className="flex gap-2 pl-9">
               <button
                 onClick={() => setChatLang('en')}
-                className={`px-4 py-1.5 rounded-full text-[10px] font-bold border transition-all shadow-sm ${chatLang === 'en' ? 'bg-primary border-primary text-primary-foreground shadow-primary/20' : 'bg-background border-border text-muted-foreground hover:border-primary/40'}`}
+                className={`px-4 py-1.5 rounded-full text-[10px] font-bold border transition-all shadow-sm ${chatLang === 'en' ? 'bg-primary border-primary text-primary-foreground shadow-primary/20' : 'bg-white/[0.06] border-white/[0.1] text-white/80 hover:bg-white/[0.12] hover:border-primary/40'}`}
               >
                 English
               </button>
               <button
                 onClick={() => setChatLang('bn')}
-                className={`px-4 py-1.5 rounded-full text-[10px] font-bold border transition-all shadow-sm ${chatLang === 'bn' ? 'bg-primary border-primary text-primary-foreground shadow-primary/20' : 'bg-background border-border text-muted-foreground hover:border-primary/40'}`}
+                className={`px-4 py-1.5 rounded-full text-[10px] font-bold border transition-all shadow-sm ${chatLang === 'bn' ? 'bg-primary border-primary text-primary-foreground shadow-primary/20' : 'bg-white/[0.06] border-white/[0.1] text-white/80 hover:bg-white/[0.12] hover:border-primary/40'}`}
               >
                 বাংলা
               </button>
@@ -76,7 +76,7 @@ export function ChatMessageList() {
                   <Zap className="w-4 h-4 text-primary fill-primary/40" />
                 </motion.div>
               </div>
-              <div className="bg-muted border border-border rounded-xl rounded-tl-none px-5 flex items-center gap-2 h-[38px]">
+              <div className="bg-white/[0.08] border border-white/[0.1] rounded-xl rounded-tl-none px-5 flex items-center gap-2 h-[38px] backdrop-blur-md">
                 {[0, 0.2, 0.4].map((delay, i) => (
                   <motion.span
                     key={i}

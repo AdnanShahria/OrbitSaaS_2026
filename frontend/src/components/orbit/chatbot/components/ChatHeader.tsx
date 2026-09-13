@@ -1,12 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreVertical, ChevronDown, Trash2, Bot } from 'lucide-react';
+import { MoreVertical, ChevronDown, Trash2, Bot, Globe } from 'lucide-react';
 import { useChatContext } from '../ChatContext';
 
 export function ChatHeader() {
   const { chatContentMemo, chatLang, setChatLang, showMenu, setShowMenu, clearChat, setOpen } = useChatContext();
 
   return (
-    <div className="shrink-0 px-5 py-3.5 bg-primary/20 border-b border-border flex items-center justify-between relative">
+    <div className="shrink-0 px-5 py-3.5 bg-white/[0.04] backdrop-blur-md border-b border-white/[0.08] flex items-center justify-between relative z-40">
       <div className="flex items-center gap-3">
         {/* Chatbot Icon */}
         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 shadow-sm shrink-0">
@@ -27,69 +27,97 @@ export function ChatHeader() {
         </div>
       </div>
 
-      <div className="flex items-center gap-1 chatbot-menu-container">
+      <div className="flex items-center gap-1 chatbot-menu-container relative">
         {/* Control Pill */}
-        <div className="flex items-center gap-1 bg-secondary/80 p-0.5 rounded-full border border-border/50 shadow-sm">
+        <div className="flex items-center gap-1 bg-white/[0.08] p-0.5 rounded-full border border-white/[0.1] shadow-sm">
           {/* Actions Menu Trigger */}
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className={`w-7 h-7 flex items-center justify-center rounded-full transition-all cursor-pointer ${showMenu ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-background/50 text-muted-foreground hover:text-foreground hover:bg-background'}`}
-            >
-              <MoreVertical className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Dropdown Menu */}
-            <AnimatePresence>
-              {showMenu && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                  className="absolute right-0 mt-3 w-48 rounded-2xl bg-card border border-border shadow-2xl z-[210] py-2 overflow-hidden ring-1 ring-black/5"
-                >
-                  {/* Lang Selector inside Menu */}
-                  <div className="px-4 py-2 border-b border-border/50">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
-                      {chatLang === 'bn' ? 'ভাষা নির্বাচন করুন' : 'Select Language'}
-                    </p>
-                    <div className="flex bg-secondary p-0.5 rounded-lg border border-border/50">
-                      <button
-                        onClick={() => { setChatLang('en'); setShowMenu(false); }}
-                        className={`flex-1 px-2 py-1.5 text-[10px] font-bold rounded-md transition-all ${chatLang === 'en' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                      >
-                        English
-                      </button>
-                      <button
-                        onClick={() => { setChatLang('bn'); setShowMenu(false); }}
-                        className={`flex-1 px-2 py-1.5 text-[10px] font-bold rounded-md transition-all ${chatLang === 'bn' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                      >
-                        বাংলা
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Clear Chat inside Menu */}
-                  <button
-                    onClick={() => { clearChat(); setShowMenu(false); }}
-                    className="w-full px-4 py-2.5 flex items-center gap-3 text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    {chatLang === 'bn' ? 'চ্যাট মুছুন' : 'Clear Conversation'}
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            aria-label="Chat options"
+            className={`w-7 h-7 flex items-center justify-center rounded-full transition-all cursor-pointer ${
+              showMenu
+                ? 'bg-white/20 text-white shadow-xs border border-white/25'
+                : 'bg-white/[0.04] text-zinc-300 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <MoreVertical className="w-3.5 h-3.5" />
+          </button>
 
           {/* Minimize Button */}
           <button
             onClick={() => setOpen(false)}
-            className="w-7 h-7 flex items-center justify-center rounded-full bg-background/50 text-muted-foreground hover:text-foreground hover:bg-background transition-all cursor-pointer"
+            aria-label="Minimize chat"
+            className="w-7 h-7 flex items-center justify-center rounded-full bg-white/[0.04] text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
           >
             <ChevronDown className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Backdrop for outside click dismissal */}
+        {showMenu && (
+          <div
+            className="fixed inset-0 z-[205]"
+            onClick={() => setShowMenu(false)}
+          />
+        )}
+
+        {/* Apple HIG Liquid Glass Popover Menu */}
+        <AnimatePresence>
+          {showMenu && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 6 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 6 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-[#0f111a]/95 backdrop-blur-2xl border border-white/[0.14] shadow-[0_20px_50px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.18)] z-[210] p-2 overflow-hidden"
+            >
+              {/* Language Selection Segment */}
+              <div className="px-1 pt-1 pb-1.5">
+                <div className="flex items-center gap-1.5 mb-1.5 px-1">
+                  <Globe className="w-3 h-3 text-zinc-400" />
+                  <span className="text-[10px] font-semibold text-zinc-300 tracking-wider uppercase">
+                    {chatLang === 'bn' ? 'ভাষা' : 'Language'}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 p-1 rounded-xl bg-white/[0.05] border border-white/[0.08] gap-1">
+                  <button
+                    onClick={() => { setChatLang('en'); setShowMenu(false); }}
+                    className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-all text-center cursor-pointer ${
+                      chatLang === 'en'
+                        ? 'bg-white/20 text-white shadow-xs border border-white/20'
+                        : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => { setChatLang('bn'); setShowMenu(false); }}
+                    className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-all text-center cursor-pointer ${
+                      chatLang === 'bn'
+                        ? 'bg-white/20 text-white shadow-xs border border-white/20'
+                        : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    বাংলা
+                  </button>
+                </div>
+              </div>
+
+              {/* Hairline Divider */}
+              <div className="h-px bg-white/[0.08] my-1 mx-1" />
+
+              {/* Clear Chat Button */}
+              <button
+                onClick={() => { clearChat(); setShowMenu(false); }}
+                className="w-full px-2.5 py-2 flex items-center gap-2.5 rounded-xl text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 active:scale-[0.98] transition-all cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>{chatLang === 'bn' ? 'চ্যাট মুছে ফেলুন' : 'Clear Conversation'}</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

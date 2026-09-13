@@ -93,94 +93,95 @@ export function LeadMagnetPopup() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+                        transition={{ duration: 0.25 }}
+                        className="absolute inset-0 bg-black/40 backdrop-blur-md"
                         onClick={handleClose}
                     />
                     <motion.div
                         layout
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.94, y: 16 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        exit={{ opacity: 0, scale: 0.94, y: 16 }}
                         transition={{
                             type: 'spring',
-                            damping: 25,
-                            stiffness: 300,
+                            damping: 26,
+                            stiffness: 320,
                             layout: { duration: 0.3, ease: 'easeOut' }
                         }}
-                        className="relative z-10 w-full max-w-[95%] sm:max-w-md md:max-w-lg lg:max-w-2xl rounded-2xl bg-card border border-border shadow-xl overflow-hidden"
+                        className="relative z-10 w-full max-w-[92%] sm:max-w-[440px] rounded-[28px] bg-white/95 border border-zinc-200/90 backdrop-blur-2xl shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04)] overflow-hidden p-6 sm:p-8 text-center"
                     >
+                        {/* Top specular hairline */}
+                        <div className="absolute inset-x-8 top-0 h-[1px] bg-gradient-to-r from-transparent via-zinc-300 to-transparent pointer-events-none" />
+
+                        {/* Ambient soft background glow */}
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-28 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+
+                        {/* Apple Close Pill */}
                         <button
                             onClick={handleClose}
-                            className="absolute right-4 top-4 text-muted-foreground hover:text-foreground transition-colors z-10 p-1 bg-background/50 rounded-full cursor-pointer"
+                            className="absolute right-4 top-4 text-zinc-400 hover:text-zinc-800 transition-all p-2 rounded-full bg-zinc-100/80 hover:bg-zinc-200/80 border border-zinc-200/60 active:scale-95 cursor-pointer z-20"
+                            aria-label="Close"
                         >
-                            <X className="w-5 h-5" />
+                            <X size={15} />
                         </button>
 
-                        {/* Flat Header Pattern */}
-                        <div className="h-24 sm:h-32 bg-muted relative overflow-hidden flex items-end justify-center">
-                            <div className="w-full h-px bg-border" />
+                        {/* Apple Frosted Squircle Icon Badge */}
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-b from-emerald-500/15 to-teal-500/5 border border-emerald-500/25 shadow-[0_8px_20px_rgba(16,185,129,0.12)] flex items-center justify-center mx-auto mb-4 relative group">
+                            <Rocket className="w-7 h-7 sm:w-8 sm:h-8 text-emerald-600 group-hover:scale-110 transition-transform duration-300" />
                         </div>
 
-                        <div className="px-5 sm:px-6 pb-6 sm:pb-8 pt-0 relative z-10 -mt-10 sm:-mt-12 text-center">
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mx-auto bg-card border border-border rounded-2xl flex items-center justify-center mb-4 sm:mb-5 lg:mb-6 relative group">
-                                <Rocket className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-primary relative z-10 transition-transform group-hover:scale-110 duration-300" />
-                            </div>
+                        <h2 className="text-xl sm:text-2xl font-bold font-display text-zinc-950 tracking-tight mb-2">
+                            {lang === 'bn' ? 'ওয়েটলিস্টে যুক্ত হোন' : 'Join The Waitlist'}
+                        </h2>
+                        <p className="text-zinc-600 text-xs sm:text-[13px] leading-relaxed mb-6 px-2">
+                            {lang === 'bn'
+                                ? 'আমাদের এক্সক্লুসিভ আপডেটের জন্য ওয়েটলিস্টে যুক্ত হোন।'
+                                : 'Join our exclusive waitlist to get early access and modern AI insights.'
+                            }
+                        </p>
 
-                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">
-                                {lang === 'bn' ? 'ওয়েটলিস্টে যুক্ত হোন' : 'Join The Waitlist'}
-                            </h2>
-                            <p className="text-muted-foreground text-xs sm:text-sm lg:text-base mb-5 sm:mb-6 lg:mb-8 leading-relaxed px-2 md:px-10">
-                                {lang === 'bn'
-                                    ? 'আমাদের এক্সক্লুসিভ আপডেটের জন্য ওয়েটলিস্টে যুক্ত হোন।'
-                                    : 'Join our exclusive waitlist to get early access and modern AI insights.'
-                                }
-                            </p>
-
-                            {status === 'success' ? (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="bg-green-500/10 text-green-500 border border-green-500/20 rounded-xl p-4 font-semibold flex items-center justify-center gap-2"
+                        {status === 'success' ? (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="bg-emerald-50 text-emerald-700 border border-emerald-200/90 rounded-2xl p-4 font-semibold text-sm flex items-center justify-center gap-2 shadow-2xs"
+                            >
+                                <Send className="w-4 h-4" />
+                                {lang === 'bn' ? 'যুক্ত হওয়া সম্পন্ন হয়েছে!' : 'Successfully joined!'}
+                            </motion.div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                                <input
+                                    type="email"
+                                    required
+                                    placeholder={lang === 'bn' ? 'আপনার সেরা ইমেইল দিন' : 'Enter your email address'}
+                                    className="w-full bg-zinc-50 hover:bg-zinc-100/60 focus:bg-white border border-zinc-200 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all duration-200 text-center font-medium shadow-2xs"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    disabled={status === 'loading'}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={status === 'loading'}
+                                    className="w-full py-3 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-sm active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.2)] cursor-pointer disabled:opacity-50"
                                 >
-                                    <Send className="w-4 h-4" />
-                                    {lang === 'bn' ? 'যুক্ত হওয়া সম্পন্ন হয়েছে!' : 'Successfully joined!'}
-                                </motion.div>
-                            ) : (
-                                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                                    <input
-                                        type="email"
-                                        required
-                                        placeholder={lang === 'bn' ? 'আপনার সেরা ইমেইল' : 'Enter your best email address'}
-                                        className="w-full bg-secondary border border-border rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow text-center"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        disabled={status === 'loading'}
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={status === 'loading'}
-                                        className="w-full bg-primary text-primary-foreground font-semibold py-2.5 sm:py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer"
-                                    >
-                                        {status === 'loading' ? (
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                        ) : (
-                                            <>
-                                                {lang === 'bn' ? 'ওয়েটলিস্টে যুক্ত হোন' : "Let's Build"}
-                                                <Send className="w-4 h-4" />
-                                            </>
-                                        )}
-                                    </button>
-                                    <p className="text-[10px] text-muted-foreground mt-2">
-                                        {lang === 'bn' ? 'আমরা স্প্যাম করি না। শুধুমাত্র প্রয়োজনীয় আপডেট।' : '100% free. No spam. Unsubscribe anytime.'}
-                                    </p>
-                                </form>
-                            )}
-                        </div>
+                                    {status === 'loading' ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            {lang === 'bn' ? 'ওয়েটলিস্টে যুক্ত হোন' : "Let's Build"}
+                                            <Send className="w-3.5 h-3.5 text-emerald-400" />
+                                        </>
+                                    )}
+                                </button>
+                                <p className="text-[10px] text-zinc-400 mt-1 font-medium tracking-wide">
+                                    {lang === 'bn' ? 'আমরা স্প্যাম করি না। শুধুমাত্র প্রয়োজনীয় আপডেট।' : '100% free. No spam. Unsubscribe anytime.'}
+                                </p>
+                            </form>
+                        )}
                     </motion.div>
                 </div>
-            )
-            }
-        </AnimatePresence >
+            )}
+        </AnimatePresence>
     );
 }

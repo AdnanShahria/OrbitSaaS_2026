@@ -333,10 +333,10 @@ export default function AdminHero() {
             <div className="space-y-4 bg-card rounded-xl p-4 md:p-6 border border-border">
                 <div>
                     <h3 className="font-semibold text-foreground mb-0.5 flex items-center gap-2">
-                        ✨ 3D Feature Flash Cards (Desktop Right Side)
+                        ✨ Apple Frosted Glass Feature Cards (Desktop Right Side)
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                        These are the three interactive glassmorphic cards floating beside the hero text on desktop screens.
+                        These are the three interactive Apple Liquid Glass cards floating beside the hero text on desktop screens.
                     </p>
                 </div>
 

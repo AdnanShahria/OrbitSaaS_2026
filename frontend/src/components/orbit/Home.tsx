@@ -8,16 +8,27 @@ import { RichText } from '@/components/ui/RichText';
 
 // Mobile detection hook — prevents heavy components from mounting on touch devices
 function useIsMobile() {
-  const [isMobile] = useState(() =>
+  const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' &&
     (window.matchMedia('(hover: none) and (pointer: coarse)').matches || window.innerWidth < 1024)
   );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(
+        window.matchMedia('(hover: none) and (pointer: coarse)').matches || window.innerWidth < 1024
+      );
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return isMobile;
 }
 
 import { NetworkCanvas } from '@/components/orbit/NetworkCanvas';
 import { 
-  ArrowRight, Cpu, Zap, Activity, Globe, MessageSquare, Shield, Rocket,
+  ArrowRight, Cpu, Zap, Activity, Globe, MessageSquare, Shield, Rocket, X,
   Bot, Smartphone, ShoppingCart, Code, Database, Cloud, Monitor, 
   Wifi, Mail, Camera, Music, Heart, Star, Target, Briefcase, 
   Award, BookOpen, Users, BarChart3, Sparkles, Layers, Settings2, 
@@ -28,17 +39,25 @@ import { WaveDivider } from '@/components/ui/WaveDivider';
 
 const BackgroundBlobs = () => (
   <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
+    {/* Emerald luminous aura top-left / center */}
     <div 
-      className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-indigo-500/20 blur-[120px] rounded-full hero-blob"
+      className="absolute -top-[10%] -left-[10%] w-[55%] h-[55%] bg-emerald-500/20 blur-[130px] rounded-full hero-blob"
       style={{ animationDuration: '15s' }}
     />
+    {/* Teal/mint glowing cloud top-right */}
     <div 
-      className="absolute top-[20%] -right-[5%] w-[45%] h-[45%] bg-indigo-500/20 blur-[100px] rounded-full hero-blob"
+      className="absolute top-[10%] -right-[10%] w-[50%] h-[50%] bg-teal-500/18 blur-[110px] rounded-full hero-blob"
       style={{ animationDuration: '18s', animationDelay: '2s' }}
     />
+    {/* Neon green / emerald radiant aura bottom-center */}
     <div 
-      className="absolute -bottom-[5%] left-[15%] w-[40%] h-[40%] bg-violet-600/20 blur-[90px] rounded-full hero-blob"
-      style={{ animationDuration: '12s', animationDelay: '4s' }}
+      className="absolute -bottom-[10%] left-[20%] w-[50%] h-[50%] bg-emerald-600/16 blur-[110px] rounded-full hero-blob"
+      style={{ animationDuration: '13s', animationDelay: '4s' }}
+    />
+    {/* Deep cyan subtle balance */}
+    <div 
+      className="absolute top-[40%] left-[10%] w-[35%] h-[35%] bg-cyan-600/12 blur-[100px] rounded-full hero-blob"
+      style={{ animationDuration: '16s', animationDelay: '3s' }}
     />
   </div>
 );
@@ -48,10 +67,10 @@ const FloatingParticles = () => (
     {[...Array(6)].map((_, i) => (
       <div
         key={i}
-        className="absolute w-px h-24 bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent floating-particle"
+        className="absolute w-px h-28 bg-gradient-to-b from-transparent via-emerald-400/30 to-transparent floating-particle"
         style={{
-          left: `${i * 20}%`,
-          animationDuration: `${15 + i * 2}s`,
+          left: `${i * 18 + 5}%`,
+          animationDuration: `${14 + i * 2}s`,
           animationDelay: `${i * 1.5}s`
         }}
       />
@@ -79,26 +98,28 @@ function useThunderboltCanvas(
   const animRef = useRef<number>(0);
 
   const createBolt = useCallback((w: number, h: number) => {
+    const isSmall = w < 768;
     const startX = Math.random() * w;
-    const startY = Math.random() * h * 0.4;
+    const startY = Math.random() * (h * 0.35);
     const points = [{ x: startX, y: startY }];
     
     let curX = startX;
     let curY = startY;
-    const segments = 8 + Math.floor(Math.random() * 8);
+    const segments = isSmall ? (6 + Math.floor(Math.random() * 5)) : (8 + Math.floor(Math.random() * 7));
+    const spreadX = isSmall ? 55 : 110;
     
     for (let i = 0; i < segments; i++) {
-      curX += (Math.random() - 0.5) * 120;
-      curY += Math.random() * 100 + 40;
+      curX += (Math.random() - 0.5) * spreadX;
+      curY += Math.random() * (isSmall ? 65 : 90) + 30;
       points.push({ x: curX, y: curY });
     }
 
     bolts.current.push({
       points,
       life: 1,
-      maxLife: 0.8 + Math.random() * 1.5,
-      opacity: 0.6 + Math.random() * 0.4,
-      width: 1 + Math.random() * 2,
+      maxLife: 0.9 + Math.random() * 1.4,
+      opacity: 0.7 + Math.random() * 0.3,
+      width: isSmall ? (1 + Math.random() * 1.5) : (1.2 + Math.random() * 2),
     });
   }, []);
 
@@ -106,9 +127,6 @@ function useThunderboltCanvas(
     const canvas = canvasRef.current;
     if (!canvas || prefersReducedMotion) return;
 
-    // Skip thunderbolt canvas entirely on mobile/touch devices
-    const isMobile = window.matchMedia('(hover: none) and (pointer: coarse)').matches || window.innerWidth < 1024;
-    if (isMobile) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -135,37 +153,36 @@ function useThunderboltCanvas(
       }
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Background glow
-      ctx.fillStyle = 'rgba(10, 10, 30, 0.05)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Further reduced spawn rate (0.015 -> 0.008) for very occasional strikes
-      if (Math.random() < 0.008) {
+      // Occasional lightning strikes (balanced for subtle, dramatic effect)
+      if (Math.random() < 0.01) {
         createBolt(canvas.width, canvas.height);
       }
 
       bolts.current = bolts.current.filter(bolt => {
-        // Further reduced decay speed (0.015 -> 0.008) for very slow fade
-        bolt.life -= 0.008;
+        bolt.life -= 0.009;
         if (bolt.life <= 0) return false;
 
         const alpha = (bolt.life / bolt.maxLife) * bolt.opacity;
         
-        // Draw glow
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = `rgba(99, 102, 241, ${alpha})`;
-        ctx.strokeStyle = `rgba(99, 102, 241, ${alpha * 0.3})`;
-        ctx.lineWidth = bolt.width * 4;
+        // Subtle ambient emerald light flash across hero background
+        ctx.fillStyle = `rgba(16, 185, 129, ${alpha * 0.035})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw electric emerald outer aura
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = `rgba(16, 185, 129, ${alpha * 0.95})`;
+        ctx.strokeStyle = `rgba(52, 211, 153, ${alpha * 0.55})`;
+        ctx.lineWidth = bolt.width * 3.8;
         ctx.beginPath();
         ctx.moveTo(bolt.points[0].x, bolt.points[0].y);
         bolt.points.forEach(p => ctx.lineTo(p.x, p.y));
         ctx.stroke();
 
-        // Draw core
-        ctx.shadowBlur = 5;
-        ctx.shadowColor = `rgba(255, 255, 255, ${alpha})`;
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+        // Draw luminous mint-white core
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = `rgba(167, 243, 208, ${alpha})`;
+        ctx.strokeStyle = `rgba(236, 253, 245, ${alpha})`;
         ctx.lineWidth = bolt.width;
         ctx.beginPath();
         ctx.moveTo(bolt.points[0].x, bolt.points[0].y);
@@ -198,81 +215,67 @@ const ICON_MAP: Record<string, LucideIcon | any> = {
 };
 
 /* ═══════════════════════════════════════════════════════════
-   FLASHY CARDS — Premium glassmorphism interactive units
+   APPLE LIQUID GLASS CARDS — HIG Frosted Surface Units
    ═══════════════════════════════════════════════════════════ */
- 
+
 const FlashyCard = React.memo(({ children, icon: Icon, title, delay, className = "" }: any) => {
-  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
-  const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  // Disable 3D tilt on touch devices — hover doesn't exist
-  const isTouch = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current || isTouch) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    setMousePos({ x, y });
-  };
-
-  const tiltX = !isTouch && isHovered ? (mousePos.y - 0.5) * 20 : 0;
-  const tiltY = !isTouch && isHovered ? (mousePos.x - 0.5) * -20 : 0;
 
   return (
     <motion.div
       ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      initial={{ opacity: 0, x: 40, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ 
         opacity: 1, 
-        x: 0, 
         y: 0,
-        rotateX: tiltX,
-        rotateY: tiltY,
         transition: {
-          rotateX: { type: "spring", stiffness: 100, damping: 20 },
-          rotateY: { type: "spring", stiffness: 100, damping: 20 },
-          opacity: { duration: 0.8, delay },
-          x: { duration: 0.8, delay, ease: [0.25, 1, 0.5, 1] },
-          y: { duration: 0.8, delay, ease: [0.25, 1, 0.5, 1] }
+          duration: 0.8,
+          delay,
+          ease: [0.16, 1, 0.3, 1] // Apple fluid spring curve
         }
       }}
-      whileHover={{ scale: 1.05 }}
-      style={{ 
-        transformStyle: "preserve-3d",
-        boxShadow: isHovered 
-          ? '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 10px rgba(99, 102, 241, 0.1)' 
-          : '0 4px 20px 0 rgba(0, 0, 0, 0.25)' 
+      whileHover={{ 
+        y: -4,
+        transition: { duration: 0.25, ease: "easeOut" }
       }}
-      className={`relative group bg-white/[0.02] border border-white/[0.04] backdrop-blur-lg rounded-3xl p-6 overflow-hidden ${className}`}
+      style={{
+        boxShadow: '0 20px 48px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.22)'
+      }}
+      className={`relative group rounded-[20px] p-3.5 sm:p-4 backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300 ${className}`}
     >
-      {/* Noise Texture */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none brightness-100 contrast-150" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
-      
-      {/* Dynamic Spotlight */}
+      {/* Apple Liquid Glass Layering: Multi-surface reflection & deep dark glass */}
+      <div className="absolute inset-0 rounded-[20px] bg-gradient-to-b from-white/[0.08] via-white/[0.03] to-white/[0.01] pointer-events-none" />
+      <div className="absolute inset-0 rounded-[20px] bg-[#0c0d14]/85 pointer-events-none" />
+
+      {/* Apple Specular Top Highlight Catch */}
+      <div className="absolute inset-x-5 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+
+      {/* Subtle hover top spotlight */}
       <div 
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+        className="absolute inset-0 rounded-[20px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{
-          background: `radial-gradient(600px circle at ${mousePos.x * 100}% ${mousePos.y * 100}%, rgba(99, 102, 241, 0.15), transparent 40%)`
+          background: 'radial-gradient(350px circle at 50% 0%, rgba(129, 140, 248, 0.15), transparent 70%)'
         }}
       />
 
-      <div className="relative z-10" style={{ transform: "translateZ(30px)" }}>
-        <div className="flex items-center gap-3 mb-4" style={{ transform: "translateZ(20px)" }}>
-          <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-            <Icon size={18} />
-          </div>
-          <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">{title}</h3>
+      {/* Card Header — Apple HIG Style */}
+      <div className="relative z-10">
+        <div className="flex items-center gap-2 mb-2.5">
+          {Icon && (
+            <div className="w-6 h-6 rounded-[8px] bg-white/[0.08] border border-white/[0.12] flex items-center justify-center text-white/90 shadow-sm transition-transform duration-300 group-hover:scale-105 shrink-0">
+              <Icon size={13} className="stroke-[2.2]" />
+            </div>
+          )}
+          <h3 className="text-[10.5px] font-semibold tracking-wider text-white/70 uppercase font-sans truncate">
+            {title}
+          </h3>
         </div>
-        <div style={{ transform: "translateZ(10px)" }}>
+
+        {/* Card Body */}
+        <div>
           {children}
         </div>
       </div>
-      
-      <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-700" />
     </motion.div>
   );
 });
@@ -284,68 +287,166 @@ const AIWorkflow = React.memo(({ steps }: { steps: string[] }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveStep(s => (s + 1) % displaySteps.length);
-    }, 1500);
+    }, 1800);
     return () => clearInterval(interval);
   }, [displaySteps.length]);
 
   return (
-    <div className="flex flex-col gap-2">
-      {displaySteps.map((step, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <div className={`w-1.5 h-1.5 rounded-full ${activeStep === i ? 'bg-indigo-400 animate-pulse shadow-[0_0_8px_rgba(129,140,248,0.8)]' : 'bg-white/10'}`} />
-          <span className={`text-[10px] font-mono tracking-wider ${activeStep === i ? 'text-indigo-300' : 'text-white/20'}`}>
-            {step}
-          </span>
-          {activeStep === i && (
-            <motion.span layoutId="activeTag" className="ml-auto text-[8px] text-indigo-400/50 font-bold uppercase">Active</motion.span>
-          )}
+    <div className="relative pl-1">
+      {/* Sleek vertical connecting track */}
+      <div className="absolute left-[7px] top-2 bottom-2 w-[1.5px] bg-white/[0.08]" />
+
+      <div className="flex flex-col gap-2.5 relative">
+        {displaySteps.map((step, i) => {
+          const isActive = activeStep === i;
+          return (
+            <div key={i} className="flex items-center gap-3 group/step">
+              {/* Apple-style status indicator */}
+              <div className="relative flex items-center justify-center w-3.5 h-3.5 shrink-0">
+                {isActive ? (
+                  <>
+                    <motion.span 
+                      layoutId="pulseRing"
+                      className="absolute inset-0 rounded-full bg-indigo-500/30 animate-ping" 
+                    />
+                    <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-indigo-400 to-cyan-300 shadow-[0_0_10px_rgba(99,102,241,0.8)]" />
+                  </>
+                ) : (
+                  <div className="w-2 h-2 rounded-full border border-white/25 bg-[#14151e]" />
+                )}
+              </div>
+
+              {/* Step Label */}
+              <span className={`text-[11px] tracking-wider font-mono transition-colors duration-300 truncate ${isActive ? 'text-white font-semibold' : 'text-white/40 font-normal'}`}>
+                {step}
+              </span>
+
+              {/* Active Badge */}
+              {isActive && (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="ml-auto text-[8px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.2)] shrink-0"
+                >
+                  Active
+                </motion.span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+const ChatBotVisual = React.memo(({ 
+  query, 
+  response,
+  footerLeft,
+  footerRight
+}: { 
+  query: string; 
+  response: string;
+  footerLeft?: string;
+  footerRight?: string;
+}) => {
+  return (
+    <div className="flex flex-col gap-2.5">
+      {/* User Bubble */}
+      <div className="flex items-end gap-2 max-w-[92%]">
+        <div className="w-5 h-5 rounded-full bg-white/[0.08] border border-white/[0.1] flex items-center justify-center text-[9px] text-white/70 shrink-0 font-medium">
+          U
         </div>
-      ))}
+        <div className="bg-white/[0.06] border border-white/[0.08] backdrop-blur-md rounded-2xl rounded-bl-sm px-3 py-2 text-[11px] text-white/85 leading-snug shadow-sm">
+          {query || "How can I automate my business workflow?"}
+        </div>
+      </div>
+
+      {/* AI Response Bubble */}
+      <div className="flex items-end gap-2 self-end flex-row-reverse max-w-[94%]">
+        <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-cyan-400 p-[1px] shadow-[0_0_8px_rgba(99,102,241,0.4)] shrink-0">
+          <div className="w-full h-full rounded-full bg-[#0d0e15] flex items-center justify-center">
+            <Sparkles size={9} className="text-cyan-300" />
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-indigo-500/15 via-purple-500/10 to-blue-500/10 border border-indigo-400/25 backdrop-blur-md rounded-2xl rounded-br-sm px-3 py-2 text-[11px] text-indigo-100 leading-snug shadow-sm">
+          {response || "I can deploy Multi-Agent systems to..."}
+        </div>
+      </div>
+
+      {/* Apple-Style Metadata Footer */}
+      <div className="pt-2.5 border-t border-white/[0.06] flex items-center justify-between mt-1">
+        <span className="text-[10px] font-medium tracking-wide text-white/45 truncate">
+          {footerLeft || "Custom Trained LLM"}
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-semibold tracking-wide shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          {footerRight || "Active"}
+        </span>
+      </div>
     </div>
   );
 });
 
-const ChatBotVisual = React.memo(({ query, response }: { query: string; response: string }) => {
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-start gap-2">
-         <div className="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
-            <div className="w-2 h-2 rounded-full bg-indigo-400" />
-         </div>
-         <div className="bg-white/5 rounded-2xl rounded-tl-none p-2 text-[10px] text-white/60 leading-tight">
-            {query || "How can I automate my business workflow?"}
-         </div>
-      </div>
-      <div className="flex items-start gap-2 self-end flex-row-reverse">
-         <div className="w-6 h-6 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center shrink-0">
-            <Zap size={10} className="text-cyan-400" />
-         </div>
-         <div className="bg-indigo-500/20 border border-indigo-500/10 rounded-2xl rounded-tr-none p-2 text-[10px] text-indigo-100 leading-tight">
-            {response || "I can deploy Multi-Agent systems to..."}
-         </div>
-      </div>
-    </div>
-  );
-});
+const PerformanceMetric = React.memo(({ 
+  label, 
+  value, 
+  sub1, 
+  sub2 
+}: { 
+  label: string; 
+  value: string; 
+  sub1: string; 
+  sub2: string;
+}) => {
+  const barHeights = [45, 75, 55, 95, 70, 85, 60, 90];
 
-const PerformanceMetric = React.memo(({ label, value, sub1, sub2 }: { label: string; value: string; sub1: string; sub2: string }) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       <div className="flex justify-between items-end">
-         <div className="flex flex-col">
-            <span className="text-[10px] text-white/30 uppercase tracking-[0.1em]">{label || "Uptime"}</span>
-            <span className="text-2xl font-black text-white">{value || "99.9%"}</span>
-         </div>
-         <div className="h-8 flex items-end gap-[2px]">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="w-[3px] bg-indigo-500/40 rounded-full" style={{ height: `${20 + Math.random() * 80}%` }} />
-            ))}
-         </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-semibold text-white/45 uppercase tracking-wider font-sans">
+            {label || "Uptime"}
+          </span>
+          <span className="text-2xl sm:text-3xl font-bold tracking-tight text-white tabular-nums">
+            {value || "99.9%"}
+          </span>
+        </div>
+
+        {/* Apple Activity / Audio EQ Visualizer */}
+        <div className="h-8 flex items-end gap-[3px] px-1.5 py-1 bg-white/[0.03] border border-white/[0.06] rounded-lg">
+          {barHeights.map((h, i) => (
+            <motion.div
+              key={i}
+              className="w-[3px] rounded-full bg-gradient-to-t from-indigo-500 to-cyan-300 shadow-[0_0_6px_rgba(99,102,241,0.3)]"
+              animate={{ 
+                height: [`${h * 0.4}%`, `${h}%`, `${Math.max(25, h * 0.7)}%`],
+                opacity: [0.7, 1, 0.8]
+              }}
+              transition={{
+                duration: 1.2 + (i % 3) * 0.3,
+                repeat: Infinity,
+                repeatType: "reverse",
+                ease: "easeInOut",
+                delay: i * 0.1
+              }}
+            />
+          ))}
+        </div>
       </div>
-      <div className="h-[1px] w-full bg-white/5" />
-      <div className="flex justify-between text-[10px] font-mono text-indigo-400/60 uppercase">
-         <span>{sub1 || "Latency: 0.8ms"}</span>
-         <span>{sub2 || "Global Edge"}</span>
+
+      {/* Hairline Divider */}
+      <div className="h-[1px] w-full bg-white/[0.06]" />
+
+      {/* Apple Status Footer */}
+      <div className="flex justify-between items-center text-[10px] tracking-wide text-indigo-300/80 font-mono">
+        <span className="flex items-center gap-1.5 truncate">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)] shrink-0" />
+          {sub1 || "Latency: 0.8ms"}
+        </span>
+        <span className="px-1.5 py-0.5 rounded bg-white/[0.05] border border-white/[0.08] text-white/60 text-[9px] uppercase font-medium shrink-0">
+          {sub2 || "Global Edge"}
+        </span>
       </div>
     </div>
   );
@@ -402,7 +503,7 @@ const HeroTypewriter = React.memo(({ phrases, phase }: { phrases: string[]; phas
   }, [displayText, isDeleting, phraseIndex, typingSpeed, phase, activePhrases]);
 
   return (
-    <div className="text-[1.6rem] sm:text-[2.2rem] md:text-[4rem] lg:text-[3.5rem] xl:text-[4.5rem] relative inline-flex items-center min-h-[1.15em] mt-1 lg:mt-2 whitespace-nowrap overflow-visible">
+    <div className="text-[1.9rem] xs:text-[2.3rem] sm:text-[2.8rem] md:text-[4rem] lg:text-[3.5rem] xl:text-[4.5rem] relative inline-flex items-center min-h-[1.15em] mt-1 lg:mt-2 whitespace-nowrap overflow-visible">
       <span
         className="leading-none"
         style={{
@@ -455,12 +556,13 @@ export function Home() {
 
   const [showCtaOptions, setShowCtaOptions] = useState(false);
 
+
   useThunderboltCanvas(canvasRef, prefersReducedMotion);
 
   return (
     <section 
       id="home" 
-      className="relative min-h-[100svh] flex flex-col items-center pt-20 md:pt-28 lg:pt-32 pb-16 overflow-hidden noise-overlay border-none"
+      className="relative min-h-[100svh] flex flex-col justify-between items-center pt-14 xs:pt-16 sm:pt-20 md:pt-28 lg:pt-32 pb-12 sm:pb-16 md:pb-16 overflow-hidden noise-overlay border-none"
       style={{ 
         // Prevent FOUC: entire section invisible until phase 1
         opacity: phase >= 1 ? 1 : 0,
@@ -478,11 +580,43 @@ export function Home() {
           <FloatingParticles />
         </motion.div>
       </Suspense>
-      <div className="absolute inset-0 bg-gradient-to-b from-black via-black/95 to-black pointer-events-none" />
-      {/* ── Canvas Background — fade in at phase 2 ── */}
+
+      {/* ── Cyber Tech Mesh Grid Overlay ── */}
+      <div 
+        className="absolute inset-0 pointer-events-none -z-5 opacity-25"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(16, 185, 129, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(16, 185, 129, 0.08) 1px, transparent 1px)
+          `,
+          backgroundSize: '48px 48px',
+          maskImage: 'radial-gradient(ellipse 80% 80% at 50% 45%, black 25%, transparent 92%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 45%, black 25%, transparent 92%)',
+        }}
+      />
+
+      {/* ── Global Mesh Structure Canvas Layer — visible on both mobile and laptop ── */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: phase >= 2 ? 0.85 : 0 }}
+        transition={{ duration: 2 }}
+        className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
+        style={{
+          maskImage: 'radial-gradient(ellipse 90% 85% at 50% 45%, black 35%, transparent 95%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 90% 85% at 50% 45%, black 35%, transparent 95%)',
+        }}
+      >
+        <NetworkCanvas />
+      </motion.div>
+
+      {/* Soft dark vignette so content stands out with crystal clear contrast */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/75 pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,transparent_35%,rgba(3,7,6,0.85)_100%)] pointer-events-none z-0" />
+
+      {/* ── Thunderbolt Canvas Background — electric arcs fade in at phase 2 ── */}
       <motion.canvas
         initial={{ opacity: 0 }}
-        animate={{ opacity: phase >= 2 ? 0.6 : 0 }}
+        animate={{ opacity: phase >= 2 ? 0.75 : 0 }}
         transition={{ duration: 2 }}
         ref={canvasRef}
         data-idm-ignore="true"
@@ -495,19 +629,20 @@ export function Home() {
       />
 
       {/* ── Grid Layout ── */}
-      <div className="w-full max-w-[1400px] mx-auto px-6 lg:px-8 relative z-10 pt-4 md:pt-0 pb-12 overflow-x-hidden">
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-16 xl:gap-24 2xl:gap-32 items-center relative">
+      <div className="w-full max-w-[1400px] mx-auto px-5 sm:px-6 lg:px-8 relative z-10 flex-1 flex flex-col justify-between py-2 md:py-0">
+        <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-center relative my-auto">
           
           {/* Left Side: Content */}
-          <div className="lg:col-span-7 xl:col-span-8 space-y-8">
+          <div className="lg:col-span-7 xl:col-span-7 space-y-7 sm:space-y-8 md:space-y-8 flex flex-col justify-between">
             {/* Tagline badge — phase 1 */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={phase >= 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="flex w-full mb-10 md:mb-8">
-                <span className="relative inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-[9px] sm:text-xs font-black tracking-widest uppercase shadow-[0_0_15px_rgba(99,102,241,0.2)] whitespace-nowrap overflow-hidden group">
+              {/* Gap 1 (Blue Box 1): Badge to Heading */}
+              <div className="flex w-full mb-8 xs:mb-9 sm:mb-8 md:mb-9">
+                <span className="relative inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-[10px] sm:text-xs font-black tracking-widest uppercase shadow-[0_0_15px_rgba(99,102,241,0.2)] whitespace-nowrap overflow-hidden group">
                   {/* Shiny sweep animation */}
                   <motion.span 
                     animate={{ x: ['-100%', '200%'] }}
@@ -528,14 +663,15 @@ export function Home() {
                 </span>
               </div>
 
+              {/* Gap 2 (Blue Box 2): Heading to Subtitle */}
               <h1 
-                className="font-black leading-[1.05] tracking-tight mb-8"
+                className="font-black leading-[1.05] tracking-tight mb-9 xs:mb-11 sm:mb-9 md:mb-11"
                 style={{ 
                   fontFamily: 'var(--font-display)'
                 }}
               >
                 {/* Line 1: Static Title — phase 1, staggered words */}
-                <div className="text-[2rem] leading-[1.1] md:text-[5rem] lg:text-[4rem] xl:text-[5.2rem] flex flex-wrap lg:flex-nowrap lg:whitespace-nowrap items-center mb-1">
+                <div className="text-[2.4rem] xs:text-[2.85rem] sm:text-[3.5rem] leading-[1.08] md:text-[5rem] lg:text-[4rem] xl:text-[5.2rem] flex flex-wrap lg:flex-nowrap lg:whitespace-nowrap items-center mb-1">
                   {titlePrefix.split(' ').map((word: string, i: number) => (
                     <motion.span
                       key={i}
@@ -560,103 +696,118 @@ export function Home() {
                 animate={phase >= 2 ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
                 transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
               >
-                  <p className="text-base md:text-xl text-white/50 max-w-xl leading-relaxed mb-8 md:mb-12">
-                   <RichText text={subtitle} />
-                 </p>
+                {/* Gap 3 (Blue Box 3): Subtitle to Stats Bar */}
+                <p className="text-base xs:text-[17px] sm:text-base md:text-xl text-white/60 max-w-xl leading-relaxed mb-10 xs:mb-12 sm:mb-10 md:mb-12">
+                  <RichText text={subtitle} />
+                </p>
 
-                <div className="mb-10 md:mb-12 relative">
-                  <div className="absolute -inset-4 bg-indigo-500/5 blur-3xl rounded-[3rem] -z-10" />
+                {/* Gap 4 (Blue Box 4): Stats Bar to CTA Buttons */}
+                <div className="mb-9 xs:mb-11 sm:mb-9 md:mb-11 relative">
+                  <div className="absolute -inset-1.5 bg-emerald-500/10 blur-xl rounded-full -z-10" />
                   
-                  <div className="w-fit grid grid-cols-2 gap-x-3 gap-y-4 md:flex md:flex-wrap md:items-center md:gap-x-8 md:gap-y-4 bg-white/[0.03] border border-white/[0.08] backdrop-blur-3xl rounded-2xl p-3 sm:p-4 md:px-8 md:py-5 shadow-2xl relative overflow-hidden group/stats">
-                    {/* Premium iridescent scan line */}
-                    <motion.div 
-                      animate={{ x: ['-200%', '200%'] }}
-                      transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent -skew-x-12 -z-10 pointer-events-none"
-                    />
-                    
-                    {stats.map((stat: any, i: number) => (
-                      <div key={i} className="flex items-center gap-6 group/stat">
-                        <div className="flex flex-col">
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-xl md:text-2xl font-black bg-gradient-to-br from-white to-white/70 bg-clip-text text-transparent tabular-nums tracking-tight">
+                  <div className="w-full sm:max-w-[560px] bg-white/[0.035] sm:bg-white/[0.04] border border-white/[0.09] sm:border-white/[0.1] backdrop-blur-2xl rounded-full py-2 px-1.5 xs:px-2.5 sm:py-2.5 sm:px-5 shadow-[0_8px_28px_-6px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.18)] relative overflow-hidden group/stats">
+                    {/* Top specular hairline highlight */}
+                    <div className="absolute inset-x-6 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/35 to-transparent pointer-events-none" />
+
+                    <div className="grid grid-cols-4 divide-x divide-white/[0.08] items-center">
+                      {stats.map((stat: any, i: number) => (
+                        <div key={i} className="flex flex-col items-center justify-center text-center px-1 xs:px-1.5 sm:px-3 min-w-0 group/stat">
+                          <div className="flex items-baseline justify-center gap-1">
+                            <span className="text-[13px] xs:text-[14px] sm:text-[15px] font-bold text-white tabular-nums tracking-tight whitespace-nowrap">
                               {stat.value}{stat.suffix}
                             </span>
                             <motion.div 
                               animate={{ 
-                                scale: [1, 1.2, 1],
-                                opacity: [0.6, 1, 0.6]
+                                scale: [1, 1.3, 1],
+                                opacity: [0.5, 1, 0.5]
                               }}
-                              transition={{ duration: 2, repeat: Infinity, delay: i * 0.5 }}
-                              className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]" 
+                              transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.35 }}
+                              className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] shrink-0" 
                             />
                           </div>
-                          <div className="text-[10px] text-white/40 uppercase tracking-[0.15em] font-bold mt-1">
+                          <div className="text-[7.5px] xs:text-[8px] sm:text-[8.5px] text-white/50 uppercase tracking-wider font-semibold leading-tight mt-0.5 line-clamp-2 text-center" title={stat.label}>
                             {stat.label}
                           </div>
                         </div>
-                        
-                        {i < stats.length - 1 && (
-                          <div className="hidden md:block h-8 w-[1px] bg-gradient-to-b from-transparent via-white/10 to-transparent" />
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex flex-row items-center gap-3 md:gap-5 h-[52px] md:h-[60px]">
+                <div className="flex flex-row items-center gap-3 md:gap-4 h-[50px] xs:h-[54px] pt-1.5 sm:pt-1">
                   <div className="relative h-full flex items-center">
                     <AnimatePresence mode="wait">
                       {!showCtaOptions ? (
                         <motion.button
                           key="mainCta"
-                          initial={{ opacity: 0, width: 0 }}
-                          animate={{ opacity: 1, width: 'auto' }}
-                          exit={{ opacity: 0, width: 0 }}
-                          transition={{ duration: 0.3 }}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.25 }}
                           onClick={() => setShowCtaOptions(true)}
-                          className="relative overflow-hidden h-full px-5 md:px-8 bg-white text-black text-sm md:text-base font-bold rounded-xl hover:bg-indigo-400 transition-all duration-500 flex items-center justify-center gap-2 group cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(129,140,248,0.4)] whitespace-nowrap"
+                          className="relative overflow-hidden h-full px-5 md:px-7 bg-white text-black text-sm md:text-base font-semibold rounded-2xl hover:bg-white/90 transition-all duration-300 flex items-center justify-center gap-2 group cursor-pointer shadow-[0_10px_25px_rgba(255,255,255,0.18),inset_0_1px_0_0_rgba(255,255,255,0.8)] whitespace-nowrap"
                         >
-                          <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
                           <span className="relative z-10 flex items-center gap-2">
                             {cta}
-                            <Zap className="fill-current transition-transform group-hover:scale-125" size={16} />
+                            <Zap className="fill-current text-indigo-600 transition-transform group-hover:scale-110" size={15} />
                           </span>
                         </motion.button>
                       ) : (
                         <motion.div
                           key="options"
-                          initial={{ opacity: 0, scale: 0.95, width: 0 }}
-                          animate={{ opacity: 1, scale: 1, width: 'auto' }}
-                          exit={{ opacity: 0, scale: 0.95, width: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="flex items-center gap-2 md:gap-3 h-full overflow-hidden"
+                          initial={{ opacity: 0, scale: 0.92, y: 4 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.92, y: 4 }}
+                          transition={{ type: "spring", stiffness: 320, damping: 26 }}
+                          className="flex items-center gap-1.5 sm:gap-2 h-full p-1 rounded-2xl bg-white/[0.04] border border-white/[0.12] backdrop-blur-2xl shadow-[0_14px_36px_-8px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.22)] relative overflow-hidden"
                         >
+                          {/* Top specular hairline */}
+                          <div className="absolute inset-x-3 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+
+                          {/* Apple Frosted WhatsApp Action Card */}
                           <a
                             href={`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="h-full px-5 md:px-6 bg-[#25D366] text-white text-sm md:text-base font-bold rounded-xl hover:brightness-110 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap shadow-[0_0_20px_rgba(37,211,102,0.3)]"
+                            className="group/wa flex items-center gap-2.5 px-3.5 sm:px-4 h-full rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 hover:border-emerald-400/50 text-emerald-300 hover:text-white backdrop-blur-xl shadow-[0_4px_12px_rgba(16,185,129,0.15)] transition-all duration-200 active:scale-[0.98] whitespace-nowrap"
                           >
-                            WhatsApp
+                            <div className="w-5 h-5 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover/wa:scale-110 transition-transform shrink-0">
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824z" />
+                              </svg>
+                            </div>
+                            <div className="flex flex-col text-left">
+                              <span className="text-xs sm:text-[13px] font-bold leading-tight text-white">WhatsApp</span>
+                              <span className="text-[8.5px] sm:text-[9px] text-emerald-300/80 leading-none">Direct Chat</span>
+                            </div>
                           </a>
+
+                          {/* Apple Frosted Email Action Card */}
                           <a
                             href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(contactEmail)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="h-full px-5 md:px-6 bg-indigo-500 text-white text-sm md:text-base font-bold rounded-xl hover:bg-indigo-400 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap shadow-[0_0_20px_rgba(99,102,241,0.3)]"
+                            className="group/mail flex items-center gap-2.5 px-3.5 sm:px-4 h-full rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-400/30 hover:border-indigo-300/50 text-indigo-200 hover:text-white backdrop-blur-xl shadow-[0_4px_12px_rgba(99,102,241,0.15)] transition-all duration-200 active:scale-[0.98] whitespace-nowrap"
                           >
-                            Email
+                            <div className="w-5 h-5 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-300 group-hover/mail:scale-110 transition-transform shrink-0">
+                              <Mail size={12} className="stroke-[2.4]" />
+                            </div>
+                            <div className="flex flex-col text-left">
+                              <span className="text-xs sm:text-[13px] font-bold leading-tight text-white">Email</span>
+                              <span className="text-[8.5px] sm:text-[9px] text-indigo-300/80 leading-none">Inquiry Desk</span>
+                            </div>
                           </a>
+
+                          {/* Apple Close Pill */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowCtaOptions(false);
                             }}
-                            className="h-full px-3 md:px-4 bg-white/10 text-white/60 hover:text-white rounded-xl hover:bg-white/20 transition-all duration-300 flex items-center justify-center"
-                            aria-label="Close"
+                            className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-white/[0.06] hover:bg-white/[0.14] border border-white/[0.1] text-white/60 hover:text-white backdrop-blur-xl flex items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer ml-0.5 shrink-0"
+                            aria-label="Close options"
                           >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            <X size={14} />
                           </button>
                         </motion.div>
                       )}
@@ -664,41 +815,42 @@ export function Home() {
                   </div>
                   <button
                     onClick={() => navigate('/services')}
-                    className={`px-5 py-3 md:px-8 md:py-4 bg-white/5 border border-white/10 text-white text-sm md:text-base font-bold rounded-xl hover:bg-white/10 transition-all duration-300 flex items-center gap-2 group cursor-pointer ${showCtaOptions ? 'hidden sm:flex' : 'flex'}`}
+                    className={`px-4.5 py-2.5 md:px-6 md:py-3.5 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.09] backdrop-blur-xl text-white text-xs md:text-sm font-semibold transition-all duration-300 flex items-center gap-2 group cursor-pointer ${showCtaOptions ? 'hidden sm:flex' : 'flex'}`}
                   >
-                    {learnMore}
-                    <ArrowRight className="transition-transform group-hover:translate-x-1" size={16} />
+                    <span>{learnMore}</span>
+                    <ArrowRight className="transition-transform group-hover:translate-x-1 text-white/65 group-hover:text-white" size={15} />
                   </button>
                 </div>
               </motion.div>
             </motion.div>
           </div>
 
-          {/* Right Side: Flashy Cards — Keep column in grid layout to prevent CLS */}
+          {/* Right Side: Apple Frosted Glass Showcase — Expanded height and generous vertical breathing space */}
           {!isMobile && (
-            <div className={`lg:col-span-5 xl:col-span-4 hidden lg:block transition-opacity duration-1000 ${phase >= 2 ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-              <div className="relative h-[620px] w-full">
-                {/* Card 1: Agentic AI - Top Right */}
-                <div className="absolute top-[2%] right-0 z-10 transition-all duration-500">
-                  <FlashyCard icon={ICON_MAP[t?.feature1Icon] || Activity} title={t?.feature1Title || "Agentic AI nodes"} delay={0.2} className="w-[280px]">
+            <div className={`lg:col-span-5 xl:col-span-5 hidden lg:block transition-opacity duration-1000 ${phase >= 2 ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+              <div className="relative h-[700px] w-full max-w-[460px] ml-auto">
+                {/* Card 1: Agentic AI - Top Right (Ends ~y=150px) */}
+                <div className="absolute top-0 right-2 sm:right-4 z-10 transition-all duration-500">
+                  <FlashyCard icon={ICON_MAP[t?.feature1Icon] || Activity} title={t?.feature1Title || "Agentic AI nodes"} delay={0.2} className="w-[270px]">
                     <AIWorkflow steps={t?.feature1Steps} />
                   </FlashyCard>
                 </div>
 
-                {/* Card 2: Conversational AI - Shifted slightly down */}
-                <div className="absolute top-[35%] left-[-15%] z-20 transition-all duration-500">
-                  <FlashyCard icon={ICON_MAP[t?.feature2Icon] || Cpu} title={t?.feature2Title || "Conversational AI"} delay={0.4} className="w-[300px]">
-                    <ChatBotVisual query={t?.feature2Query} response={t?.feature2Response} />
-                    <div className="mt-4 flex justify-between items-center text-[10px] text-indigo-400 font-bold uppercase tracking-widest">
-                       <span>{t?.feature2FooterLeft || "Custom Trained LLM"}</span>
-                       <span className="opacity-50">{t?.feature2FooterRight || "Active"}</span>
-                    </div>
+                {/* Card 2: Conversational AI - Middle Overlap (Starts at y=225px, giving ~65-75px clear space below Card 1) */}
+                <div className="absolute top-[225px] left-0 xl:left-[-10px] z-20 transition-all duration-500">
+                  <FlashyCard icon={ICON_MAP[t?.feature2Icon] || Cpu} title={t?.feature2Title || "Conversational AI"} delay={0.4} className="w-[295px]">
+                    <ChatBotVisual 
+                      query={t?.feature2Query} 
+                      response={t?.feature2Response} 
+                      footerLeft={t?.feature2FooterLeft}
+                      footerRight={t?.feature2FooterRight}
+                    />
                   </FlashyCard>
                 </div>
 
-                {/* Card 3: Enterprise Solutions - Pushed further down */}
-                <div className="absolute bottom-[-10%] right-[5%] z-10 transition-all duration-500">
-                  <FlashyCard icon={ICON_MAP[t?.feature3Icon] || Zap} title={t?.feature3Title || "Enterprise Solutions"} delay={0.6} className="w-[260px]">
+                {/* Card 3: Enterprise Solutions - Bottom Right (Starts at y=465px, giving ~65-75px clear space below Card 2) */}
+                <div className="absolute top-[465px] right-2 sm:right-4 z-10 transition-all duration-500">
+                  <FlashyCard icon={ICON_MAP[t?.feature3Icon] || Zap} title={t?.feature3Title || "Enterprise Solutions"} delay={0.6} className="w-[265px]">
                      <PerformanceMetric 
                        label={t?.feature3UptimeLabel} 
                        value={t?.feature3UptimeValue} 
@@ -708,21 +860,9 @@ export function Home() {
                   </FlashyCard>
                 </div>
 
-                {/* Background Glows shifted for new layout */}
-                <div className="absolute top-[45%] left-[-50%] w-96 h-96 bg-indigo-500/10 rounded-full blur-[160px] -z-10" />
-                <div className="absolute top-[15%] right-0 w-48 h-48 bg-cyan-500/10 rounded-full blur-[100px] -z-10" />
-                
-                {/* Neural Network / Data Constellation Canvas Layer */}
-                <div 
-                  className="absolute z-0 pointer-events-none" 
-                  style={{
-                    top: '-10%', right: '-10%', bottom: '-10%', left: '-40%',
-                    maskImage: 'radial-gradient(ellipse 80% 80% at 60% 50%, black 40%, transparent 100%)',
-                    WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 60% 50%, black 40%, transparent 100%)',
-                  }}
-                >
-                  <NetworkCanvas />
-                </div>
+                {/* Apple Ambient Soft Background Glows */}
+                <div className="absolute top-[20%] left-[-20%] w-72 h-72 bg-emerald-500/12 rounded-full blur-[120px] -z-10 pointer-events-none" />
+                <div className="absolute bottom-[8%] right-[-10%] w-60 h-60 bg-teal-500/12 rounded-full blur-[100px] -z-10 pointer-events-none" />
               </div>
             </div>
           )}

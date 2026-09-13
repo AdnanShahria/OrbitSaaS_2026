@@ -16,7 +16,7 @@ export function ChatSuggestionChips() {
   if (activeChips.length === 0 || isLoading) return null;
 
   return (
-    <div className={`shrink-0 px-4 pt-2 pb-0 bg-card/80 transition-opacity ${showEmailPrompt ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`shrink-0 px-4 pt-2 pb-0 bg-transparent transition-opacity ${showEmailPrompt ? 'opacity-40 pointer-events-none' : ''}`}>
       <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
         {activeChips.map((s, i) => (
           <button
@@ -42,7 +42,7 @@ export function ChatSuggestionChips() {
                 executeAIResponse(newMessages);
               }, 50);
             }}
-            className="shrink-0 px-4 py-2 rounded-full text-[11px] font-bold bg-muted text-foreground border border-border hover:bg-muted-foreground/10 transition-colors cursor-pointer whitespace-nowrap"
+            className="shrink-0 px-3.5 py-1.5 rounded-full text-[11px] font-bold bg-white/[0.06] text-white/90 border border-white/[0.1] hover:bg-white/[0.12] hover:border-emerald-500/40 transition-colors cursor-pointer whitespace-nowrap backdrop-blur-md"
           >
             {s}
           </button>

@@ -12,7 +12,7 @@ export function ChatEmailPrompt() {
         <div className="w-8 h-8 rounded-full bg-border flex items-center justify-center shrink-0">
           <Bot className="w-4 h-4 text-foreground" />
         </div>
-        <div className="bg-muted rounded-xl rounded-tl-none px-4 py-3 text-base md:text-[15px] text-foreground max-w-[90%] border border-border">
+        <div className="bg-white/[0.06] border border-white/[0.1] backdrop-blur-md rounded-xl rounded-tl-none px-4 py-3 text-base md:text-[15px] text-foreground max-w-[90%] shadow-sm">
           <p className="mb-3 text-[15px] md:text-sm leading-relaxed font-medium">
             {chatLang === 'bn'
               ? 'অবশ্যই, আমি সাহায্য করতে পারি। তবে আমাদের সংযোগ বিচ্ছিন্ন হয়ে গেলে, আমি কোথায় উত্তর পাঠাবো? আপনার ইমেইলটি দিন:'
@@ -26,7 +26,7 @@ export function ChatEmailPrompt() {
               value={leadEmail}
               onChange={(e) => setLeadEmail(e.target.value)}
               disabled={leadStatus === 'loading'}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-base md:text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all pointer-events-auto"
+              className="w-full bg-white/[0.05] border border-white/[0.12] focus:border-emerald-400 rounded-lg px-3 py-2.5 text-base md:text-[15px] text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all pointer-events-auto"
             />
             <button
               type="submit"

@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ExternalLink, ChevronLeft, ChevronRight, ChevronDown, X, ArrowUpRight, Share2, Check } from 'lucide-react';
+import { ArrowLeft, ExternalLink, ChevronLeft, ChevronRight, ChevronDown, X, Share2, Check } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { useContent } from '@/contexts/ContentContext';
 import { Navbar } from '@/components/orbit/Navbar';
@@ -14,7 +14,6 @@ import { ensureAbsoluteUrl } from '@/lib/utils';
 import { ImageWithSkeleton } from '@/components/orbit/ImageWithSkeleton';
 import { RichText } from '@/components/ui/RichText';
 import { toast } from 'sonner';
-import { fallbackAchievements, AchievementItem } from '@/data/achievements';
 
 type MediaItem = { type: 'image'; url: string } | { type: 'video'; url: string };
 
@@ -84,7 +83,6 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
     };
 
     const currentMedia = media[currentIndex];
-    const ytId = currentMedia.type === 'video' ? extractYouTubeId(currentMedia.url) : null;
 
     const renderVideo = (item: MediaItem, isLightbox = false) => {
         if (item.type !== 'video') return null;
@@ -107,7 +105,7 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
     return (
         <>
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-8">
-                <div className="relative w-full aspect-video bg-muted/10 rounded-2xl overflow-hidden border border-border group">
+                <div className="relative w-full aspect-video bg-zinc-100 rounded-2xl sm:rounded-3xl overflow-hidden border border-zinc-200/90 shadow-[0_12px_40px_-15px_rgba(0,0,0,0.08)] group">
                     <div className={`absolute inset-0 ${currentMedia.type === 'image' ? 'cursor-pointer' : ''}`} onClick={currentMedia.type === 'image' ? openLightbox : undefined}>
                         {currentMedia.type === 'video' ? renderVideo(currentMedia) : (
                             <AnimatePresence initial={false} custom={direction}>
@@ -127,20 +125,28 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                     </div>
                 </div>
                 {media.length > 1 && (
-                    <div className="flex justify-center items-center gap-2 sm:gap-6 mt-8 relative z-10 px-4">
-                        <button onClick={(e) => { e.stopPropagation(); paginate(-1); }} className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-border bg-card text-foreground hover:bg-muted transition-colors shrink-0">
-                            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <div className="flex justify-center items-center gap-2 sm:gap-6 mt-6 relative z-10 px-4">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); paginate(-1); }}
+                            className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-zinc-200/90 bg-white text-zinc-700 hover:text-zinc-950 hover:bg-zinc-50 shadow-xs hover:shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
+                            aria-label="Previous image"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
                         </button>
                         <div className="flex justify-center flex-wrap gap-2.5 max-w-[70%] sm:max-w-none">
                             {media.map((item, idx) => (
                                 <motion.button key={idx} onClick={(e) => { e.stopPropagation(); setDirection(idx > currentIndex ? 1 : -1); setCurrentIndex(idx); }}
-                                    className={`h-2 sm:h-2.5 rounded-full transition-all duration-300 shrink-0 ${idx === currentIndex ? 'bg-primary w-8 sm:w-10' : 'bg-white/20 hover:bg-white/40 w-2 sm:w-2.5'}`}
+                                    className={`h-2 sm:h-2.5 rounded-full transition-all duration-300 shrink-0 ${idx === currentIndex ? 'bg-emerald-600 w-8 sm:w-10' : 'bg-zinc-300 hover:bg-zinc-400 w-2 sm:w-2.5'}`}
                                     title={item.type === 'video' ? 'Video' : `Image ${idx + 1}`}
                                 />
                             ))}
                         </div>
-                        <button onClick={(e) => { e.stopPropagation(); paginate(1); }} className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-border bg-card text-foreground hover:bg-muted transition-colors shrink-0">
-                            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <button
+                            onClick={(e) => { e.stopPropagation(); paginate(1); }}
+                            className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-zinc-200/90 bg-white text-zinc-700 hover:text-zinc-950 hover:bg-zinc-50 shadow-xs hover:shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
+                            aria-label="Next image"
+                        >
+                            <ChevronRight className="w-5 h-5" />
                         </button>
                     </div>
                 )}
@@ -201,22 +207,34 @@ function CollapsibleCards({ blocks }: { blocks: string[] }) {
                 const preview = !heading ? stripHtml(bodyHtml).slice(0, 60) : '';
 
                 return (
-                    <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 + i * 0.08 }} className="rounded-xl sm:rounded-2xl border border-border bg-card overflow-hidden">
-                        <button type="button" onClick={() => toggle(i)} className={`w-full flex items-center gap-4 px-6 sm:px-8 py-5 sm:py-6 text-left transition-colors duration-300 relative group/toggle ${isExpanded ? 'bg-muted/50' : 'hover:bg-muted/30'}`}>
+                    <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.3 + i * 0.08 }}
+                        className="rounded-2xl border border-zinc-200/90 bg-white overflow-hidden shadow-2xs hover:shadow-md transition-all duration-300 mb-4"
+                    >
+                        <button
+                            type="button"
+                            onClick={() => toggle(i)}
+                            className={`w-full flex items-center gap-4 px-6 sm:px-8 py-5 text-left transition-colors duration-200 cursor-pointer ${isExpanded ? 'bg-zinc-50/70' : 'hover:bg-zinc-50/40'}`}
+                        >
                             <div className="relative flex-shrink-0 group-hover/toggle:scale-105 transition-transform duration-300">
-                                <div className="relative flex items-center justify-center w-9 h-9 rounded-full border border-border bg-muted">
-                                    <ChevronDown className={`w-4 h-4 text-primary transition-transform duration-300 ${isExpanded ? '' : '-rotate-90'}`} />
+                                <div className="relative flex items-center justify-center w-9 h-9 rounded-full border border-emerald-500/20 bg-emerald-50 text-emerald-600">
+                                    <ChevronDown className={`w-4 h-4 text-emerald-600 transition-transform duration-300 ${isExpanded ? '' : '-rotate-90'}`} />
                                 </div>
                             </div>
                             <div className="flex flex-col gap-1 min-w-0">
-                                <h3 className="text-lg sm:text-2xl font-bold tracking-tight text-foreground transition-colors duration-300 group-hover/toggle:text-primary">{label}</h3>
-                                {!isExpanded && preview && <span className="text-sm text-muted-foreground/50 truncate font-medium tracking-wide">{preview}…</span>}
+                                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-950 transition-colors duration-200" style={{ fontFamily: "var(--font-display)" }}>
+                                    {label}
+                                </h3>
+                                {!isExpanded && preview && <span className="text-sm text-zinc-400 truncate font-normal">{preview}…</span>}
                             </div>
                         </button>
                         <AnimatePresence initial={false}>
                             {isExpanded && (
-                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }} className="overflow-hidden">
-                                    <div className="px-5 sm:px-8 pb-5 sm:pb-7 pt-2 text-muted-foreground text-base sm:text-lg leading-relaxed space-y-4">
+                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }} className="overflow-hidden border-t border-zinc-100">
+                                    <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-4 text-zinc-600 text-sm sm:text-base leading-relaxed space-y-4">
                                         <RichText text={stripHtml(bodyHtml)} />
                                     </div>
                                 </motion.div>
@@ -236,22 +254,18 @@ function SuggestedAchievementCard({ item, routeId }: { item: any, routeId: strin
     return (
         <Link
             to={`/achievement/${routeId}`}
-            className="group relative flex gap-4 rounded-2xl overflow-hidden border border-white/[0.05] bg-zinc-950/40 p-3 transition-all duration-500 hover:-translate-y-1 hover:bg-zinc-900/60 hover:border-[#FACC15]/30 hover:shadow-[0_15px_30px_-10px_rgba(250,204,21,0.1)]"
+            className="group relative flex gap-3.5 rounded-2xl overflow-hidden border border-zinc-200/80 bg-white p-3 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/40 hover:shadow-[0_12px_28px_rgba(16,185,129,0.08)] shadow-2xs"
         >
-            {/* Premium Glow on Hover */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#FACC15]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
-            <div className="relative w-28 sm:w-36 flex-shrink-0 aspect-video rounded-xl overflow-hidden bg-black/20 border border-white/[0.05]">
-                <ImageWithSkeleton src={coverImage} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 no-browser-trigger" />
-                <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform [transition-duration:1.2s] ease-in-out bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />
-                </div>
+            <div className="relative w-28 sm:w-32 flex-shrink-0 aspect-video rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200/60">
+                <ImageWithSkeleton src={coverImage} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 no-browser-trigger" />
             </div>
-            <div className="flex flex-col justify-center min-w-0 z-10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#FACC15] mb-1.5 line-clamp-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                    {itemCats.slice(0, 2).join(' · ')}
-                </span>
-                <h3 className="font-display text-sm font-bold text-white/90 group-hover:text-white transition-colors line-clamp-2 leading-snug">
+            <div className="flex flex-col justify-center min-w-0 z-10 py-1">
+                {itemCats.length > 0 && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1 line-clamp-1">
+                        {itemCats.slice(0, 2).join(' · ')}
+                    </span>
+                )}
+                <h3 className="font-display text-xs sm:text-sm font-bold text-zinc-900 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-snug">
                     {item.title}
                 </h3>
             </div>
@@ -294,12 +308,14 @@ export default function AchievementDetail() {
 
     if (!achievement || idx < 0 || baseItem?.hidden) {
         return (
-            <div className="min-h-[100dvh] bg-background text-foreground">
+            <div className="min-h-[100dvh] bg-[#FDFBF7] text-zinc-900">
                 <Navbar />
                 <div className="flex flex-col items-center justify-center py-40 px-4">
                     <Helmet><title>Achievement Not Found | Orbit SaaS</title><meta name="robots" content="noindex" /></Helmet>
-                    <h1 className="text-3xl font-bold mb-4">Achievement Not Found</h1>
-                    <Link to="/achievements" className="text-primary hover:underline flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Back to Achievements</Link>
+                    <h1 className="text-3xl font-bold mb-4 font-display">Achievement Not Found</h1>
+                    <Link to="/#achievements" className="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-2">
+                        <ArrowLeft className="w-4 h-4" /> Back to Achievements
+                    </Link>
                 </div>
                 <OrbitFooter />
             </div>
@@ -330,7 +346,13 @@ export default function AchievementDetail() {
     }).filter(Boolean).slice(0, 6);
 
     return (
-        <div className="min-h-[100dvh] relative bg-background text-foreground">
+        <div className="min-h-[100dvh] relative bg-[#FDFBF7] text-zinc-900 selection:bg-zinc-900 selection:text-white">
+            {/* Ambient Apple Lighting Effect */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden select-none" aria-hidden="true">
+                <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-emerald-100/30 rounded-full blur-[130px] -translate-y-1/2" />
+                <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] bg-amber-100/25 rounded-full blur-[140px]" />
+            </div>
+
             <Helmet>
                 <title data-rh="true">{seoTitle}</title>
                 <meta data-rh="true" name="description" content={seoDesc} />
@@ -355,22 +377,23 @@ export default function AchievementDetail() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16 flex flex-col lg:flex-row gap-10">
                     {/* Left: Main Content */}
                     <div className="flex-1 min-w-0">
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }}
-                            className="rounded-2xl border border-border bg-card px-6 sm:px-10 py-6 sm:py-8 mb-6 relative overflow-hidden group/title">
-                            <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight leading-snug text-foreground mb-5 relative z-10 text-center max-w-4xl mx-auto">{achievement.title}</h1>
-                            <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
-                                {achievement.category && (
-                                    <span className="px-3 py-1.5 rounded-full bg-[#22C55E]/10 text-[#22C55E] text-[11px] sm:text-xs font-bold uppercase tracking-wider border border-[#22C55E]/20">{achievement.category}</span>
-                                )}
-                                {achievement.date && (
-                                    <span className="px-3 py-1.5 rounded-full bg-[#FACC15]/10 text-[#FACC15] text-[11px] sm:text-xs font-medium border border-[#FACC15]/20">{achievement.date}</span>
-                                )}
-                                {achievement.tags && Array.isArray(achievement.tags) && achievement.tags.map((tag, j) => (
-                                    <span key={`tag-${j}`} className="px-3 py-1.5 rounded-full bg-secondary text-muted-foreground text-[11px] sm:text-xs font-medium border border-border">{tag}</span>
-                                ))}
-                            </div>
-                            
-                            <div className="absolute bottom-4 right-4 z-20">
+                        {/* Title Card */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.05 }}
+                            className="rounded-2xl sm:rounded-3xl border border-zinc-200/90 bg-white/95 backdrop-blur-xl px-6 sm:px-10 py-7 sm:py-9 mb-8 relative overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.03)] text-center"
+                        >
+                            {/* Top row: Breadcrumb + Share Button */}
+                            <div className="flex items-center justify-between gap-4 mb-4">
+                                <Link
+                                    to="/#achievements"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 hover:bg-emerald-50 text-zinc-600 hover:text-emerald-700 border border-zinc-200/80 text-xs font-semibold transition-colors group/back shadow-2xs"
+                                >
+                                    <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover/back:-translate-x-0.5" />
+                                    <span>All Achievements</span>
+                                </Link>
+
                                 <button 
                                     onClick={async () => {
                                         const url = currentUrl;
@@ -385,10 +408,32 @@ export default function AchievementDetail() {
                                         }
                                     }}
                                     title={isCopied ? 'Copied!' : 'Share'}
-                                    className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500/20 transition-all duration-300 shadow-sm"
+                                    className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-zinc-100 hover:bg-zinc-200/80 text-zinc-700 border border-zinc-200 transition-all duration-200 shadow-2xs active:scale-95 cursor-pointer"
                                 >
-                                    {isCopied ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />}
+                                    {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
                                 </button>
+                            </div>
+
+                            <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight leading-snug text-zinc-950 mb-5 relative z-10 text-center max-w-4xl mx-auto">
+                                {achievement.title}
+                            </h1>
+
+                            <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
+                                {achievement.category && (
+                                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] sm:text-xs font-bold uppercase tracking-wider border border-emerald-200/80 shadow-2xs">
+                                        {achievement.category}
+                                    </span>
+                                )}
+                                {achievement.date && (
+                                    <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-[11px] sm:text-xs font-semibold border border-amber-200/80 shadow-2xs">
+                                        {achievement.date}
+                                    </span>
+                                )}
+                                {achievement.tags && Array.isArray(achievement.tags) && achievement.tags.map((tag, j) => (
+                                    <span key={`tag-${j}`} className="px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 text-[11px] sm:text-xs font-medium border border-zinc-200/80">
+                                        {tag}
+                                    </span>
+                                ))}
                             </div>
                         </motion.div>
 
@@ -407,19 +452,30 @@ export default function AchievementDetail() {
                                 return <CollapsibleCards blocks={renderBlocks} />;
                             }
                             return (
-                                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-                                    className="rounded-2xl border border-border bg-card px-6 sm:px-10 py-8 sm:py-10">
-                                    <div className="text-muted-foreground text-base sm:text-lg leading-relaxed"><RichText text={stripHtml(html)} /></div>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.5, delay: 0.2 }}
+                                    className="rounded-2xl border border-zinc-200/90 bg-white px-6 sm:px-10 py-8 sm:py-10 shadow-2xs mb-6"
+                                >
+                                    <div className="text-zinc-600 text-base sm:text-lg leading-relaxed">
+                                        <RichText text={stripHtml(html)} />
+                                    </div>
                                 </motion.div>
                             );
                         })()}
 
                         {/* Live Link */}
                         {achievement.link && achievement.link !== '#' && (
-                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }} className="mt-10">
-                                <a href={ensureAbsoluteUrl(achievement.link)} target="_blank" rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all">
-                                    <ExternalLink className="w-4 h-4" /> View Link
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }} className="mt-8">
+                                <a
+                                    href={ensureAbsoluteUrl(achievement.link)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-zinc-950 text-white font-medium hover:bg-zinc-800 transition-all shadow-sm active:scale-95 cursor-pointer"
+                                >
+                                    <ExternalLink className="w-4 h-4 text-emerald-400" />
+                                    <span>View Details / Source</span>
                                 </a>
                             </motion.div>
                         )}
@@ -429,7 +485,7 @@ export default function AchievementDetail() {
                     {suggested.length > 0 && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="w-full lg:w-[380px] flex-shrink-0">
                             <div className="lg:sticky lg:top-24">
-                                <h2 className="font-display text-lg font-bold text-foreground mb-4">More Achievements</h2>
+                                <h2 className="font-display text-lg font-bold text-zinc-950 mb-4">More Achievements</h2>
                                 <div className="flex flex-col gap-3">
                                     {suggested.map((item) => <SuggestedAchievementCard key={item._id} item={item} routeId={item._id} />)}
                                 </div>

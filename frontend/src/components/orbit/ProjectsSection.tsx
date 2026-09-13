@@ -309,8 +309,6 @@ export function ProjectsSection() {
                     </div>
                 )}
             </div>
-
-            <WaveDivider fill="#FFFFFF" />
         </section>
     );
 }
