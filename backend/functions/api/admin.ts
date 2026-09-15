@@ -56,7 +56,7 @@ async function purgeCloudflareCache(env: Env, baseUrl: string) {
 }
 
 // ─── OTP Email Helper ───
-async function sendAdminLoginOtpEmail(env: Env, otp: string, targetEmail: string) {
+async function sendAdminLoginOtpEmail(env: Env, otp: string, targetEmail: string): Promise<boolean> {
     const subject = "Admin Access - Authorization Code";
     const text = `Your ORBIT SaaS admin login code is: ${otp}`;
     const html = `
@@ -82,7 +82,7 @@ async function sendAdminLoginOtpEmail(env: Env, otp: string, targetEmail: string
     </div>
     `;
 
-    await sendMail(env, {
+    return await sendMail(env, {
         to: targetEmail,
         subject,
         text,
@@ -131,7 +131,10 @@ async function handleLoginOtpSend(request: Request, env: Env): Promise<Response>
         args: [email, otp],
     });
 
-    await sendAdminLoginOtpEmail(env, otp, email);
+    const sent = await sendAdminLoginOtpEmail(env, otp, email);
+    if (!sent) {
+        return jsonResponse({ error: 'Failed to send OTP email. Check mail provider credentials.' }, request, 500);
+    }
 
     return jsonResponse({ success: true, message: 'OTP sent to email' }, request);
 }

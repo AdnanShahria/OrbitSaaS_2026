@@ -1,4 +1,3 @@
-import nodemailer from 'nodemailer';
 import type { Env } from './types';
 
 export interface MailAttachment {
