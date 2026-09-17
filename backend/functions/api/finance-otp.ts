@@ -5,7 +5,12 @@ import { ensureAuditTable, logAudit, getRequestMeta } from '../_lib/audit';
 import type { Env } from '../_lib/types';
 import { sendMail } from '../_lib/mail';
 
-const ALLOWED_MAILS = ['adnanshahria2019@gmail.com', 'abdurrafiu7@gmail.com'];
+const ALLOWED_MAILS = [
+    'adnanshahria2019@gmail.com',
+    'abdurrafiu7@gmail.com',
+    'nisarfeni2015@gmail.com',
+    'artalha100@gmail.com'
+];
 
 // Generate a random 6-digit OTP
 function generateOtp(): string {
@@ -13,7 +18,7 @@ function generateOtp(): string {
 }
 
 // Send OTP email helper
-async function sendOtpEmail(env: Env, otp: string, targetEmail: string) {
+async function sendOtpEmail(env: Env, otp: string, targetEmail: string): Promise<boolean> {
     const subject = "Admin OTP - Financial Authorization";
     const text = `Your ORBIT SaaS admin OTP for financial authorization is: ${otp}`;
     const html = `
@@ -39,7 +44,7 @@ async function sendOtpEmail(env: Env, otp: string, targetEmail: string) {
     </div>
     `;
 
-    await sendMail(env, {
+    return await sendMail(env, {
         to: targetEmail,
         subject,
         text,
@@ -85,8 +90,11 @@ async function handleSend(request: Request, env: Env): Promise<Response> {
         args: [email, otp],
     });
 
-    // Send email without blocking
-    await sendOtpEmail(env, otp, email);
+    // Send email
+    const sent = await sendOtpEmail(env, otp, email);
+    if (!sent) {
+        return jsonResponse({ error: 'Failed to send OTP email. Please check mail provider credentials.' }, request, 500);
+    }
 
     return jsonResponse({ success: true, message: `Financial OTP sent to ${email}` }, request);
 }

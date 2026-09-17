@@ -52,7 +52,12 @@ async function handleSend(request: Request, env: Env): Promise<Response> {
         return jsonResponse({ error: 'Unauthorized' }, request, 401);
     }
 
-    const ALLOWED_MAILS = ['adnanshahria2019@gmail.com', 'nisarfeni2015@gmail.com'];
+    const ALLOWED_MAILS = [
+        'adnanshahria2019@gmail.com',
+        'abdurrafiu7@gmail.com',
+        'nisarfeni2015@gmail.com',
+        'artalha100@gmail.com'
+    ];
     if (!ALLOWED_MAILS.includes(adminEmail)) {
         return jsonResponse({ error: 'You are not authorized to perform image optimization.' }, request, 403);
     }

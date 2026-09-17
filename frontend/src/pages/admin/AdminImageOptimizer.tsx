@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { uploadImage } from '@/lib/imageUpload';
 import imageCompression from 'browser-image-compression';
-import { getImageUrl, getFallbackUrl, serializeImageUrl, parseImageUrl, type ImageUrl } from '@/lib/imageUrl';
+import { getImageUrl, getFallbackUrl, serializeImageUrl, parseImageUrl, buildImageUrl, type ImageUrl } from '@/lib/imageUrl';
 
 // ─── Regex ────────────────────────────────────────────────────────────────────
 const BASE_URL_REGEX = `https?:\\/\\/[^\\s"'<>]+\\.(?:jpg|jpeg|png|webp|gif)(?:\\?[^\\s"'<>]+)?|https?:\\/\\/i\\.ibb\\.co\\/[^\\s"'<>]+`;
