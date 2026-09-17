@@ -32,20 +32,46 @@ export interface ParsedImageUrl {
  * Parse any image URL (Gen 1 string OR Gen 2 object) into a normalised
  * { primary, fallback } form. Returns null if the input is empty/invalid.
  */
-export function parseImageUrl(raw: ImageUrl | null | undefined): ParsedImageUrl | null {
+/**
+ * Safely extract a trimmed URL string from any unknown/arbitrary input.
+ */
+function toCleanUrlString(val: unknown): string | null {
+    if (!val) return null;
+    if (typeof val === 'string') {
+        const trimmed = val.trim();
+        return trimmed || null;
+    }
+    if (typeof val === 'object' && val !== null) {
+        const obj = val as Record<string, unknown>;
+        // If it's a nested ImageUrl or similar, check fallback first (to get ImgBB/CDN) then primary/url
+        return toCleanUrlString(obj.fallback) || toCleanUrlString(obj.primary) || toCleanUrlString(obj.url) || toCleanUrlString(obj.src) || null;
+    }
+    return null;
+}
+
+/**
+ * Parse any image URL (Gen 1 string OR Gen 2 object) into a normalised
+ * { primary, fallback } form. Returns null if the input is empty/invalid.
+ */
+export function parseImageUrl(raw: unknown): ParsedImageUrl | null {
     if (!raw) return null;
 
-    // Gen 2: already an object
-    if (typeof raw === 'object' && raw !== null) {
-        const p = raw.primary?.trim();
-        if (!p) return null;
-        return { primary: p, fallback: raw.fallback?.trim() || null };
-    }
-
-    // Gen 1: "primary|||fallback" string  OR  plain single URL string
+    // Gen 1: "primary|||fallback" string OR plain single URL string OR stringified JSON
     if (typeof raw === 'string') {
         const str = raw.trim();
         if (!str) return null;
+
+        // Stringified JSON object: '{"primary":"...","fallback":"..."}'
+        if (str.startsWith('{') && str.endsWith('}')) {
+            try {
+                const parsed = JSON.parse(str);
+                if (parsed && typeof parsed === 'object') {
+                    return parseImageUrl(parsed);
+                }
+            } catch {
+                // Not JSON, continue to string checks
+            }
+        }
 
         if (str.includes('|||')) {
             const [primary, fallback] = str.split('|||').map(s => s.trim());
@@ -54,6 +80,45 @@ export function parseImageUrl(raw: ImageUrl | null | undefined): ParsedImageUrl 
 
         // Plain single URL (old ImgBB-only or R2-only)
         return { primary: str, fallback: null };
+    }
+
+    // Gen 2: already an object
+    if (typeof raw === 'object' && raw !== null) {
+        const obj = raw as Record<string, unknown>;
+
+        // Safely extract primary (never call .trim() without string check)
+        let primary: string | null = null;
+        if (typeof obj.primary === 'string') {
+            primary = obj.primary.trim() || null;
+        } else if (typeof obj.url === 'string') {
+            primary = obj.url.trim() || null;
+        } else if (typeof obj.src === 'string') {
+            primary = obj.src.trim() || null;
+        } else if (obj.primary && typeof obj.primary === 'object') {
+            const inner = parseImageUrl(obj.primary);
+            primary = inner?.primary || null;
+        }
+
+        if (!primary) return null;
+
+        // Safely extract fallback (handles string OR nested object)
+        let fallback: string | null = null;
+        if (typeof obj.fallback === 'string') {
+            fallback = obj.fallback.trim() || null;
+        } else if (typeof obj.fallback_url === 'string') {
+            fallback = obj.fallback_url.trim() || null;
+        } else if (obj.fallback && typeof obj.fallback === 'object') {
+            // Unpack nested object defensively
+            const inner = parseImageUrl(obj.fallback);
+            fallback = inner?.fallback || inner?.primary || null;
+        }
+
+        // Ensure fallback is not identical to primary
+        if (fallback === primary) {
+            fallback = null;
+        }
+
+        return { primary, fallback };
     }
 
     return null;
@@ -82,11 +147,14 @@ export function getFallbackUrl(raw: ImageUrl | null | undefined): string | null 
  * @param primary   Primary R2 URL
  * @param fallback  Optional ImgBB fallback URL
  */
-export function buildImageUrl(primary: string, fallback?: string | null): ImageUrl {
-    if (fallback) {
-        return { primary, fallback };
+export function buildImageUrl(primary: string, fallback?: unknown): ImageUrl {
+    const cleanPrimary = typeof primary === 'string' ? primary.trim() : (parseImageUrl(primary)?.primary ?? '');
+    const cleanFallback = toCleanUrlString(fallback);
+
+    if (cleanFallback && cleanFallback !== cleanPrimary) {
+        return { primary: cleanPrimary, fallback: cleanFallback };
     }
-    return { primary };
+    return { primary: cleanPrimary };
 }
 
 /**
@@ -96,7 +164,7 @@ export function buildImageUrl(primary: string, fallback?: string | null): ImageU
  * NOTE: This is only needed when writing raw strings into legacy fields.
  * Prefer storing the object directly in JSON.
  */
-export function serializeImageUrl(raw: ImageUrl | null | undefined): string {
+export function serializeImageUrl(raw: unknown): string {
     const parsed = parseImageUrl(raw);
     if (!parsed) return '';
     if (parsed.fallback) {

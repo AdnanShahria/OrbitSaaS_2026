@@ -59,11 +59,12 @@ function replaceImageUrlsInObject(data: any, replacements: Map<string, ImageUrl>
 
     // 3. Objects
     if (typeof data === 'object') {
-        // If data is an ImageUrl object: { primary: "...", fallback?: "..." }
-        if (typeof data.primary === 'string') {
+        // If data is an ImageUrl object: check if the primary URL matches replacements
+        const dataParsed = parseImageUrl(data);
+        if (dataParsed) {
             for (const [oldKey, newVal] of replacements.entries()) {
                 const oldParsed = parseImageUrl(oldKey);
-                if (oldParsed && (oldParsed.primary === data.primary || oldKey === data.primary)) {
+                if (oldParsed && (oldParsed.primary === dataParsed.primary || oldKey === dataParsed.primary)) {
                     return newVal;
                 }
             }
@@ -74,6 +75,15 @@ function replaceImageUrlsInObject(data: any, replacements: Map<string, ImageUrl>
         for (const [k, v] of Object.entries(data)) {
             newObj[k] = replaceImageUrlsInObject(v, replacements);
         }
+
+        // If this object represents an ImageUrl (has 'primary'), flatten and normalize it
+        if ('primary' in newObj) {
+            const parsed = parseImageUrl(newObj);
+            if (parsed) {
+                return buildImageUrl(parsed.primary, parsed.fallback);
+            }
+        }
+
         return newObj;
     }
 

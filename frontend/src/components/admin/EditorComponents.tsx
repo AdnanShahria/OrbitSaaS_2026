@@ -7,34 +7,40 @@ import {
     Braces, Copy, ClipboardPaste
 } from 'lucide-react';
 
-/* ─── Language Toggle ─── */
+/* ─── Language Toggle (Apple Segmented Pill) ─── */
 export function LangToggle({ lang, setLang }: { lang: string; setLang: (l: string) => void }) {
     return (
-        <div className="flex items-center gap-1 bg-secondary rounded-lg p-1">
-            {['en', 'bn'].map(l => (
-                <button
-                    key={l}
-                    onClick={() => setLang(l)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${lang === l ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+        <div className="flex items-center gap-1 bg-secondary/80 p-1 rounded-full border border-border/50 backdrop-blur-md shadow-sm">
+            {['en', 'bn'].map(l => {
+                const active = lang === l;
+                return (
+                    <button
+                        key={l}
+                        onClick={() => setLang(l)}
+                        className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                            active
+                                ? 'bg-card text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.08)] scale-[1.02]'
+                                : 'text-muted-foreground hover:text-foreground'
                         }`}
-                >
-                    {l === 'en' ? 'English' : 'বাংলা'}
-                </button>
-            ))}
+                    >
+                        {l === 'en' ? 'English' : 'বাংলা'}
+                    </button>
+                );
+            })}
         </div>
     );
 }
 
-/* ─── Save Button ─── */
+/* ─── Save Button (Apple HIG Accent Elevation) ─── */
 export function SaveButton({ onClick, saving, saved, className = '' }: { onClick: () => void; saving: boolean; saved: boolean; className?: string }) {
     return (
         <button
             onClick={onClick}
             disabled={saving}
             title="Save section changes"
-            className={`px-5 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer ${className} ${saved
-                ? 'bg-green-500/20 text-green-500 border border-green-500/30'
-                : 'bg-primary text-primary-foreground hover:opacity-90'
+            className={`px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all duration-200 cursor-pointer shadow-[0_4px_14px_rgba(0,113,227,0.22)] active:scale-[0.98] ${className} ${saved
+                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-[0_2px_10px_rgba(52,199,89,0.15)]'
+                : 'bg-primary text-primary-foreground hover:opacity-95'
                 } disabled:opacity-50`}
         >
             {saving ? (
@@ -44,7 +50,7 @@ export function SaveButton({ onClick, saving, saved, className = '' }: { onClick
                 </>
             ) : saved ? (
                 <>
-                    <Check className="w-4 h-4" /> Saved!
+                    <Check className="w-4 h-4 text-emerald-500" /> Saved!
                 </>
             ) : (
                 <>
@@ -102,21 +108,23 @@ export function JsonPanel({
     };
 
     return (
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="bg-card rounded-2xl border border-border/80 shadow-xs overflow-hidden">
             <button
                 onClick={() => { setOpen(!open); if (!open) handleExport(); }}
-                className="w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-4 hover:bg-secondary/30 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between px-4 py-3.5 md:px-6 md:py-4 hover:bg-secondary/40 transition-colors cursor-pointer"
             >
                 <div className="flex items-center gap-2.5">
-                    <Braces className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-foreground">{title}</span>
-                    <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">Power Tool</span>
+                    <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <Braces className="w-4 h-4" />
+                    </div>
+                    <span className="font-semibold text-foreground text-sm">{title}</span>
+                    <span className="text-[11px] font-semibold text-muted-foreground bg-secondary px-2.5 py-0.5 rounded-full border border-border/40">Power Tool</span>
                 </div>
                 {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
             </button>
 
             {open && (
-                <div className="px-4 pb-4 md:px-6 md:pb-6 space-y-4 border-t border-border pt-4">
+                <div className="px-4 pb-4 md:px-6 md:pb-6 space-y-4 border-t border-border/50 pt-4">
                     <p className="text-xs text-muted-foreground">
                         {description} <b>Importing fills the form</b> — you still need to click <b>"Save Changes"</b> to persist.
                     </p>
@@ -124,28 +132,28 @@ export function JsonPanel({
                     <div className="flex flex-wrap gap-2">
                         <button
                             onClick={handleExport}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary text-foreground text-xs font-medium hover:bg-secondary/80 transition-colors cursor-pointer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary text-foreground text-xs font-semibold hover:bg-secondary/80 border border-border/40 transition-colors cursor-pointer shadow-xs"
                         >
-                            <Braces className="w-3.5 h-3.5" /> Export Current
+                            <Braces className="w-3.5 h-3.5 text-primary" /> Export Current
                         </button>
                         <button
                             onClick={handleCopy}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary text-foreground text-xs font-medium hover:bg-secondary/80 transition-colors cursor-pointer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary text-foreground text-xs font-semibold hover:bg-secondary/80 border border-border/40 transition-colors cursor-pointer shadow-xs"
                         >
-                            {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                             {copied ? 'Copied!' : 'Copy'}
                         </button>
                         <button
                             onClick={handleImport}
                             disabled={!jsonText.trim()}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-all cursor-pointer disabled:opacity-40"
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-all cursor-pointer disabled:opacity-40 shadow-xs active:scale-95"
                         >
                             <ClipboardPaste className="w-3.5 h-3.5" /> Import into Form
                         </button>
                     </div>
 
                     {parseError && (
-                        <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+                        <div className="flex items-start gap-2 px-3.5 py-2.5 rounded-xl bg-destructive/10 border border-destructive/25 text-destructive text-xs">
                             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                             <span>{parseError}</span>
                         </div>
@@ -155,8 +163,8 @@ export function JsonPanel({
                         value={jsonText}
                         onChange={(e) => { setJsonText(e.target.value); setParseError(''); }}
                         placeholder='Paste your JSON here...'
-                        rows={16}
-                        className="w-full rounded-lg bg-background border border-border p-4 text-sm font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
+                        rows={14}
+                        className="w-full rounded-xl bg-secondary/40 focus:bg-card border border-border p-4 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y transition-all"
                         spellCheck={false}
                     />
                 </div>
@@ -308,20 +316,20 @@ export function TextField({
                         onKeyUp={checkSelection}
                         onBlur={() => setTimeout(() => setSelToolbar(null), 250)}
                         rows={3}
-                        className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50 border border-border resize-y"
+                        className="w-full bg-secondary/60 focus:bg-card rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary border border-border transition-all resize-y shadow-xs"
                     />
-                    {/* Floating Selection Toolbar */}
+                    {/* Floating Selection Toolbar (Adaptive Dual-Theme Liquid Glass) */}
                     {selToolbar && (
-                        <div className="flex flex-col gap-1 p-1 bg-[#0f172a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[340px]">
+                        <div className="flex flex-col gap-1 p-1.5 bg-card/95 text-foreground backdrop-blur-2xl border border-border rounded-2xl shadow-2xl overflow-hidden min-w-[340px]">
                             {/* Row 1: Text Styles */}
-                            <div className="grid grid-cols-6 gap-0.5 border-b border-white/5 pb-1">
+                            <div className="grid grid-cols-6 gap-0.5 border-b border-border/50 pb-1">
                                 <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('<<', '>>'); }} className="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-emerald-500/10 group transition-all" title="Green Normal">
-                                    <span className="text-[10px] font-medium text-emerald-400 group-hover:scale-110 transition-transform">Green</span>
+                                    <span className="text-[10px] font-medium text-emerald-500 group-hover:scale-110 transition-transform">Green</span>
                                 </button>
                                 <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('**<<', '>>**'); }} className="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-emerald-500/10 group transition-all" title="Green Bold">
                                     <div className="flex items-center gap-0.5">
-                                        <span className="text-[10px] font-black text-white">B</span>
-                                        <span className="text-[10px] font-bold text-emerald-400">Green</span>
+                                        <span className="text-[10px] font-black text-foreground">B</span>
+                                        <span className="text-[10px] font-bold text-emerald-500">Green</span>
                                     </div>
                                 </button>
 
@@ -330,35 +338,35 @@ export function TextField({
                                 </button>
                                 <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('**((', '))**'); }} className="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-amber-500/10 group transition-all" title="Gold Bold">
                                     <div className="flex items-center gap-0.5">
-                                        <span className="text-[10px] font-black text-white">B</span>
+                                        <span className="text-[10px] font-black text-foreground">B</span>
                                         <span className="text-[10px] font-bold text-amber-500">Gold</span>
                                     </div>
                                 </button>
 
-                                <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('||', '||'); }} className="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-white/10 group transition-all" title="White Normal">
-                                    <span className="text-[10px] font-medium text-white group-hover:scale-110 transition-transform">White</span>
+                                <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('||', '||'); }} className="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-secondary group transition-all" title="Neutral Normal">
+                                    <span className="text-[10px] font-medium text-foreground group-hover:scale-110 transition-transform">Neutral</span>
                                 </button>
-                                <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('**||', '||**'); }} className="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-white/10 group transition-all" title="White Bold">
+                                <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('**||', '||**'); }} className="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-secondary group transition-all" title="Neutral Bold">
                                     <div className="flex items-center gap-0.5">
-                                        <span className="text-[10px] font-black text-white">B</span>
-                                        <span className="text-[10px] font-bold text-white">White</span>
+                                        <span className="text-[10px] font-black text-foreground">B</span>
+                                        <span className="text-[10px] font-bold text-foreground">Bold</span>
                                     </div>
                                 </button>
                             </div>
 
                             {/* Row 2: Cards & Save */}
                             <div className="grid grid-cols-5 gap-0.5 pt-1 items-center">
-                                <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('{{', '}}'); }} className="flex items-center justify-center p-1.5 rounded-lg hover:bg-white/10 group transition-all" title="White Card">
-                                    <div className="px-2 py-0.5 rounded border border-white/20 bg-white/5 text-[9px] font-bold text-white group-hover:bg-white/20 transition-colors">White Card</div>
+                                <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('{{', '}}'); }} className="flex items-center justify-center p-1.5 rounded-lg hover:bg-secondary group transition-all" title="Neutral Card">
+                                    <div className="px-2 py-0.5 rounded border border-border bg-secondary/50 text-[9px] font-bold text-foreground group-hover:bg-secondary transition-colors">Card</div>
                                 </button>
                                 <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('==', '=='); }} className="flex items-center justify-center p-1.5 rounded-lg hover:bg-emerald-500/10 group transition-all" title="Green Card">
-                                    <div className="px-2 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-[9px] font-bold text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">Green Card</div>
+                                    <div className="px-2 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/10 text-[9px] font-bold text-emerald-500 group-hover:bg-emerald-500/20 transition-colors">Green Card</div>
                                 </button>
                                 <button type="button" onMouseDown={e => { e.preventDefault(); wrapSelection('[[', ']]'); }} className="flex items-center justify-center p-1.5 rounded-lg hover:bg-amber-500/10 group transition-all" title="Gold Card">
-                                    <div className="px-2 py-0.5 rounded border border-amber-500/20 bg-amber-500/5 text-[9px] font-bold text-amber-500 group-hover:bg-amber-500/20 transition-colors">Gold Card</div>
+                                    <div className="px-2 py-0.5 rounded border border-amber-500/20 bg-amber-500/10 text-[9px] font-bold text-amber-500 group-hover:bg-amber-500/20 transition-colors">Gold Card</div>
                                 </button>
                                 <button type="button" onMouseDown={e => { e.preventDefault(); stripMarkers(); }} className="flex items-center justify-center p-1.5 rounded-lg hover:bg-red-500/10 group transition-all" title="Clear Formatting">
-                                    <span className="text-[9px] font-bold text-red-400 group-hover:scale-105 transition-transform italic">Clean</span>
+                                    <span className="text-[9px] font-bold text-red-500 group-hover:scale-105 transition-transform italic">Clean</span>
                                 </button>
                                 <div className="flex items-center justify-center px-1">
                                     <button
@@ -370,7 +378,7 @@ export function TextField({
                                             if (saveBtn) saveBtn.click();
                                             setSelToolbar(null);
                                         }}
-                                        className="w-full bg-primary/20 hover:bg-primary/40 border border-primary/50 text-primary rounded px-2 py-1 text-[10px] font-black uppercase tracking-tighter transition-all active:scale-95"
+                                        className="w-full bg-primary text-primary-foreground hover:opacity-90 rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 shadow-xs"
                                     >
                                         Save
                                     </button>
@@ -380,8 +388,8 @@ export function TextField({
                     )}
                     {/* Live Preview */}
                     {hasRichMarkers && (
-                        <div className="mt-2 px-3 py-2 rounded-lg bg-background/50 border border-border/50 text-sm text-muted-foreground leading-relaxed">
-                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold block mb-1">Preview</span>
+                        <div className="mt-2 px-3 py-2 rounded-xl bg-card border border-border text-sm text-foreground leading-relaxed shadow-xs">
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold block mb-1">Live Preview</span>
                             <RichText text={value} />
                         </div>
                     )}
@@ -391,14 +399,14 @@ export function TextField({
                     type="text"
                     value={value}
                     onChange={e => onChange(e.target.value)}
-                    className="w-full bg-secondary rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50 border border-border"
+                    className="w-full bg-secondary/60 focus:bg-card rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary border border-border transition-all shadow-xs"
                 />
             )}
         </div>
     );
 }
 
-/* ─── Toggle Field ─── */
+/* ─── Toggle Field (Apple iOS Switch) ─── */
 export function ToggleField({
     label,
     description,
@@ -411,20 +419,22 @@ export function ToggleField({
     onChange: (v: boolean) => void;
 }) {
     return (
-        <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
-            <div className="space-y-0.5">
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-secondary/40 border border-border/60 backdrop-blur-sm transition-colors">
+            <div className="space-y-0.5 pr-3">
                 <span className="text-sm font-medium text-foreground block">{label}</span>
-                {description && <p className="text-[10px] text-muted-foreground">{description}</p>}
+                {description && <p className="text-[11px] text-muted-foreground leading-snug">{description}</p>}
             </div>
             <button
                 type="button"
                 onClick={() => onChange(!checked)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${checked ? 'bg-primary' : 'bg-muted'
-                    }`}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none cursor-pointer ${
+                    checked ? 'bg-primary' : 'bg-muted-foreground/30'
+                }`}
             >
                 <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out ${
+                        checked ? 'translate-x-[22px]' : 'translate-x-[2px]'
+                    }`}
                 />
             </button>
         </div>
@@ -474,23 +484,23 @@ export function ColorField({
     );
 }
 
-/* ─── Section Header ─── */
+/* ─── Section Header (Apple Typography & Spacing) ─── */
 export function SectionHeader({ title, description }: { title: string; description: string }) {
     return (
         <div className="mb-4 md:mb-6">
-            <h1 className="font-display text-xl md:text-2xl font-bold text-foreground">{title}</h1>
-            <p className="text-muted-foreground text-xs sm:text-sm mt-1">{description}</p>
+            <h1 className="font-display text-xl md:text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1 leading-relaxed">{description}</p>
         </div>
     );
 }
 
-/* ─── Error Alert ─── */
+/* ─── Error Alert (Apple Semantic Alert Pill) ─── */
 export function ErrorAlert({ message }: { message: string }) {
     if (!message) return null;
     return (
-        <div className="flex items-center gap-2 text-red-500 text-sm bg-red-500/10 rounded-lg px-4 py-3 border border-red-500/20">
+        <div className="flex items-center gap-2.5 text-red-600 dark:text-red-400 text-sm bg-red-500/10 rounded-2xl px-4 py-3 border border-red-500/20 shadow-xs">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            {message}
+            <span>{message}</span>
         </div>
     );
 }
@@ -626,17 +636,17 @@ export function ItemListEditor<T extends Record<string, unknown>>({
                                 <ArrowDown className="w-3.5 h-3.5" />
                             </button>
                         </div>
-                        <div className="flex-1 bg-secondary/50 rounded-xl border border-border overflow-hidden">
+                        <div className="flex-1 bg-card rounded-2xl border border-border/80 shadow-xs hover:shadow-sm transition-all overflow-hidden">
                             {/* Collapsible Header */}
                             <button
                                 onClick={() => toggleItem(i)}
-                                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-secondary/80 transition-colors cursor-pointer"
+                                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-secondary/40 transition-colors cursor-pointer"
                             >
                                 <div className="flex items-center gap-2.5 min-w-0">
-                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shadow-xs">
                                         {i + 1}
                                     </span>
-                                    <span className="text-sm font-medium text-foreground truncate">
+                                    <span className="text-sm font-semibold text-foreground truncate">
                                         {label}
                                     </span>
                                 </div>
@@ -651,13 +661,13 @@ export function ItemListEditor<T extends Record<string, unknown>>({
                                 style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
                             >
                                 <div className="overflow-hidden">
-                                    <div className="px-4 pb-4 pt-1 space-y-3 border-t border-border/50">
+                                    <div className="px-4 pb-4 pt-2 space-y-3 border-t border-border/50">
                                         {renderItem(item, i, (updated) => updateItem(i, updated))}
                                         {onSave && isExpanded && (
                                             <div className="flex justify-end pt-2 border-t border-border/30 mt-4">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); onSave(); }}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-xs font-bold transition-all cursor-pointer"
+                                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                                                 >
                                                     <Save className="w-3.5 h-3.5" /> Save Item Changes
                                                 </button>
@@ -669,7 +679,8 @@ export function ItemListEditor<T extends Record<string, unknown>>({
                         </div>
                         <button
                             onClick={() => removeItem(i)}
-                            className="mt-3 text-red-500 hover:text-red-400 transition-colors cursor-pointer"
+                            className="mt-3.5 p-1.5 rounded-lg text-red-500/70 hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            title="Delete Item"
                         >
                             <Trash2 className="w-4 h-4" />
                         </button>
@@ -678,7 +689,7 @@ export function ItemListEditor<T extends Record<string, unknown>>({
             })}
             <button
                 onClick={addItem}
-                className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 text-xs font-semibold text-primary transition-all cursor-pointer"
             >
                 <Plus className="w-4 h-4" />
                 {addLabel}

@@ -46,12 +46,12 @@ const DEFAULT_NOTES = `1. Payment is due within the specified due date.
 3. Thank you for choosing ORBIT SaaS for your digital innovation!`;
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string; icon: any }> = {
-    draft: { bg: 'bg-slate-500/10', text: 'text-slate-400', border: 'border-slate-500/20', icon: Clock },
-    sent: { bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20', icon: Send },
-    paid: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', icon: CheckCircle2 },
-    partially_paid: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', icon: AlertTriangle },
-    overdue: { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20', icon: AlertTriangle },
-    cancelled: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20', icon: X },
+    draft: { bg: 'bg-slate-500/10', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-500/20', icon: Clock },
+    sent: { bg: 'bg-indigo-500/10', text: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-500/20', icon: Send },
+    paid: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20', icon: CheckCircle2 },
+    partially_paid: { bg: 'bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-500/20', icon: AlertTriangle },
+    overdue: { bg: 'bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400', border: 'border-rose-500/20', icon: AlertTriangle },
+    cancelled: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20', icon: X },
 };
 
 export default function AdminInvoices() {
@@ -545,7 +545,7 @@ export default function AdminInvoices() {
     }, [selectedInvoice, emailForm.message]);
 
     return (
-        <div className="min-h-screen bg-[#07070b] text-foreground p-4 md:p-8 pt-20">
+        <div className="min-h-full text-foreground space-y-8 p-1 md:p-2">
             <Helmet>
                 <title>Customer Invoices & Billing — Admin | ORBIT SaaS</title>
             </Helmet>
@@ -553,15 +553,15 @@ export default function AdminInvoices() {
             <div className="max-w-7xl mx-auto space-y-8">
                 
                 {/* ─── Header & Top Actions ─── */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                     <div>
                         <div className="flex items-center gap-3 mb-1">
                             <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 shadow-lg shadow-indigo-500/20 text-white">
                                 <Receipt className="w-6 h-6" />
                             </div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
                                 Customer Invoices
-                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
+                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-mono">
                                     Direct Billing
                                 </span>
                             </h1>
@@ -574,7 +574,7 @@ export default function AdminInvoices() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={fetchInvoices}
-                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-medium transition-all"
+                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-secondary hover:bg-secondary/80 border border-border text-sm font-medium transition-all"
                             title="Refresh Invoices"
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -593,25 +593,25 @@ export default function AdminInvoices() {
 
                 {/* ─── Dashboard Metrics ─── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 text-white/5 group-hover:text-indigo-500/20 transition-all">
+                    <div className="p-5 rounded-2xl bg-card border border-border backdrop-blur-md relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 text-muted-foreground/20 group-hover:text-indigo-500/20 transition-all">
                             <Receipt className="w-12 h-12" />
                         </div>
                         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total Invoiced</div>
-                        <div className="text-2xl font-bold text-white tracking-tight">
+                        <div className="text-2xl font-bold text-foreground tracking-tight">
                             {formatCurrency(stats.total_invoiced, 'BDT')}
                         </div>
-                        <div className="text-xs text-indigo-400 mt-2 font-medium">
+                        <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-2 font-medium">
                             {stats.total_invoices} total invoices logged
                         </div>
                     </div>
 
-                    <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 text-white/5 group-hover:text-emerald-500/20 transition-all">
+                    <div className="p-5 rounded-2xl bg-card border border-border backdrop-blur-md relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 text-muted-foreground/20 group-hover:text-emerald-500/20 transition-all">
                             <CheckCircle2 className="w-12 h-12" />
                         </div>
                         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Collected Revenue</div>
-                        <div className="text-2xl font-bold text-emerald-400 tracking-tight">
+                        <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
                             {formatCurrency(stats.total_collected, 'BDT')}
                         </div>
                         <div className="text-xs text-emerald-500/80 mt-2 font-medium">
@@ -619,35 +619,35 @@ export default function AdminInvoices() {
                         </div>
                     </div>
 
-                    <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 text-white/5 group-hover:text-rose-500/20 transition-all">
+                    <div className="p-5 rounded-2xl bg-card border border-border backdrop-blur-md relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 text-muted-foreground/20 group-hover:text-rose-500/20 transition-all">
                             <DollarSign className="w-12 h-12" />
                         </div>
                         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Outstanding Balance</div>
-                        <div className="text-2xl font-bold text-rose-400 tracking-tight">
+                        <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">
                             {formatCurrency(stats.total_due, 'BDT')}
                         </div>
-                        <div className="text-xs text-rose-400/80 mt-2 font-medium">
+                        <div className="text-xs text-rose-600 dark:text-rose-400/80 mt-2 font-medium">
                             Pending customer payments
                         </div>
                     </div>
 
-                    <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 text-white/5 group-hover:text-amber-500/20 transition-all">
+                    <div className="p-5 rounded-2xl bg-card border border-border backdrop-blur-md relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 text-muted-foreground/20 group-hover:text-amber-500/20 transition-all">
                             <Send className="w-12 h-12" />
                         </div>
                         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Sent / Dispatched</div>
                         <div className="text-2xl font-bold text-purple-300 tracking-tight">
                             {stats.sent_count} <span className="text-xs text-muted-foreground font-normal">Sent ({stats.draft_count} Drafts)</span>
                         </div>
-                        <div className="text-xs text-amber-400 mt-2 font-medium">
+                        <div className="text-xs text-amber-700 dark:text-amber-400 mt-2 font-medium">
                             {stats.overdue_count} Overdue attention needed
                         </div>
                     </div>
                 </div>
 
                 {/* ─── Search & Filters Bar ─── */}
-                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="p-4 rounded-2xl bg-card border border-border flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div className="relative w-full md:w-96">
                         <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
@@ -655,7 +655,7 @@ export default function AdminInvoices() {
                             placeholder="Search by invoice #, client, email, project..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-indigo-500 text-white placeholder:text-muted-foreground"
+                            className="w-full pl-10 pr-4 py-2 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:border-indigo-500 text-white placeholder:text-muted-foreground"
                         />
                     </div>
 
@@ -666,14 +666,14 @@ export default function AdminInvoices() {
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-medium text-white focus:outline-none focus:border-indigo-500"
+                                className="px-3 py-1.5 rounded-xl bg-secondary border border-border text-xs font-medium text-white focus:outline-none focus:border-indigo-500"
                             >
-                                <option value="all" className="bg-[#12121c]">All Statuses</option>
-                                <option value="draft" className="bg-[#12121c]">Draft</option>
-                                <option value="sent" className="bg-[#12121c]">Sent to Customer</option>
-                                <option value="paid" className="bg-[#12121c]">Paid</option>
-                                <option value="partially_paid" className="bg-[#12121c]">Partially Paid</option>
-                                <option value="overdue" className="bg-[#12121c]">Overdue</option>
+                                <option value="all" className="bg-card text-foreground">All Statuses</option>
+                                <option value="draft" className="bg-card text-foreground">Draft</option>
+                                <option value="sent" className="bg-card text-foreground">Sent to Customer</option>
+                                <option value="paid" className="bg-card text-foreground">Paid</option>
+                                <option value="partially_paid" className="bg-card text-foreground">Partially Paid</option>
+                                <option value="overdue" className="bg-card text-foreground">Overdue</option>
                             </select>
                         </div>
 
@@ -683,11 +683,11 @@ export default function AdminInvoices() {
                             <select
                                 value={serviceFilter}
                                 onChange={(e) => setServiceFilter(e.target.value)}
-                                className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-medium text-white focus:outline-none focus:border-indigo-500"
+                                className="px-3 py-1.5 rounded-xl bg-secondary border border-border text-xs font-medium text-white focus:outline-none focus:border-indigo-500"
                             >
-                                <option value="all" className="bg-[#12121c]">All Services</option>
+                                <option value="all" className="bg-card text-foreground">All Services</option>
                                 {SERVICE_TYPE_OPTIONS.map(opt => (
-                                    <option key={opt} value={opt} className="bg-[#12121c]">{opt}</option>
+                                    <option key={opt} value={opt} className="bg-card text-foreground">{opt}</option>
                                 ))}
                             </select>
                         </div>
@@ -695,11 +695,11 @@ export default function AdminInvoices() {
                 </div>
 
                 {/* ─── Invoices Index Table ─── */}
-                <div className="rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden shadow-2xl">
+                <div className="rounded-2xl bg-card border border-border overflow-hidden shadow-2xl">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm border-collapse">
                             <thead>
-                                <tr className="border-b border-white/10 bg-white/[0.02] text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                                <tr className="border-b border-border bg-card text-xs uppercase tracking-wider text-muted-foreground font-semibold">
                                     <th className="py-4 px-5">Invoice #</th>
                                     <th className="py-4 px-5">Customer / Identity</th>
                                     <th className="py-4 px-5">Service Type</th>
@@ -709,7 +709,7 @@ export default function AdminInvoices() {
                                     <th className="py-4 px-5 text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/5">
+                            <tbody className="divide-y divide-border">
                                 {loading ? (
                                     <tr>
                                         <td colSpan={7} className="text-center py-16 text-muted-foreground">
@@ -723,8 +723,8 @@ export default function AdminInvoices() {
                                     <tr>
                                         <td colSpan={7} className="text-center py-16 text-muted-foreground">
                                             <div className="flex flex-col items-center gap-3">
-                                                <Receipt className="w-10 h-10 text-white/10" />
-                                                <p className="text-base font-semibold text-white">No invoices found</p>
+                                                <Receipt className="w-10 h-10 text-muted-foreground/30" />
+                                                <p className="text-base font-semibold text-foreground">No invoices found</p>
                                                 <p className="text-xs max-w-sm">
                                                     {search || statusFilter !== 'all' || serviceFilter !== 'all'
                                                         ? 'Try clearing the filters to see historical invoices.'
@@ -745,11 +745,11 @@ export default function AdminInvoices() {
                                         const StatusIcon = statusStyle.icon;
 
                                         return (
-                                            <tr key={inv.id || inv.invoice_number} className="hover:bg-white/[0.02] transition-colors group">
+                                            <tr key={inv.id || inv.invoice_number} className="hover:bg-card transition-colors group">
                                                 
                                                 {/* Invoice # */}
                                                 <td className="py-4 px-5">
-                                                    <div className="font-mono font-bold text-white text-sm">
+                                                    <div className="font-mono font-bold text-foreground text-sm">
                                                         {inv.invoice_number}
                                                     </div>
                                                     {inv.project_name && (
@@ -761,7 +761,7 @@ export default function AdminInvoices() {
 
                                                 {/* Customer */}
                                                 <td className="py-4 px-5">
-                                                    <div className="font-semibold text-white flex items-center gap-1.5">
+                                                    <div className="font-semibold text-foreground flex items-center gap-1.5">
                                                         {inv.client_name}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground flex items-center gap-1">
@@ -783,21 +783,21 @@ export default function AdminInvoices() {
 
                                                 {/* Dates */}
                                                 <td className="py-4 px-5 text-xs text-muted-foreground space-y-0.5">
-                                                    <div><span className="text-white/40">Issued:</span> {inv.issue_date}</div>
-                                                    <div className="font-medium text-rose-400/90"><span className="text-white/40">Due:</span> {inv.due_date}</div>
+                                                    <div><span className="text-muted-foreground">Issued:</span> {inv.issue_date}</div>
+                                                    <div className="font-medium text-rose-600 dark:text-rose-400/90"><span className="text-muted-foreground">Due:</span> {inv.due_date}</div>
                                                 </td>
 
                                                 {/* Amount / Due */}
                                                 <td className="py-4 px-5 text-right">
-                                                    <div className="font-bold text-white text-sm">
+                                                    <div className="font-bold text-foreground text-sm">
                                                         {formatCurrency(inv.total_amount, inv.currency)}
                                                     </div>
                                                     {Number(inv.due_amount) > 0 ? (
-                                                        <div className="text-xs font-semibold text-rose-400">
+                                                        <div className="text-xs font-semibold text-rose-600 dark:text-rose-400">
                                                             Due: {formatCurrency(inv.due_amount, inv.currency)}
                                                         </div>
                                                     ) : (
-                                                        <div className="text-xs font-medium text-emerald-400">
+                                                        <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                                                             Paid in full
                                                         </div>
                                                     )}
@@ -818,7 +818,7 @@ export default function AdminInvoices() {
                                                         {/* Send Email Button */}
                                                         <button
                                                             onClick={() => handleOpenEmailModal(inv)}
-                                                            className="p-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 transition-all"
+                                                            className="p-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 transition-all"
                                                             title="Compose & Send Email to Customer"
                                                         >
                                                             <Mail className="w-4 h-4" />
@@ -827,7 +827,7 @@ export default function AdminInvoices() {
                                                         {/* Download PDF Button */}
                                                         <button
                                                             onClick={() => handleDownloadPdf(inv)}
-                                                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 transition-all"
+                                                            className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-white/80 hover:text-white border border-border transition-all"
                                                             title="Download PDF"
                                                         >
                                                             <Download className="w-4 h-4" />
@@ -836,7 +836,7 @@ export default function AdminInvoices() {
                                                         {/* Edit Button */}
                                                         <button
                                                             onClick={() => handleOpenEdit(inv)}
-                                                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 transition-all"
+                                                            className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-white/80 hover:text-white border border-border transition-all"
                                                             title="Edit Invoice"
                                                         >
                                                             <Edit className="w-4 h-4" />
@@ -845,7 +845,7 @@ export default function AdminInvoices() {
                                                         {/* Duplicate */}
                                                         <button
                                                             onClick={() => handleDuplicate(inv)}
-                                                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 transition-all hidden sm:inline-flex"
+                                                            className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-white/60 hover:text-white border border-border transition-all hidden sm:inline-flex"
                                                             title="Duplicate Invoice"
                                                         >
                                                             <Copy className="w-4 h-4" />
@@ -855,7 +855,7 @@ export default function AdminInvoices() {
                                                         {inv.status !== 'paid' && (
                                                             <button
                                                                 onClick={() => handleQuickStatus(inv, 'paid')}
-                                                                className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 transition-all"
+                                                                className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 transition-all"
                                                                 title="Mark as Paid in full"
                                                             >
                                                                 <Check className="w-4 h-4" />
@@ -865,7 +865,7 @@ export default function AdminInvoices() {
                                                         {/* Delete */}
                                                         <button
                                                             onClick={() => { setInvoiceToDelete(inv); setDeleteModalOpen(true); }}
-                                                            className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/20 transition-all"
+                                                            className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 hover:text-rose-300 border border-rose-500/20 transition-all"
                                                             title="Delete Invoice"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -895,16 +895,16 @@ export default function AdminInvoices() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-[#0f0f18] border border-white/10 rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl p-6 md:p-8 space-y-6"
+                            className="bg-card border border-border rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl p-6 md:p-8 space-y-6"
                         >
                             {/* Modal Header */}
-                            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                            <div className="flex items-center justify-between border-b border-border pb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2.5 rounded-xl bg-indigo-600 text-white">
                                         <Receipt className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-bold text-white">
+                                        <h2 className="text-xl font-bold text-foreground">
                                             {formData.id ? `Edit Invoice (${formData.invoice_number})` : 'Create Customer Invoice'}
                                         </h2>
                                         <p className="text-xs text-muted-foreground">
@@ -916,14 +916,14 @@ export default function AdminInvoices() {
                                     <button
                                         type="button"
                                         onClick={handleBuilderPreview}
-                                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 hover:border-indigo-500/40 text-sm font-medium transition-all"
+                                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 hover:border-indigo-500/40 text-sm font-medium transition-all"
                                     >
                                         <Eye className="w-4 h-4" />
                                         Preview
                                     </button>
                                     <button
                                         onClick={() => setBuilderOpen(false)}
-                                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                                        className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -932,7 +932,7 @@ export default function AdminInvoices() {
 
                             {/* Section 1: Customer Identity */}
                             <div className="space-y-4">
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
                                     <User className="w-4 h-4" /> 1. Customer Identity & Project
                                 </h3>
 
@@ -946,7 +946,7 @@ export default function AdminInvoices() {
                                             placeholder="e.g. Acme Corp / John Doe"
                                             value={formData.client_name}
                                             onChange={(e) => setFormData(f => ({ ...f, client_name: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                         />
                                     </div>
 
@@ -959,7 +959,7 @@ export default function AdminInvoices() {
                                             placeholder="client@company.com"
                                             value={formData.client_email}
                                             onChange={(e) => setFormData(f => ({ ...f, client_email: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                         />
                                     </div>
 
@@ -972,7 +972,7 @@ export default function AdminInvoices() {
                                             placeholder="+880 1700-000000"
                                             value={formData.client_phone || ''}
                                             onChange={(e) => setFormData(f => ({ ...f, client_phone: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                         />
                                     </div>
                                 </div>
@@ -985,10 +985,10 @@ export default function AdminInvoices() {
                                         <select
                                             value={formData.service_type}
                                             onChange={(e) => setFormData(f => ({ ...f, service_type: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#12121c] border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className="w-full px-3.5 py-2.5 rounded-xl bg-card text-foreground border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                         >
                                             {SERVICE_TYPE_OPTIONS.map(opt => (
-                                                <option key={opt} value={opt} className="bg-[#12121c]">{opt}</option>
+                                                <option key={opt} value={opt} className="bg-card text-foreground">{opt}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -1003,7 +1003,7 @@ export default function AdminInvoices() {
                                                 placeholder="e.g. AI Workflow Integration"
                                                 value={customServiceInput}
                                                 onChange={(e) => setCustomServiceInput(e.target.value)}
-                                                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                                className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                             />
                                         </div>
                                     ) : (
@@ -1016,7 +1016,7 @@ export default function AdminInvoices() {
                                                 placeholder="e.g. Orbit Platform v2"
                                                 value={formData.project_name || ''}
                                                 onChange={(e) => setFormData(f => ({ ...f, project_name: e.target.value }))}
-                                                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                                className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                             />
                                         </div>
                                     )}
@@ -1030,15 +1030,15 @@ export default function AdminInvoices() {
                                             placeholder="Dhaka, Bangladesh / Global"
                                             value={formData.client_address || ''}
                                             onChange={(e) => setFormData(f => ({ ...f, client_address: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                         />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Section 2: Invoice Metadata */}
-                            <div className="space-y-4 pt-2 border-t border-white/10">
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                            <div className="space-y-4 pt-2 border-t border-border">
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
                                     <Calendar className="w-4 h-4" /> 2. Invoice Dates & Currency
                                 </h3>
 
@@ -1051,7 +1051,7 @@ export default function AdminInvoices() {
                                             type="text"
                                             value={formData.invoice_number}
                                             onChange={(e) => setFormData(f => ({ ...f, invoice_number: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-mono focus:border-indigo-500 focus:outline-none text-white"
+                                            className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm font-mono focus:border-indigo-500 focus:outline-none text-white"
                                         />
                                     </div>
 
@@ -1063,7 +1063,7 @@ export default function AdminInvoices() {
                                             type="date"
                                             value={formData.issue_date}
                                             onChange={(e) => setFormData(f => ({ ...f, issue_date: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#12121c] border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className="w-full px-3.5 py-2.5 rounded-xl bg-card text-foreground border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                         />
                                     </div>
 
@@ -1075,7 +1075,7 @@ export default function AdminInvoices() {
                                             type="date"
                                             value={formData.due_date}
                                             onChange={(e) => setFormData(f => ({ ...f, due_date: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#12121c] border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className="w-full px-3.5 py-2.5 rounded-xl bg-card text-foreground border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                         />
                                     </div>
 
@@ -1086,10 +1086,10 @@ export default function AdminInvoices() {
                                         <select
                                             value={formData.currency}
                                             onChange={(e) => setFormData(f => ({ ...f, currency: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#12121c] border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className="w-full px-3.5 py-2.5 rounded-xl bg-card text-foreground border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                         >
                                             {CURRENCIES.map(c => (
-                                                <option key={c.code} value={c.code} className="bg-[#12121c]">{c.label}</option>
+                                                <option key={c.code} value={c.code} className="bg-card text-foreground">{c.label}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -1097,9 +1097,9 @@ export default function AdminInvoices() {
                             </div>
 
                             {/* Section 3: Line Items */}
-                            <div className="space-y-3 pt-2 border-t border-white/10">
+                            <div className="space-y-3 pt-2 border-t border-border">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
                                         <Layers className="w-4 h-4" /> 3. Billable Items & Services
                                     </h3>
                                     <button
@@ -1113,14 +1113,14 @@ export default function AdminInvoices() {
 
                                 <div className="space-y-2">
                                     {(Array.isArray(formData.items) ? formData.items : []).map((item, idx) => (
-                                        <div key={idx} className="flex flex-col sm:flex-row items-center gap-2 bg-white/[0.02] p-2.5 rounded-xl border border-white/5">
+                                        <div key={idx} className="flex flex-col sm:flex-row items-center gap-2 bg-card p-2.5 rounded-xl border border-border/50">
                                             <div className="w-full sm:flex-1">
                                                 <input
                                                     type="text"
                                                     placeholder="Item / Deliverable description"
                                                     value={item.description}
                                                     onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                                                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white placeholder:text-muted-foreground/60"
+                                                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white placeholder:text-muted-foreground/60"
                                                 />
                                             </div>
                                             <div className="w-full sm:w-20">
@@ -1130,7 +1130,7 @@ export default function AdminInvoices() {
                                                     placeholder="Qty"
                                                     value={item.quantity}
                                                     onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                                                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-center focus:border-indigo-500 focus:outline-none text-white"
+                                                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm text-center focus:border-indigo-500 focus:outline-none text-white"
                                                 />
                                             </div>
                                             <div className="w-full sm:w-32">
@@ -1140,7 +1140,7 @@ export default function AdminInvoices() {
                                                     placeholder="Rate"
                                                     value={item.unit_price}
                                                     onChange={(e) => updateItem(idx, 'unit_price', e.target.value)}
-                                                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-right focus:border-indigo-500 focus:outline-none text-white"
+                                                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm text-right focus:border-indigo-500 focus:outline-none text-white"
                                                 />
                                             </div>
                                             <div className="w-full sm:w-32 text-right font-mono font-bold text-sm text-white px-2">
@@ -1149,7 +1149,7 @@ export default function AdminInvoices() {
                                             <button
                                                 type="button"
                                                 onClick={() => removeItem(idx)}
-                                                className="p-2 rounded-lg hover:bg-rose-500/20 text-muted-foreground hover:text-rose-400 transition-colors"
+                                                className="p-2 rounded-lg hover:bg-rose-500/20 text-muted-foreground hover:text-rose-600 dark:text-rose-400 transition-colors"
                                                 title="Remove item"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -1160,7 +1160,7 @@ export default function AdminInvoices() {
                             </div>
 
                             {/* Section 4: Calculations & Financials */}
-                            <div className="pt-4 border-t border-white/10 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="pt-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-6">
                                 
                                 {/* Payment instructions & Notes */}
                                 <div className="space-y-3">
@@ -1173,32 +1173,32 @@ export default function AdminInvoices() {
                                                 {[
                                                     {
                                                         label: 'Default',
-                                                        color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20',
+                                                        color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20',
                                                         text: `Bank Transfer:\nBank: City Bank PLC / Dutch-Bangla Bank\nAccount Name: ORBIT SaaS Solutions\nAccount Number: 1502-XXXXXXXXX-001\nRouting Number: 22527XXXX\n\nMobile Banking (bKash / Nagad Merchant):\n01700-000000 (Make Payment)\n\nInternational: Wire / Stripe payment link available upon request.`,
                                                     },
                                                     {
                                                         label: 'Paid ✓',
-                                                        color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20',
+                                                        color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20',
                                                         text: `PAYMENT RECEIVED - Thank you!\n\nThis invoice has been fully paid. No further action is required.\nIf you need a receipt or have questions, contact us at contact@orbitsaas.cloud.`,
                                                     },
                                                     {
                                                         label: 'Partial',
-                                                        color: 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
+                                                        color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
                                                         text: `PARTIAL PAYMENT RECEIVED - Balance Remaining\n\nThank you for your partial payment! Please remit the remaining balance before the due date.\n\nBank Transfer:\nBank: City Bank PLC / Dutch-Bangla Bank\nAccount Name: ORBIT SaaS Solutions\nAccount Number: 1502-XXXXXXXXX-001\nRouting Number: 22527XXXX\n\nMobile Banking (bKash / Nagad Merchant):\n01700-000000 (Make Payment)\n\nInternational: Wire / Stripe payment link available upon request.`,
                                                     },
                                                     {
                                                         label: 'Due ⚠',
-                                                        color: 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
+                                                        color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
                                                         text: `PAYMENT DUE - Please remit before the due date.\n\nBank Transfer:\nBank: City Bank PLC / Dutch-Bangla Bank\nAccount Name: ORBIT SaaS Solutions\nAccount Number: 1502-XXXXXXXXX-001\n\nMobile Banking (bKash / Nagad Merchant):\n01700-000000 (Make Payment)\n\nInternational: Wire / Stripe payment link available upon request.`,
                                                     },
                                                     {
                                                         label: 'Overdue',
-                                                        color: 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20',
+                                                        color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20',
                                                         text: `OVERDUE - Immediate payment required.\n\nThis invoice is past its due date. Please process payment immediately to avoid service interruption.\n\nBank Transfer:\nBank: City Bank PLC / Dutch-Bangla Bank\nAccount Name: ORBIT SaaS Solutions\nAccount Number: 1502-XXXXXXXXX-001\n\nMobile Banking (bKash / Nagad): 01700-000000\n\nContact us urgently at contact@orbitsaas.cloud if you have any concerns.`,
                                                     },
                                                     {
                                                         label: 'Discontinued',
-                                                        color: 'bg-slate-500/10 text-slate-400 border-slate-500/20 hover:bg-slate-500/20',
+                                                        color: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20 hover:bg-slate-500/20',
                                                         text: `SERVICE DISCONTINUED\n\nThis project/service has been discontinued. Any outstanding balance shown above remains payable.\nPlease settle the remaining amount via the methods below:\n\nMobile Banking (bKash / Nagad): 01700-000000\nBank Transfer available on request.\n\nFor questions, reach us at contact@orbitsaas.cloud.`,
                                                     },
                                                 ].map((preset) => (
@@ -1217,7 +1217,7 @@ export default function AdminInvoices() {
                                             rows={4}
                                             value={formData.payment_instructions || ''}
                                             onChange={(e) => setFormData(f => ({ ...f, payment_instructions: e.target.value }))}
-                                            className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-xs focus:border-indigo-500 focus:outline-none text-white resize-none"
+                                            className="w-full p-3 rounded-xl bg-secondary border border-border text-xs focus:border-indigo-500 focus:outline-none text-white resize-none"
                                         />
                                     </div>
 
@@ -1230,27 +1230,27 @@ export default function AdminInvoices() {
                                                 {[
                                                     {
                                                         label: 'Default',
-                                                        color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20',
+                                                        color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20',
                                                         text: `1. Payment is due within the specified due date.\n2. In case of inquiries regarding this invoice, please reach us at contact@orbitsaas.cloud.\n3. Thank you for choosing ORBIT SaaS for your digital innovation!`,
                                                     },
                                                     {
                                                         label: 'Paid ✓',
-                                                        color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20',
+                                                        color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20',
                                                         text: `1. Payment has been received in full - thank you!\n2. This invoice is now closed. No further action needed.\n3. We appreciate your trust in ORBIT SaaS. Looking forward to continuing our partnership!`,
                                                     },
                                                     {
                                                         label: 'Partial',
-                                                        color: 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
+                                                        color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
                                                         text: `1. A partial payment has been received. The remaining balance is shown above.\n2. Please clear the outstanding amount before the due date to avoid service delays.\n3. Contact contact@orbitsaas.cloud for payment plans or questions.`,
                                                     },
                                                     {
                                                         label: 'Overdue',
-                                                        color: 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20',
+                                                        color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20',
                                                         text: `1. This invoice is past its due date. Please process payment immediately.\n2. Continued non-payment may result in service suspension or additional late fees.\n3. If you have already paid, please disregard this notice and contact us with your payment reference.`,
                                                     },
                                                     {
                                                         label: 'Discontinued',
-                                                        color: 'bg-slate-500/10 text-slate-400 border-slate-500/20 hover:bg-slate-500/20',
+                                                        color: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20 hover:bg-slate-500/20',
                                                         text: `1. This service/project has been discontinued as per mutual agreement.\n2. Any outstanding balance remains payable and must be settled within 15 business days.\n3. For queries regarding final settlement, contact contact@orbitsaas.cloud.`,
                                                     },
                                                 ].map((preset) => (
@@ -1269,13 +1269,13 @@ export default function AdminInvoices() {
                                             rows={2}
                                             value={formData.notes || ''}
                                             onChange={(e) => setFormData(f => ({ ...f, notes: e.target.value }))}
-                                            className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-xs focus:border-indigo-500 focus:outline-none text-white resize-none"
+                                            className="w-full p-3 rounded-xl bg-secondary border border-border text-xs focus:border-indigo-500 focus:outline-none text-white resize-none"
                                         />
                                     </div>
                                 </div>
 
                                 {/* Live Calculations Box */}
-                                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+                                <div className="p-4 rounded-2xl bg-card border border-border space-y-3">
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-muted-foreground">Subtotal:</span>
                                         <span className="font-semibold text-white">{formatCurrency(formData.subtotal, formData.currency)}</span>
@@ -1288,7 +1288,7 @@ export default function AdminInvoices() {
                                             min="0"
                                             value={formData.discount || 0}
                                             onChange={(e) => recalculateTotals(formData.items as InvoiceItem[], Number(e.target.value), formData.tax, formData.paid_amount)}
-                                            className="w-28 px-2 py-1 text-right rounded-lg bg-white/5 border border-white/10 text-sm text-emerald-400 focus:outline-none focus:border-emerald-500"
+                                            className="w-28 px-2 py-1 text-right rounded-lg bg-secondary border border-border text-sm text-emerald-600 dark:text-emerald-400 focus:outline-none focus:border-emerald-500"
                                         />
                                     </div>
 
@@ -1299,11 +1299,11 @@ export default function AdminInvoices() {
                                             min="0"
                                             value={formData.tax || 0}
                                             onChange={(e) => recalculateTotals(formData.items as InvoiceItem[], formData.discount, Number(e.target.value), formData.paid_amount)}
-                                            className="w-28 px-2 py-1 text-right rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-indigo-500"
+                                            className="w-28 px-2 py-1 text-right rounded-lg bg-secondary border border-border text-sm text-white focus:outline-none focus:border-indigo-500"
                                         />
                                     </div>
 
-                                    <div className="border-t border-white/10 pt-2 flex justify-between items-center">
+                                    <div className="border-t border-border pt-2 flex justify-between items-center">
                                         <span className="font-bold text-white text-base">Grand Total:</span>
                                         <span className="font-bold text-white text-lg font-mono">
                                             {formatCurrency(formData.total_amount, formData.currency)}
@@ -1317,13 +1317,13 @@ export default function AdminInvoices() {
                                             min="0"
                                             value={formData.paid_amount || 0}
                                             onChange={(e) => recalculateTotals(formData.items as InvoiceItem[], formData.discount, formData.tax, Number(e.target.value))}
-                                            className="w-28 px-2 py-1 text-right rounded-lg bg-white/5 border border-white/10 text-sm text-emerald-400 font-semibold focus:outline-none focus:border-emerald-500"
+                                            className="w-28 px-2 py-1 text-right rounded-lg bg-secondary border border-border text-sm text-emerald-600 dark:text-emerald-400 font-semibold focus:outline-none focus:border-emerald-500"
                                         />
                                     </div>
 
                                     <div className="border-t border-rose-500/30 pt-2.5 flex justify-between items-center bg-rose-500/10 p-3 rounded-xl border">
                                         <span className="font-bold text-rose-300 text-sm">Balance Due:</span>
-                                        <span className="font-extrabold text-rose-400 text-lg font-mono">
+                                        <span className="font-extrabold text-rose-600 dark:text-rose-400 text-lg font-mono">
                                             {formatCurrency(formData.due_amount, formData.currency)}
                                         </span>
                                     </div>
@@ -1332,13 +1332,13 @@ export default function AdminInvoices() {
                             </div>
 
                             {/* Modal Footer Buttons */}
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-white/10">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border">
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                     <span>Status:</span>
                                     <select
                                         value={formData.status}
                                         onChange={(e) => setFormData(f => ({ ...f, status: e.target.value as any }))}
-                                        className="px-2.5 py-1 rounded-lg bg-[#12121c] border border-white/10 text-xs font-semibold text-white focus:outline-none"
+                                        className="px-2.5 py-1 rounded-lg bg-card text-foreground border border-border text-xs font-semibold text-white focus:outline-none"
                                     >
                                         <option value="draft">Draft</option>
                                         <option value="sent">Sent</option>
@@ -1352,7 +1352,7 @@ export default function AdminInvoices() {
                                     <button
                                         type="button"
                                         onClick={() => setBuilderOpen(false)}
-                                        className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium text-muted-foreground hover:text-white transition-colors"
+                                        className="px-4 py-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-sm font-medium text-muted-foreground hover:text-white transition-colors"
                                     >
                                         Cancel
                                     </button>
@@ -1361,7 +1361,7 @@ export default function AdminInvoices() {
                                         type="button"
                                         disabled={saving}
                                         onClick={() => handleSaveInvoice(false)}
-                                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-sm font-semibold text-white border border-white/10 transition-all disabled:opacity-50"
+                                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-sm font-semibold text-white border border-border transition-all disabled:opacity-50"
                                     >
                                         {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
                                         {saving ? 'Saving...' : 'Save Invoice'}
@@ -1403,18 +1403,18 @@ export default function AdminInvoices() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-[#0f0f18] border border-white/10 rounded-3xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden"
+                            className="bg-card border border-border rounded-3xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden"
                         >
                             {/* Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.01]">
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-secondary/20">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white">
                                         <Mail className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                                             Send Invoice {selectedInvoice.invoice_number}
-                                            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                                                 To: {selectedInvoice.client_name}
                                             </span>
                                         </h2>
@@ -1425,7 +1425,7 @@ export default function AdminInvoices() {
                                 </div>
                                 <button
                                     onClick={() => setEmailModalOpen(false)}
-                                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                                    className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white transition-colors"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
@@ -1435,7 +1435,7 @@ export default function AdminInvoices() {
                             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
                                 
                                 {/* LEFT: Email Composer Form (5 cols) */}
-                                <div className="lg:col-span-5 p-6 border-r border-white/10 overflow-y-auto space-y-4 bg-white/[0.01]">
+                                <div className="lg:col-span-5 p-6 border-r border-border overflow-y-auto space-y-4 bg-secondary/20">
                                     <div>
                                         <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
                                             Recipient Email
@@ -1444,7 +1444,7 @@ export default function AdminInvoices() {
                                             type="email"
                                             value={emailForm.recipient}
                                             onChange={(e) => setEmailForm(f => ({ ...f, recipient: e.target.value }))}
-                                            className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white font-mono"
+                                            className="w-full px-3.5 py-2 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white font-mono"
                                         />
                                     </div>
 
@@ -1456,7 +1456,7 @@ export default function AdminInvoices() {
                                             type="text"
                                             value={emailForm.subject}
                                             onChange={(e) => setEmailForm(f => ({ ...f, subject: e.target.value }))}
-                                            className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className="w-full px-3.5 py-2 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
                                         />
                                     </div>
 
@@ -1465,21 +1465,21 @@ export default function AdminInvoices() {
                                             <label className="text-xs font-semibold text-muted-foreground">
                                                 Personal Message / Composal Body
                                             </label>
-                                            <span className="text-[11px] text-indigo-400">Renders directly in email body</span>
+                                            <span className="text-[11px] text-indigo-600 dark:text-indigo-400">Renders directly in email body</span>
                                         </div>
                                         <textarea
                                             rows={8}
                                             value={emailForm.message}
                                             onChange={(e) => setEmailForm(f => ({ ...f, message: e.target.value }))}
                                             placeholder="Write a custom note or payment instructions to the customer..."
-                                            className="w-full p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs font-sans leading-relaxed focus:border-indigo-500 focus:outline-none text-white resize-none"
+                                            className="w-full p-3.5 rounded-xl bg-secondary border border-border text-xs font-sans leading-relaxed focus:border-indigo-500 focus:outline-none text-white resize-none"
                                         />
                                     </div>
 
                                     {/* Attachment Toggle */}
                                     <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between">
                                         <div className="flex items-center gap-2.5">
-                                            <FileText className="w-5 h-5 text-indigo-400" />
+                                            <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                                             <div>
                                                 <div className="text-xs font-bold text-white">Attach High-Res PDF</div>
                                                 <div className="text-[11px] text-indigo-300/80">{selectedInvoice.invoice_number}.pdf</div>
@@ -1517,10 +1517,10 @@ export default function AdminInvoices() {
                                 </div>
 
                                 {/* RIGHT: Live Interactive Preview (7 cols) */}
-                                <div className="lg:col-span-7 flex flex-col h-full bg-[#09090f]">
+                                <div className="lg:col-span-7 flex flex-col h-full bg-secondary/30">
                                     
                                     {/* Preview Tab Selector */}
-                                    <div className="flex items-center justify-between px-6 py-2.5 border-b border-white/10 bg-white/[0.02]">
+                                    <div className="flex items-center justify-between px-6 py-2.5 border-b border-border bg-card">
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => setActiveEmailTab('html')}
@@ -1553,14 +1553,14 @@ export default function AdminInvoices() {
                                                     href={pdfPreviewUrl}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-muted-foreground hover:text-white transition-all"
+                                                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-medium text-muted-foreground hover:text-white transition-all"
                                                 >
                                                     <ExternalLink className="w-3.5 h-3.5" /> Open Tab
                                                 </a>
                                             )}
                                             <button
                                                 onClick={() => handleDownloadPdf(selectedInvoice)}
-                                                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-muted-foreground hover:text-white transition-all"
+                                                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-medium text-muted-foreground hover:text-white transition-all"
                                             >
                                                 <Download className="w-3.5 h-3.5" /> Download PDF
                                             </button>
@@ -1570,7 +1570,7 @@ export default function AdminInvoices() {
                                     {/* Preview Container */}
                                     <div className="flex-1 p-4 overflow-y-auto flex items-center justify-center">
                                         {activeEmailTab === 'html' ? (
-                                            <div className="w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-[#0b0b12] shadow-inner">
+                                            <div className="w-full h-full rounded-2xl overflow-hidden border border-border bg-secondary/20 shadow-inner">
                                                 <iframe
                                                     title="Email Preview"
                                                     srcDoc={emailPreviewHtml}
@@ -1578,7 +1578,7 @@ export default function AdminInvoices() {
                                                 />
                                             </div>
                                         ) : (
-                                            <div className="w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-[#1e1e2d] shadow-inner">
+                                            <div className="w-full h-full rounded-2xl overflow-hidden border border-border bg-secondary/20 shadow-inner">
                                                 {pdfPreviewUrl ? (
                                                     <iframe
                                                         title="PDF Preview"
@@ -1612,18 +1612,18 @@ export default function AdminInvoices() {
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="bg-[#0f0f18] border border-white/10 rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden"
+                            className="bg-card border border-border rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden"
                         >
                             {/* Preview Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.02]">
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white">
                                         <Eye className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                                             Invoice Preview
-                                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                                                 Unsaved Draft
                                             </span>
                                         </h2>
@@ -1638,7 +1638,7 @@ export default function AdminInvoices() {
                                             href={builderPreviewUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium text-muted-foreground hover:text-white border border-white/10 transition-all"
+                                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-sm font-medium text-muted-foreground hover:text-white border border-border transition-all"
                                         >
                                             <ExternalLink className="w-3.5 h-3.5" /> Open Tab
                                         </a>
@@ -1651,13 +1651,13 @@ export default function AdminInvoices() {
                                                 : formData.service_type;
                                             handleDownloadPdf({ ...formData, service_type: effectiveServiceType });
                                         }}
-                                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium text-muted-foreground hover:text-white border border-white/10 transition-all"
+                                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-sm font-medium text-muted-foreground hover:text-white border border-border transition-all"
                                     >
                                         <Download className="w-3.5 h-3.5" /> Download PDF
                                     </button>
                                     <button
                                         onClick={() => setBuilderPreviewOpen(false)}
-                                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                                        className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -1666,7 +1666,7 @@ export default function AdminInvoices() {
 
                             {/* PDF Embed */}
                             <div className="flex-1 p-4 overflow-hidden">
-                                <div className="w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-[#1e1e2d] shadow-inner">
+                                <div className="w-full h-full rounded-2xl overflow-hidden border border-border bg-secondary/20 shadow-inner">
                                     {builderPreviewUrl ? (
                                         <iframe
                                             title="Invoice PDF Preview"
@@ -1696,13 +1696,13 @@ export default function AdminInvoices() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-[#0f0f18] border border-rose-500/20 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4"
+                            className="bg-card border border-rose-500/20 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4"
                         >
-                            <div className="flex items-center gap-3 text-rose-400">
+                            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
                                 <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
                                     <ShieldAlert className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-lg font-bold text-white">Delete Invoice?</h3>
+                                <h3 className="text-lg font-bold text-foreground">Delete Invoice?</h3>
                             </div>
 
                             <p className="text-sm text-muted-foreground">
@@ -1712,7 +1712,7 @@ export default function AdminInvoices() {
                             <div className="flex items-center justify-end gap-3 pt-2">
                                 <button
                                     onClick={() => setDeleteModalOpen(false)}
-                                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium text-muted-foreground hover:text-white"
+                                    className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-sm font-medium text-muted-foreground hover:text-white"
                                 >
                                     Cancel
                                 </button>
