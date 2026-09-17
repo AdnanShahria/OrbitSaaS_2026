@@ -4,6 +4,7 @@ import {
     SectionHeader,
     SaveButton,
     ErrorAlert,
+    JsonPanel,
 } from '@/components/admin/EditorComponents';
 import { useContent } from '@/contexts/ContentContext';
 import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -254,6 +255,22 @@ export default function AdminLegal() {
             </div>
 
             <SaveButton onClick={handleSave} saving={saving} saved={saved} />
+
+            <div className="mt-8 pt-8 border-t border-border">
+                <JsonPanel
+                    title={`Legal Policy JSON (${activeTab === 'privacy' ? 'Privacy Policy' : 'Terms of Service'})`}
+                    description={`Export or import ${activeTab === 'privacy' ? 'Privacy Policy' : 'Terms of Service'} structure.`}
+                    data={currentData}
+                    onImport={(parsed) => {
+                        if (!parsed || typeof parsed !== 'object') return;
+                        setCurrentData({
+                            title: parsed.title || currentData.title,
+                            lastUpdated: parsed.lastUpdated || currentData.lastUpdated,
+                            sections: Array.isArray(parsed.sections) ? parsed.sections : currentData.sections,
+                        });
+                    }}
+                />
+            </div>
         </div>
     );
 }

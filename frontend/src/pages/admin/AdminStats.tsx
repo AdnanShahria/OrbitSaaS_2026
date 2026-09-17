@@ -17,16 +17,23 @@ export default function AdminStats() {
 
     useEffect(() => {
         const d = getData();
-        if (d && d.items && d.items.length === 4) {
-            setLiveProjects(String(d.items[0].value || '24'));
-            setCountries(String(d.items[1].value || '5'));
-            setUsersServed(String(d.items[2].value || '120'));
-            setYearsExperience(String(d.items[3].value || '3'));
-
-            setLabelProjects(d.items[0].label || 'Live Projects');
-            setLabelCountries(d.items[1].label || 'Countries');
-            setLabelUsers(d.items[2].label || 'Users Served');
-            setLabelYears(d.items[3].label || 'Years Experience');
+        if (d && d.items && Array.isArray(d.items)) {
+            if (d.items[0]) {
+                setLiveProjects(String(d.items[0].value ?? '24'));
+                setLabelProjects(d.items[0].label || 'Live Projects');
+            }
+            if (d.items[1]) {
+                setCountries(String(d.items[1].value ?? '5'));
+                setLabelCountries(d.items[1].label || 'Countries');
+            }
+            if (d.items[2]) {
+                setUsersServed(String(d.items[2].value ?? '120'));
+                setLabelUsers(d.items[2].label || 'Users Served');
+            }
+            if (d.items[3]) {
+                setYearsExperience(String(d.items[3].value ?? '3'));
+                setLabelYears(d.items[3].label || 'Years Experience');
+            }
         }
     }, [getData]);
 
@@ -78,15 +85,25 @@ export default function AdminStats() {
                     title={`JSON Import / Export (${lang.toUpperCase()})`}
                     data={currentPayload}
                     onImport={(parsed: any) => {
-                        if (parsed.items && parsed.items.length === 4) {
-                            setLiveProjects(String(parsed.items[0].value || '24'));
-                            setCountries(String(parsed.items[1].value || '5'));
-                            setUsersServed(String(parsed.items[2].value || '120'));
-                            setYearsExperience(String(parsed.items[3].value || '3'));
-                            setLabelProjects(parsed.items[0].label || 'Live Projects');
-                            setLabelCountries(parsed.items[1].label || 'Countries');
-                            setLabelUsers(parsed.items[2].label || 'Users Served');
-                            setLabelYears(parsed.items[3].label || 'Years Experience');
+                        if (!parsed || typeof parsed !== 'object') return;
+                        const items = Array.isArray(parsed.items) ? parsed.items : (Array.isArray(parsed) ? parsed : []);
+                        if (items.length > 0) {
+                            if (items[0]) {
+                                if (items[0].value !== undefined) setLiveProjects(String(items[0].value));
+                                if (items[0].label !== undefined) setLabelProjects(items[0].label);
+                            }
+                            if (items[1]) {
+                                if (items[1].value !== undefined) setCountries(String(items[1].value));
+                                if (items[1].label !== undefined) setLabelCountries(items[1].label);
+                            }
+                            if (items[2]) {
+                                if (items[2].value !== undefined) setUsersServed(String(items[2].value));
+                                if (items[2].label !== undefined) setLabelUsers(items[2].label);
+                            }
+                            if (items[3]) {
+                                if (items[3].value !== undefined) setYearsExperience(String(items[3].value));
+                                if (items[3].label !== undefined) setLabelYears(items[3].label);
+                            }
                         }
                     }}
                 />

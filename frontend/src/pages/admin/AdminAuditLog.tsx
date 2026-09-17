@@ -38,6 +38,7 @@ const ACTION_CONFIG: Record<string, { label: string; color: string; bg: string; 
     export: { label: 'Exported', color: 'text-purple-400', bg: 'bg-purple-500/10', icon: Download },
     seed: { label: 'Seeded', color: 'text-cyan-400', bg: 'bg-cyan-500/10', icon: Database },
     logout: { label: 'Logout', color: 'text-zinc-400', bg: 'bg-zinc-500/10', icon: LogIn },
+    restore: { label: 'Restored', color: 'text-teal-400', bg: 'bg-teal-500/10', icon: RefreshCw },
 };
 
 const ENTITY_COLORS: Record<string, string> = {

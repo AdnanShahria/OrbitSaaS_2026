@@ -8,11 +8,11 @@ import {
     HardDriveDownload, HardDriveUpload, RefreshCw
 } from 'lucide-react';
 
-// All content section keys used by the admin panel
-const ALL_SECTIONS = [
-    'hero', 'stats', 'services', 'techStack', 'whyUs', 'projects',
-    'leadership', 'reviews', 'contact', 'footer', 'chatbot', 'links',
-    'nav', 'seo', 'privacy', 'terms'
+// All known content section keys used by the admin panel
+const ALL_KNOWN_SECTIONS = [
+    'hero', 'stats', 'services', 'process', 'techStack', 'whyUs', 'projects',
+    'achievements', 'leadership', 'reviews', 'contact', 'footer', 'chatbot', 'links',
+    'nav', 'seo', 'privacy', 'terms', 'adminProfile'
 ];
 
 export default function AdminBackup() {
@@ -28,20 +28,47 @@ export default function AdminBackup() {
     const [uploadFileName, setUploadFileName] = useState('');
     const [restorePreviewOpen, setRestorePreviewOpen] = useState(false);
     const [restoring, setRestoring] = useState(false);
+    const [downloading, setDownloading] = useState(false);
     const [restoreProgress, setRestoreProgress] = useState<{ done: number; total: number; current: string } | null>(null);
     const [error, setError] = useState('');
 
     // ─── Download Backup ───
     const handleDownload = async () => {
+        setDownloading(true);
+        const toastId = toast.loading('Preparing complete backup...');
         try {
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            let enData = { ...(content.en || {}) };
+            let bnData = { ...(content.bn || {}) };
+
+            // Fetch live API content to guarantee all sections from DB are included
+            try {
+                const [resEn, resBn] = await Promise.all([
+                    fetch(`${API_BASE}/api/content?lang=en`).then(r => r.ok ? r.json() : null),
+                    fetch(`${API_BASE}/api/content?lang=bn`).then(r => r.ok ? r.json() : null),
+                ]);
+                if (resEn?.success && resEn.content) {
+                    enData = { ...enData, ...resEn.content };
+                }
+                if (resBn?.success && resBn.content) {
+                    bnData = { ...bnData, ...resBn.content };
+                }
+            } catch {
+                // Fall back to context state if API call fails
+            }
+
             const backup = {
                 _meta: {
                     exportedAt: new Date().toISOString(),
-                    version: '1.0',
+                    version: '1.1',
                     source: 'Orbit SaaS Admin Panel',
+                    sectionsCount: {
+                        en: Object.keys(enData).length,
+                        bn: Object.keys(bnData).length,
+                    }
                 },
-                en: content.en,
-                bn: content.bn,
+                en: enData,
+                bn: bnData,
             };
 
             const json = JSON.stringify(backup, null, 2);
@@ -63,11 +90,14 @@ export default function AdminBackup() {
                     const writable = await handle.createWritable();
                     await writable.write(json);
                     await writable.close();
-                    toast.success('Backup saved successfully!');
+                    toast.success('Backup saved successfully!', { id: toastId });
                     return;
                 } catch (pickerErr: any) {
                     // User cancelled the dialog
-                    if (pickerErr?.name === 'AbortError') return;
+                    if (pickerErr?.name === 'AbortError') {
+                        toast.dismiss(toastId);
+                        return;
+                    }
                 }
             }
 
@@ -82,10 +112,12 @@ export default function AdminBackup() {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            toast.success('Backup downloaded successfully!');
+            toast.success('Backup downloaded successfully!', { id: toastId });
         } catch (err) {
             console.error('Download error:', err);
-            toast.error('Failed to generate backup file');
+            toast.error('Failed to generate backup file', { id: toastId });
+        } finally {
+            setDownloading(false);
         }
     };
 
@@ -106,7 +138,18 @@ export default function AdminBackup() {
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const parsed = JSON.parse(event.target?.result as string);
+                let parsed = JSON.parse(event.target?.result as string);
+
+                // Handle array format [ { section, lang, data } ] by converting to { en, bn }
+                if (Array.isArray(parsed)) {
+                    const normalized: { en: Record<string, unknown>; bn: Record<string, unknown> } = { en: {}, bn: {} };
+                    for (const item of parsed) {
+                        if (item.section && (item.lang === 'en' || item.lang === 'bn') && item.data) {
+                            normalized[item.lang as 'en' | 'bn'][item.section] = typeof item.data === 'string' ? JSON.parse(item.data) : item.data;
+                        }
+                    }
+                    parsed = normalized;
+                }
 
                 // Validate structure
                 if (!parsed.en && !parsed.bn) {
@@ -137,18 +180,63 @@ export default function AdminBackup() {
         setError('');
         const toastId = toast.loading('Restoring content...');
 
-        const langs = ['en', 'bn'].filter(l => uploadedData[l]);
+        const langs = (['en', 'bn'] as const).filter(l => uploadedData[l]);
         const tasks: { section: string; lang: string; data: any }[] = [];
 
         for (const lang of langs) {
             const langData = uploadedData[lang] as Record<string, unknown>;
-            for (const section of ALL_SECTIONS) {
-                if (langData[section]) {
+            // Extract EVERY section key present in langData, never omitting any
+            const keys = Object.keys(langData).filter(k => k !== '_meta');
+            for (const section of keys) {
+                if (langData[section] !== undefined && langData[section] !== null) {
                     tasks.push({ section, lang, data: langData[section] });
                 }
             }
         }
 
+        if (tasks.length === 0) {
+            toast.error('No sections found in backup file to restore', { id: toastId });
+            setRestoring(false);
+            return;
+        }
+
+        const token = localStorage.getItem('admin_token');
+        const API_BASE = import.meta.env.VITE_API_URL || '';
+        let bulkSuccess = false;
+
+        // Try fast atomic bulk restore first
+        if (token) {
+            try {
+                const bulkRes = await fetch(`${API_BASE}/api/content`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ bulk: tasks }),
+                });
+                if (bulkRes.ok) {
+                    const result = await bulkRes.json();
+                    if (result.success) {
+                        bulkSuccess = true;
+                    }
+                }
+            } catch (bulkErr) {
+                console.warn('Bulk restore failed, falling back to sequential restore:', bulkErr);
+            }
+        }
+
+        if (bulkSuccess) {
+            toast.success(`All ${tasks.length} sections restored successfully!`, { id: toastId });
+            setUploadedData(null);
+            setUploadFileName('');
+            setRestorePreviewOpen(false);
+            await refreshContent();
+            setRestoring(false);
+            return;
+        }
+
+        // Sequential fallback
         let done = 0;
         let failed = 0;
 
@@ -177,20 +265,19 @@ export default function AdminBackup() {
             setUploadedData(null);
             setUploadFileName('');
             setRestorePreviewOpen(false);
-            // Refresh content to reflect changes
             await refreshContent();
         } else {
             toast.error(`Restored ${done - failed}/${tasks.length} sections. ${failed} failed.`, { id: toastId });
         }
     };
 
-    // Count sections in uploaded data
+    // Count sections in uploaded data dynamically
     const getUploadSummary = () => {
         if (!uploadedData) return null;
         const summary: { lang: string; sections: string[] }[] = [];
         for (const lang of ['en', 'bn']) {
-            if (uploadedData[lang]) {
-                const sections = ALL_SECTIONS.filter(s => uploadedData[lang][s]);
+            if (uploadedData[lang] && typeof uploadedData[lang] === 'object') {
+                const sections = Object.keys(uploadedData[lang]).filter(k => k !== '_meta');
                 if (sections.length > 0) {
                     summary.push({ lang, sections });
                 }
@@ -264,14 +351,24 @@ export default function AdminBackup() {
                             Download Backup
                         </h3>
                         <p className="text-sm text-muted-foreground mt-1 mb-4">
-                            Export all content (both English & বাংলা) as a single JSON file. This includes every section: Hero, Stats, Services, Tech Stack, Why Us, Projects, Leadership, Reviews, Contact, Footer, Chatbot, Links, Navbar, and SEO.
+                            Export all content (both English & বাংলা) as a single JSON file. This includes every section: Hero, Stats, Services, Process, Tech Stack, Why Us, Projects, Achievements, Leadership, Reviews, Contact, Footer, Chatbot, Links, Navbar, SEO, Legal (Privacy & Terms), and Admin Profile.
                         </p>
                         <button
                             onClick={handleDownload}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm bg-emerald-500 text-white hover:bg-emerald-600 transition-colors cursor-pointer shadow-lg shadow-emerald-500/20"
+                            disabled={downloading}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm bg-emerald-500 text-white hover:bg-emerald-600 transition-colors cursor-pointer shadow-lg shadow-emerald-500/20 disabled:opacity-50"
                         >
-                            <Download className="w-4 h-4" />
-                            Download Backup (.json)
+                            {downloading ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Exporting...
+                                </>
+                            ) : (
+                                <>
+                                    <Download className="w-4 h-4" />
+                                    Download Backup (.json)
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>

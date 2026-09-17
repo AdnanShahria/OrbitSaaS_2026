@@ -645,7 +645,97 @@ export default function AdminServices() {
                     title="Data Blueprint"
                     description="Raw merged view of EN + BN data structures."
                     data={{ sectionInfo, items, globalTheme: { titleColor, subtitleColor, cardBorder, iconColor } }}
-                    onImport={() => toast.error('JSON import disabled in sync mode.')}
+                    onImport={(parsed) => {
+                        if (!parsed || typeof parsed !== 'object') {
+                            toast.error('Invalid JSON structure');
+                            return;
+                        }
+
+                        // 1. Unified structure import: { sectionInfo, items, globalTheme }
+                        if (parsed.sectionInfo || parsed.items || parsed.globalTheme) {
+                            if (parsed.sectionInfo) {
+                                setSectionInfo({
+                                    en: {
+                                        title: parsed.sectionInfo.en?.title || '',
+                                        subtitle: parsed.sectionInfo.en?.subtitle || '',
+                                    },
+                                    bn: {
+                                        title: parsed.sectionInfo.bn?.title || '',
+                                        subtitle: parsed.sectionInfo.bn?.subtitle || '',
+                                    },
+                                });
+                            }
+                            if (parsed.globalTheme) {
+                                if (parsed.globalTheme.titleColor) setTitleColor(parsed.globalTheme.titleColor);
+                                if (parsed.globalTheme.subtitleColor) setSubtitleColor(parsed.globalTheme.subtitleColor);
+                                if (parsed.globalTheme.cardBorder) setCardBorder(parsed.globalTheme.cardBorder);
+                                if (parsed.globalTheme.iconColor) setIconColor(parsed.globalTheme.iconColor);
+                            }
+                            if (Array.isArray(parsed.items)) {
+                                setItems(parsed.items.map((m: any) => ({
+                                    en: {
+                                        title: m.en?.title || m.title || '',
+                                        desc: m.en?.desc || m.desc || '',
+                                        badge: m.en?.badge || m.badge || '',
+                                    },
+                                    bn: {
+                                        title: m.bn?.title || '',
+                                        desc: m.bn?.desc || '',
+                                        badge: m.bn?.badge || '',
+                                    },
+                                    icon: m.icon || '',
+                                    color: m.color || '',
+                                    border: m.border || '',
+                                })));
+                            }
+                            toast.success('Services JSON imported into form! Click "Save Services" to persist.');
+                            return;
+                        }
+
+                        // 2. Dual language import: { en: { title, subtitle, items }, bn: { ... } }
+                        if (parsed.en || parsed.bn) {
+                            setSectionInfo({
+                                en: { title: parsed.en?.title || '', subtitle: parsed.en?.subtitle || '' },
+                                bn: { title: parsed.bn?.title || '', subtitle: parsed.bn?.subtitle || '' },
+                            });
+                            const enItems = Array.isArray(parsed.en?.items) ? parsed.en.items : [];
+                            const bnItems = Array.isArray(parsed.bn?.items) ? parsed.bn.items : [];
+                            const maxLen = Math.max(enItems.length, bnItems.length);
+                            const merged: UnifiedService[] = [];
+                            for (let i = 0; i < maxLen; i++) {
+                                const en = enItems[i] || {};
+                                const bn = bnItems[i] || {};
+                                merged.push({
+                                    en: { title: en.title || '', desc: en.desc || '', badge: en.badge || '' },
+                                    bn: { title: bn.title || '', desc: bn.desc || '', badge: bn.badge || '' },
+                                    icon: en.icon || bn.icon || '',
+                                    color: en.color || bn.color || '',
+                                    border: en.border || bn.border || '',
+                                });
+                            }
+                            setItems(merged);
+                            if (parsed.en?.titleColor || parsed.bn?.titleColor) setTitleColor(parsed.en?.titleColor || parsed.bn?.titleColor);
+                            if (parsed.en?.subtitleColor || parsed.bn?.subtitleColor) setSubtitleColor(parsed.en?.subtitleColor || parsed.bn?.subtitleColor);
+                            if (parsed.en?.cardBorder || parsed.bn?.cardBorder) setCardBorder(parsed.en?.cardBorder || parsed.bn?.cardBorder);
+                            if (parsed.en?.iconColor || parsed.bn?.iconColor) setIconColor(parsed.en?.iconColor || parsed.bn?.iconColor);
+                            toast.success('Services JSON imported into form! Click "Save Services" to persist.');
+                            return;
+                        }
+
+                        // 3. Simple single-language import: { title, subtitle, items, ... }
+                        if (parsed.items && Array.isArray(parsed.items)) {
+                            if (parsed.title) setSectionInfo(prev => ({ ...prev, en: { ...prev.en, title: parsed.title } }));
+                            if (parsed.subtitle) setSectionInfo(prev => ({ ...prev, en: { ...prev.en, subtitle: parsed.subtitle } }));
+                            setItems(parsed.items.map((m: any) => ({
+                                en: { title: m.title || '', desc: m.desc || '', badge: m.badge || '' },
+                                bn: { title: '', desc: '', badge: '' },
+                                icon: m.icon || '',
+                                color: m.color || '',
+                                border: m.border || '',
+                            })));
+                            toast.success('Services JSON imported into form! Click "Save Services" to persist.');
+                        }
+                    }}
                 />
             </div>
         </div>

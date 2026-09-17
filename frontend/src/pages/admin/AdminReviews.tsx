@@ -422,7 +422,7 @@ export default function AdminReviews() {
             <div className="mt-8 pt-8 border-t border-border">
                 <JsonPanel
                     title={`JSON Import / Export (${lang.toUpperCase()})`}
-                    data={currentPayload}
+                    data={{ title, subtitle, items, showSocials }}
                     onImport={(parsed: any) => {
                         if (parsed.title) setTitle(parsed.title);
                         if (parsed.subtitle) setSubtitle(parsed.subtitle);
@@ -437,6 +437,7 @@ export default function AdminReviews() {
                                 projectId: item.projectId || '',
                                 projectName: item.projectName || '',
                                 badgeName: item.badgeName || '',
+                                hidden: item.hidden ?? false,
                                 social: item.social ? Object.fromEntries(
                                     Object.entries(item.social).map(([k, v]) => [
                                         k,

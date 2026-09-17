@@ -196,9 +196,78 @@ export const onRequest: PagesFunction<Env> = async (context) => {
                 return jsonResponse({ error: 'Unauthorized' }, request, 401);
             }
 
-            const body = await request.json() as { section?: string; lang?: string; data?: unknown };
-            const { section, lang, data } = body;
-            if (!section || !lang || !data) {
+            const body = await request.json() as any;
+
+            // ── Bulk Restore Support ──
+            const bulkItems: Array<{ section: string; lang: string; data: unknown }> = [];
+            if (Array.isArray(body.bulk)) {
+                bulkItems.push(...body.bulk);
+            } else if (body.backup && typeof body.backup === 'object') {
+                for (const l of ['en', 'bn']) {
+                    if (body.backup[l] && typeof body.backup[l] === 'object') {
+                        for (const [sec, val] of Object.entries(body.backup[l])) {
+                            if (sec !== '_meta' && val !== undefined && val !== null) {
+                                bulkItems.push({ section: sec, lang: l, data: val });
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (bulkItems.length > 0) {
+                const statements = bulkItems.map(item => ({
+                    sql: `INSERT INTO site_content (section, lang, data, updated_at)
+                  VALUES (?, ?, ?, datetime('now'))
+                  ON CONFLICT(section, lang) DO UPDATE SET data = ?, updated_at = datetime('now')`,
+                    args: [item.section, item.lang, JSON.stringify(item.data), JSON.stringify(item.data)],
+                }));
+
+                await db.batch(statements, 'write');
+
+                // Rebuild content_cache for all affected languages
+                const affectedLangs = Array.from(new Set(bulkItems.map(i => i.lang)));
+                for (const l of affectedLangs) {
+                    try {
+                        const allSections = await db.execute({
+                            sql: 'SELECT section, data FROM site_content WHERE lang = ?',
+                            args: [l],
+                        });
+                        const assembled: Record<string, unknown> = {};
+                        for (const row of allSections.rows) {
+                            assembled[row.section as string] = JSON.parse(row.data as string);
+                        }
+                        await db.execute({
+                            sql: `INSERT INTO content_cache (lang, data, updated_at)
+                        VALUES (?, ?, datetime('now'))
+                        ON CONFLICT(lang) DO UPDATE SET data = ?, updated_at = datetime('now')`,
+                            args: [l, JSON.stringify(assembled), JSON.stringify(assembled)],
+                        });
+                        await db.execute({ sql: 'DELETE FROM kb_gist WHERE lang = ?', args: [l] });
+                    } catch { /* skip */ }
+                }
+
+                // Audit log for bulk restore
+                try {
+                    await ensureAuditTable(env);
+                    const adminEmail = await getAdminIdentity(request, env.JWT_SECRET);
+                    const meta = getRequestMeta(request);
+                    await logAudit(env, {
+                        admin_email: adminEmail || 'unknown',
+                        action: 'restore',
+                        entity_type: 'content',
+                        entity_id: 'full_backup',
+                        entity_label: 'Emergency Backup Restore',
+                        changes_summary: `Restored ${bulkItems.length} content sections across ${affectedLangs.join(', ').toUpperCase()}`,
+                        ...meta,
+                    });
+                } catch { /* audit is non-critical */ }
+
+                return jsonResponse({ success: true, restoredCount: bulkItems.length }, request);
+            }
+
+            // ── Single Section Update ──
+            const { section, lang, data } = body as { section?: string; lang?: string; data?: unknown };
+            if (!section || !lang || data === undefined || data === null) {
                 return jsonResponse({ error: 'Missing section, lang, or data' }, request, 400);
             }
 

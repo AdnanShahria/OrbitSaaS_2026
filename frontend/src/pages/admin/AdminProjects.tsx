@@ -1443,6 +1443,8 @@ export default function AdminProjects() {
                         en: {
                             title: sectionInfo.en.title,
                             subtitle: sectionInfo.en.subtitle,
+                            categories: categories,
+                            visible: isVisible,
                             items: projects.map(p => ({
                                 title: p.en.title,
                                 desc: p.en.description,
@@ -1451,16 +1453,20 @@ export default function AdminProjects() {
                                 id: p.id,
                                 order: p.order,
                                 images: p.images,
+                                hoverImages: p.hoverImages,
                                 link: p.link,
                                 categories: p.categories,
                                 category: p.categories[0] || 'SaaS',
                                 featured: p.featured,
+                                hidden: p.hidden,
                                 videoPreview: p.videoPreview
                             }))
                         },
                         bn: {
                             title: sectionInfo.bn.title,
                             subtitle: sectionInfo.bn.subtitle,
+                            categories: categories,
+                            visible: isVisible,
                             items: projects.map(p => ({
                                 title: p.bn.title,
                                 desc: p.bn.description,
@@ -1469,10 +1475,12 @@ export default function AdminProjects() {
                                 id: p.id,
                                 order: p.order,
                                 images: p.images,
+                                hoverImages: p.hoverImages,
                                 link: p.link,
                                 categories: p.categories,
                                 category: p.categories[0] || 'SaaS',
                                 featured: p.featured,
+                                hidden: p.hidden,
                                 videoPreview: p.videoPreview
                             }))
                         }
@@ -1486,6 +1494,16 @@ export default function AdminProjects() {
                             en: { title: parsed.en.title || '', subtitle: parsed.en.subtitle || '' },
                             bn: { title: parsed.bn.title || '', subtitle: parsed.bn.subtitle || '' }
                         });
+                        if (parsed.en.categories && Array.isArray(parsed.en.categories)) {
+                            setCategories(parsed.en.categories);
+                        } else if (parsed.bn?.categories && Array.isArray(parsed.bn.categories)) {
+                            setCategories(parsed.bn.categories);
+                        }
+                        if (parsed.en.visible !== undefined) {
+                            setIsVisible(!!parsed.en.visible);
+                        } else if (parsed.bn?.visible !== undefined) {
+                            setIsVisible(!!parsed.bn.visible);
+                        }
                         const enItems = parsed.en.items || [];
                         const bnItems = parsed.bn.items || [];
                         const maxLen = Math.max(enItems.length, bnItems.length);
