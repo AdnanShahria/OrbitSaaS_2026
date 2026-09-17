@@ -238,12 +238,14 @@ export function TextField({
     onChange,
     multiline = false,
     lang,
+    placeholder,
 }: {
     label: string;
     value: string;
     onChange: (v: string) => void;
     multiline?: boolean;
     lang?: string;
+    placeholder?: string;
 }) {
     const taRef = useRef<HTMLTextAreaElement>(null);
     const [selToolbar, setSelToolbar] = useState<{ top: number; left: number; start: number; end: number } | null>(null);
@@ -312,6 +314,7 @@ export function TextField({
                         ref={taRef}
                         value={value}
                         onChange={e => { onChange(e.target.value); }}
+                        placeholder={placeholder}
                         onMouseUp={checkSelection}
                         onKeyUp={checkSelection}
                         onBlur={() => setTimeout(() => setSelToolbar(null), 250)}
@@ -399,6 +402,7 @@ export function TextField({
                     type="text"
                     value={value}
                     onChange={e => onChange(e.target.value)}
+                    placeholder={placeholder}
                     className="w-full bg-secondary/60 focus:bg-card rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary border border-border transition-all shadow-xs"
                 />
             )}

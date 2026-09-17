@@ -15,6 +15,7 @@ import { ImageWithSkeleton } from '@/components/orbit/ImageWithSkeleton';
 import { RichText } from '@/components/ui/RichText';
 import { toast } from 'sonner';
 import { getImageUrl, getFallbackUrl } from '@/lib/imageUrl';
+import { ZoomableLightbox } from '@/components/orbit/ZoomableLightbox';
 
 type MediaItem = { type: 'image'; url: string } | { type: 'video'; url: string };
 
@@ -350,96 +351,18 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                 )}
             </motion.div>
 
-            {/* Lightbox Overlay */}
-            <AnimatePresence>
-                {lightboxOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4 md:p-8 w-screen h-[100dvh] max-w-[100vw] max-h-[100dvh] overflow-hidden touch-none"
-                        onClick={closeLightbox}
-                    >
-                        <button
-                            onClick={closeLightbox}
-                            className="absolute top-4 sm:top-6 right-4 sm:right-6 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-                        >
-                            <X className="w-6 h-6 sm:w-8 sm:h-8" />
-                        </button>
-
-                        {media.length > 1 && (
-                            <>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); paginate(-1); }}
-                                    className="absolute left-2 sm:left-4 md:left-8 z-20 p-3 sm:p-4 rounded-full border border-white/15 bg-white/10 text-white transition-colors hover:bg-white/20 hidden sm:flex items-center justify-center cursor-pointer"
-                                >
-                                    <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); paginate(1); }}
-                                    className="absolute right-2 sm:right-4 md:right-8 z-20 p-3 sm:p-4 rounded-full border border-white/15 bg-white/10 text-white transition-colors hover:bg-white/20 hidden sm:flex items-center justify-center cursor-pointer"
-                                >
-                                    <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
-                                </button>
-                            </>
-                        )}
-
-                        {currentMedia.type === 'video' ? (
-                            <div className="w-full max-w-[85vw] aspect-video" onClick={(e) => e.stopPropagation()}>
-                                {renderMediaSlide(currentMedia, true)}
-                            </div>
-                        ) : (
-                            <motion.img
-                                key={currentIndex}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.3 }}
-                                src={getImageUrl(currentMedia.url)}
-                                alt="Fullscreen view"
-                                drag="x"
-                                dragConstraints={{ left: 0, right: 0 }}
-                                dragElastic={1}
-                                onDragEnd={handleDragEnd}
-                                draggable="false"
-                                className="max-w-[95vw] max-h-[80vh] md:max-w-[85vw] md:max-h-[85vh] object-contain select-none shadow-2xl touch-pan-y no-browser-trigger"
-                                onClick={(e) => e.stopPropagation()}
-                                onError={(e) => {
-                                    const fb = getFallbackUrl(currentMedia.url);
-                                    if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
-                                }}
-                            />
-                        )}
-
-                        <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 group max-w-[92vw] overflow-hidden">
-                            {/* Premium Gradient Border Wrapper */}
-                            <div className="relative p-[1.5px] rounded-full border border-white/20">
-                                <div className="flex items-center gap-3 sm:gap-4 text-white font-medium bg-[#0A0A0B]/90 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-xl">
-                                    {/* Mobile specific navigation inside indicator row */}
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); paginate(-1); }}
-                                        className="flex sm:hidden p-1.5 bg-[#22C55E] hover:bg-[#16A34A] text-white rounded-full transition-colors shadow-sm cursor-pointer"
-                                    >
-                                        <ChevronLeft className="w-4 h-4" />
-                                    </button>
-
-                                    <span className="text-xs sm:text-base min-w-[3rem] text-center tracking-wider tabular-nums font-semibold">
-                                        {currentIndex + 1} <span className="text-[#FFD700] mx-0.5">/</span> {media.length}
-                                    </span>
-
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); paginate(1); }}
-                                        className="flex sm:hidden p-1.5 bg-[#22C55E] hover:bg-[#16A34A] text-white rounded-full transition-colors shadow-sm cursor-pointer"
-                                    >
-                                        <ChevronRight className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* Modern Zoomable Lightbox with 2-finger pinch & high z-index */}
+            <ZoomableLightbox
+                isOpen={lightboxOpen}
+                onClose={closeLightbox}
+                media={media}
+                currentIndex={currentIndex}
+                onIndexChange={(idx) => {
+                    setDirection(idx > currentIndex ? 1 : -1);
+                    setCurrentIndex(idx);
+                }}
+                title={title}
+            />
         </>
     );
 }
@@ -810,7 +733,6 @@ export default function ProjectDetail() {
                 <meta data-rh="true" name="twitter:image" content={ogImage} />
                 <meta data-rh="true" name="twitter:image:alt" content={seoTitle} />
             </Helmet>
-            {!lightboxOpen && <Navbar />}
             <main className="pt-20 relative z-10">
                 {/* Image + Video Gallery */}
                 <ImageGallery images={allImages} title={project.title} videoUrl={project.videoPreview} onLightboxChange={setLightboxOpen} />

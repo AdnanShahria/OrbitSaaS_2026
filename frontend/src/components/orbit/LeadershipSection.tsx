@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useContent } from '@/contexts/ContentContext';
 import { useLang } from '@/contexts/LanguageContext';
@@ -128,31 +129,52 @@ const SOCIAL_CONFIG: {
 export function LeadershipSection() {
   const { content } = useContent();
   const { lang } = useLang();
+  const location = useLocation();
   const t = (content[lang] as any)?.leadership;
-  const members = (t?.members || []).filter((m: any) => !m.hidden);
+  const members = useMemo(() => (t?.members || []).filter((m: any) => !m.hidden), [t?.members]);
+  const enMembers = useMemo(() => ((content.en as any)?.leadership?.members || []).filter((m: any) => !m.hidden), [content.en]);
   const shouldReduceMotion = useReducedMotion();
 
-  // Helper to generate a slug/identifier for each member
-  const getMemberSlug = (member: any) => {
+  // Helper to generate a unique, clean slug for each member
+  const getMemberSlug = useCallback((member: any, index?: number) => {
     if (!member) return '';
-    return (
-      member.id ||
-      member.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') ||
-      'leader'
-    );
-  };
+    if (member.id && String(member.id).trim()) {
+      return String(member.id).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+    }
+    // Prefer English name for canonical shareable URL slugs even when browsing in Bengali
+    let enName = member.name;
+    if (index !== undefined && enMembers[index]?.name) {
+      enName = enMembers[index].name;
+    } else if (!/^[a-zA-Z0-9\s.-]+$/.test(enName || '')) {
+      const foundEn = enMembers.find((em: any, idx: number) =>
+        (member.image && em.image === member.image) ||
+        (member.order !== undefined && em.order === member.order) ||
+        idx === index
+      );
+      if (foundEn?.name) enName = foundEn.name;
+    }
+
+    const cleaned = (enName || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    if (cleaned) return cleaned;
+    if (index !== undefined) return `leader-${index + 1}`;
+    return 'leader';
+  }, [enMembers]);
 
   // Selected member for the "Read Bio" modal dialog
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const handleOpenMember = useCallback((member: any) => {
+  const handleOpenMember = useCallback((member: any, index?: number) => {
     setSelectedMember(member);
-    const slug = getMemberSlug(member);
+    const slug = getMemberSlug(member, index);
     const url = new URL(window.location.href);
     url.searchParams.set('member', slug);
     window.history.replaceState(null, '', url.toString());
-  }, []);
+  }, [getMemberSlug]);
 
   const handleCloseModal = useCallback(() => {
     setSelectedMember(null);
@@ -161,29 +183,108 @@ export function LeadershipSection() {
     window.history.replaceState(null, '', url.toString());
   }, []);
 
-  // Deep linking: automatically open member modal if ?member=... is in the URL
-  useEffect(() => {
-    if (members.length === 0) return;
-    const params = new URLSearchParams(window.location.search);
-    const memberParam = params.get('member');
-    if (memberParam) {
-      const match = members.find((m: any) =>
-        (m.id && m.id.toLowerCase() === memberParam.toLowerCase()) ||
-        getMemberSlug(m).toLowerCase() === memberParam.toLowerCase() ||
-        m.name?.toLowerCase() === memberParam.toLowerCase()
-      );
-      if (match) {
-        setSelectedMember(match);
-        const el = document.getElementById('leadership');
-        if (el) {
-          setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 300);
-        }
+  // Multi-strategy matcher to support id, slug, English name, Bangla name, or index (e.g. leader-1)
+  const findMatchingMember = useCallback((param: string) => {
+    if (!param || members.length === 0) return null;
+    const normalized = decodeURIComponent(param).trim().toLowerCase();
+
+    // 1. Direct match by member.id
+    const byId = members.find((m: any) => m.id && String(m.id).toLowerCase() === normalized);
+    if (byId) return byId;
+
+    // 2. Match by computed slug
+    for (let i = 0; i < members.length; i++) {
+      const slug = getMemberSlug(members[i], i);
+      if (slug.toLowerCase() === normalized) return members[i];
+    }
+
+    // 3. Match by current language name
+    const byName = members.find((m: any) => m.name && m.name.toLowerCase() === normalized);
+    if (byName) return byName;
+
+    // 4. Match by English counterpart name
+    for (let i = 0; i < members.length; i++) {
+      const enM = enMembers[i];
+      if (enM?.name && enM.name.toLowerCase() === normalized) {
+        return members[i];
       }
     }
-  }, [members]);
 
-  const handleShareMember = async (member: any) => {
-    const slug = getMemberSlug(member);
+    // 5. Match by numeric or leader-N index (e.g. "leader-1", "1", "leader-2")
+    const indexMatch = normalized.match(/^(?:leader-)?(\d+)$/);
+    if (indexMatch) {
+      const idx = parseInt(indexMatch[1], 10) - 1;
+      if (idx >= 0 && idx < members.length) {
+        return members[idx];
+      }
+    }
+
+    // 6. Fuzzy / sanitized name matching
+    for (let i = 0; i < members.length; i++) {
+      const mNameClean = (members[i].name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const enNameClean = (enMembers[i]?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const paramClean = normalized.replace(/[^a-z0-9]/g, '');
+      if (paramClean && (mNameClean === paramClean || enNameClean === paramClean)) {
+        return members[i];
+      }
+    }
+
+    return null;
+  }, [members, enMembers, getMemberSlug]);
+
+  // Deep linking: redirect/scroll to leadership segment AND automatically open member modal
+  useEffect(() => {
+    if (members.length === 0) return;
+
+    // Extract member parameter from URL query or hash
+    const searchParams = new URLSearchParams(location.search);
+    let memberParam = searchParams.get('member');
+
+    if (!memberParam && window.location.hash.includes('member=')) {
+      const queryPart = window.location.hash.split('?')[1];
+      if (queryPart) {
+        const hashParams = new URLSearchParams(queryPart);
+        memberParam = hashParams.get('member');
+      }
+    }
+
+    if (!memberParam) return;
+
+    const match = findMatchingMember(memberParam);
+    if (!match) return;
+
+    const scrollToLeadership = () => {
+      const el = document.getElementById('leadership');
+      if (el) {
+        const navOffset = 70;
+        const rect = el.getBoundingClientRect();
+        const targetTop = rect.top + window.scrollY - navOffset;
+        window.scrollTo({
+          top: Math.max(0, targetTop),
+          behavior: 'smooth',
+        });
+        return true;
+      }
+      return false;
+    };
+
+    // Scroll immediately to the leadership segment
+    scrollToLeadership();
+    const retryScrollTimer = setTimeout(scrollToLeadership, 250);
+
+    // Automatically open the modal once user arrives at leadership
+    const modalTimer = setTimeout(() => {
+      setSelectedMember(match);
+    }, 350);
+
+    return () => {
+      clearTimeout(retryScrollTimer);
+      clearTimeout(modalTimer);
+    };
+  }, [members, location.search, findMatchingMember]);
+
+  const handleShareMember = async (member: any, index?: number) => {
+    const slug = getMemberSlug(member, index);
     const shareUrl = `${window.location.origin}/leadership?member=${encodeURIComponent(slug)}`;
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -406,14 +507,28 @@ export function LeadershipSection() {
                     {subDetail}
                   </p>
 
-                  {/* Action Button: "Read Bio" */}
-                  <button
-                    type="button"
-                    onClick={() => handleOpenMember(member)}
-                    className="w-full mt-auto py-1 sm:py-1.5 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200/90 active:bg-slate-200 text-slate-700 text-[10.5px] sm:text-xs font-semibold text-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
-                  >
-                    Read Bio
-                  </button>
+                  {/* Action Button: "Read Bio" & "Share Direct CV Link" */}
+                  <div className="flex items-center gap-1.5 mt-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenMember(member, i)}
+                      className="flex-1 py-1 sm:py-1.5 px-2 sm:px-2.5 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200/90 active:bg-slate-200 text-slate-700 text-[10.5px] sm:text-xs font-semibold text-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+                    >
+                      {lang === 'bn' ? 'জীবনবৃত্তান্ত' : 'Read Bio'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShareMember(member, i);
+                      }}
+                      className="p-1 sm:p-1.5 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-500 transition-colors cursor-pointer shrink-0"
+                      title={lang === 'bn' ? 'সিভি লিংক কপি করুন' : 'Copy Direct Link for CV'}
+                      aria-label="Copy direct CV link"
+                    >
+                      <Share2 size={13} />
+                    </button>
+                  </div>
                 </motion.div>
               );
             })}

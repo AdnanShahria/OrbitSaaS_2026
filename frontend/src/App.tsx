@@ -309,7 +309,12 @@ function PublicSite() {
       ? location.pathname.slice(0, -1) 
       : location.pathname;
 
-    const targetId = routeToId[normalizedPath];
+    let targetId = routeToId[normalizedPath];
+    const searchParams = new URLSearchParams(location.search);
+    if (!targetId && searchParams.has('member')) {
+      targetId = 'leadership';
+    }
+
     if (targetId) {
       // Use polling to wait until the Suspense component actually renders its children
       let attempts = 0;
@@ -320,7 +325,13 @@ function PublicSite() {
           // Check if all previous sections have loaded by looking for empty sibling divs
           const previousEmptySections = Array.from(document.querySelectorAll('div.section-wrapper:empty'));
           if (previousEmptySections.length === 0 || attempts > 20) {
-            el.scrollIntoView({ behavior: 'smooth' });
+            const navOffset = 70;
+            const elementPosition = el.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - navOffset;
+            window.scrollTo({
+              top: Math.max(0, offsetPosition),
+              behavior: 'smooth'
+            });
             clearInterval(interval);
           }
         }
@@ -329,10 +340,10 @@ function PublicSite() {
       }, 100);
 
       return () => clearInterval(interval);
-    } else if (normalizedPath === '/') {
+    } else if (normalizedPath === '/' && !searchParams.has('member')) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [location.pathname, isLoaded]);
+  }, [location.pathname, location.search, isLoaded]);
 
   useEffect(() => {
     if (!isLoaded) return;

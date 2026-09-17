@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { SectionHeader, LangToggle, SaveButton, TextField, ErrorAlert, useSectionEditor, JsonPanel } from '@/components/admin/EditorComponents';
-import { Plus, Trash2, ChevronUp, ChevronDown, Upload, X, Link2, Layers, Settings2, HelpCircle, Search } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Upload, X, Link2, Layers, Settings2, HelpCircle, Search, Eye, Edit3 } from 'lucide-react';
 import { RichTextEditor } from '@/components/admin/RichTextEditor';
 import { uploadImage } from '@/lib/imageUpload';
 import { getImageUrl } from '@/lib/imageUrl';
+import DOMPurify from 'dompurify';
 
 // --- Multi Image Upload ---
 function MultiImageUpload({ images, onChange, title }: { images: any[]; onChange: (imgs: any[]) => void; title: string }) {
@@ -155,6 +156,7 @@ function AchievementEditor({ item, update }: { item: UnifiedAchievement; update:
     const [tab, setTab] = useState<'en' | 'bn'>('en');
     const [imagesExpanded, setImagesExpanded] = useState(false);
     const [seoExpanded, setSeoExpanded] = useState(false);
+    const [descPreview, setDescPreview] = useState(false);
 
     const updateLoc = (lang: 'en' | 'bn', field: string, value: any) => update({ ...item, [lang]: { ...item[lang], [field]: value } });
     const updateSeo = (field: string, value: any) => update({ ...item, seo: { ...item.seo, [field]: value } });
@@ -232,8 +234,49 @@ function AchievementEditor({ item, update }: { item: UnifiedAchievement; update:
                 <div className="p-5 space-y-4">
                     <TextField label={`Title (${tab.toUpperCase()})`} value={item[tab]?.title || ''} onChange={v => updateLoc(tab, 'title', v)} lang={tab} />
                     <div>
-                        <label className="text-sm font-medium text-foreground block mb-1.5">Description ({tab.toUpperCase()})</label>
-                        <RichTextEditor value={item[tab]?.description || ''} onChange={v => updateLoc(tab, 'description', v)} />
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-sm font-medium text-foreground block">Description ({tab.toUpperCase()})</label>
+                            <div className="flex items-center gap-1 bg-secondary/80 p-0.5 rounded-lg border border-border">
+                                <button
+                                    type="button"
+                                    onClick={() => setDescPreview(false)}
+                                    className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${!descPreview ? 'bg-primary text-white shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
+                                >
+                                    <Edit3 className="w-3 h-3" /> Edit
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setDescPreview(true)}
+                                    className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${descPreview ? 'bg-emerald-600 text-white shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
+                                >
+                                    <Eye className="w-3 h-3" /> Live Preview
+                                </button>
+                            </div>
+                        </div>
+
+                        {!descPreview ? (
+                            <>
+                                <RichTextEditor value={item[tab]?.description || ''} onChange={v => updateLoc(tab, 'description', v)} />
+                                <p className="text-[11px] text-muted-foreground mt-1.5">
+                                    💡 Tip: Press <kbd className="px-1 py-0.5 rounded bg-secondary text-foreground text-[10px] font-mono border border-border">Enter</kbd> for paragraph breaks. Format bold headings, lists, and links as needed.
+                                </p>
+                            </>
+                        ) : (
+                            <div className="rounded-lg border border-border bg-card p-4 sm:p-6 shadow-inner">
+                                <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    Formatted Visitor View Preview
+                                </div>
+                                <div 
+                                    className="text-foreground text-sm sm:text-base leading-relaxed space-y-3 [&_h3]:font-bold [&_h3]:text-emerald-500 [&_h3]:text-base sm:[&_h3]:text-lg [&_h3]:mt-3 [&_b]:font-bold [&_strong]:font-bold [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-emerald-500 [&_a]:underline font-normal"
+                                    dangerouslySetInnerHTML={{ 
+                                        __html: DOMPurify.sanitize(
+                                            item[tab]?.description?.replace(/([.!?])([A-Z][a-zA-Z0-9\s]{2,30}:)/g, '$1\n\n$2') || '<span class="text-muted-foreground italic">No description entered yet.</span>'
+                                        ) 
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

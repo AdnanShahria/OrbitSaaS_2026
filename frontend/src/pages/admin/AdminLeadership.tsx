@@ -9,7 +9,7 @@ import {
     JsonPanel,
     ToggleField,
 } from '@/components/admin/EditorComponents';
-import { Upload, Trash2, User, Mail, Instagram, Facebook, Twitter, Linkedin, Github, Globe, Briefcase, AtSign, Send } from 'lucide-react';
+import { Upload, Trash2, User, Mail, Instagram, Facebook, Twitter, Linkedin, Github, Globe, Briefcase, AtSign, Send, Share2, Copy, Check } from 'lucide-react';
 import { uploadImage } from '@/lib/imageUpload';
 import { useContent } from '@/contexts/ContentContext';
 import { getImageUrl } from '@/lib/imageUrl';
@@ -52,6 +52,7 @@ interface LocalizedMember {
 }
 
 interface UnifiedMember {
+    id?: string;
     image: string;
     badge?: string;
     order: number;
@@ -71,6 +72,7 @@ const makeDefaultSocials = (): SocialsMap => {
 };
 
 const DEFAULT_MEMBER: UnifiedMember = {
+    id: '',
     image: '',
     badge: '',
     order: 0,
@@ -240,6 +242,17 @@ function MemberEditor({
     update: (m: UnifiedMember) => void;
 }) {
     const [tab, setTab] = useState<'en' | 'bn'>('en');
+    const [copiedCv, setCopiedCv] = useState(false);
+
+    const memberSlug = item.id || (item.en.name ? item.en.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `leader-${item.order || 1}`);
+    const directCvUrl = typeof window !== 'undefined' ? `${window.location.origin}/leadership?member=${encodeURIComponent(memberSlug)}` : `/leadership?member=${memberSlug}`;
+
+    const handleCopyCvLink = () => {
+        navigator.clipboard.writeText(directCvUrl);
+        setCopiedCv(true);
+        toast.success('Direct CV link copied to clipboard!');
+        setTimeout(() => setCopiedCv(false), 2000);
+    };
 
     const updateLoc = (lang: 'en' | 'bn', field: keyof LocalizedMember, value: string) => {
         update({
@@ -281,12 +294,36 @@ function MemberEditor({
                     🌍 Shared Settings
                 </h4>
 
+                {/* Direct CV Link preview & copy */}
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                            <Share2 className="w-3.5 h-3.5" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider">Direct CV / Profile Link</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleCopyCvLink}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition-colors cursor-pointer"
+                        >
+                            {copiedCv ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{copiedCv ? 'Copied!' : 'Copy CV Link'}</span>
+                        </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono bg-background/80 px-2.5 py-1.5 rounded-lg border border-border/40 truncate select-all">
+                        {directCvUrl}
+                    </p>
+                    <p className="text-[10.5px] text-muted-foreground/80 leading-normal">
+                        When someone clicks this link (e.g. from an applicant's resume or email), the site automatically scrolls to Leadership and opens this member's CV bio modal.
+                    </p>
+                </div>
+
                 <MemberImageUpload
                     image={item.image}
                     onChange={(url) => update({ ...item, image: url })}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label className="text-sm font-medium text-foreground block mb-1.5">
                             Display Order
@@ -303,9 +340,17 @@ function MemberEditor({
                     </div>
                     <div>
                         <TextField
-                            label="Photo Badge / Status (e.g. O+, Lead, Core)"
+                            label="Photo Badge (e.g. O+, Lead, Core)"
                             value={item.badge || ''}
                             onChange={(v) => update({ ...item, badge: v })}
+                        />
+                    </div>
+                    <div>
+                        <TextField
+                            label="Member ID / Slug (for CV URL)"
+                            value={item.id || ''}
+                            onChange={(v) => update({ ...item, id: v })}
+                            placeholder={item.en.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'leader-1'}
                         />
                     </div>
                 </div>
@@ -446,7 +491,11 @@ export default function AdminLeadership() {
                     mergedSocials[p] = existingSocials[p];
                 }
             }
+            const fallbackSlug = en.name
+                ? en.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                : `leader-${i + 1}`;
             merged.push({
+                id: en.id || bn.id || fallbackSlug,
                 image: en.image || bn.image || '',
                 badge: en.badge || bn.badge || '',
                 order: en.order ?? bn.order ?? i + 1,
@@ -472,29 +521,37 @@ export default function AdminLeadership() {
         const sorted = [...members].sort((a, b) => a.order - b.order);
 
         try {
-            const enMembers = sorted.map((m) => ({
-                name: m.en.name,
-                role: m.en.role,
-                subDetail: m.en.subDetail,
-                bio: m.en.bio,
-                badge: m.badge,
-                image: m.image,
-                order: m.order,
-                hidden: m.hidden,
-                socials: m.socials,
-            }));
+            const enMembers = sorted.map((m, idx) => {
+                const id = m.id || (m.en.name ? m.en.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `leader-${idx + 1}`);
+                return {
+                    id,
+                    name: m.en.name,
+                    role: m.en.role,
+                    subDetail: m.en.subDetail,
+                    bio: m.en.bio,
+                    badge: m.badge,
+                    image: m.image,
+                    order: m.order,
+                    hidden: m.hidden,
+                    socials: m.socials,
+                };
+            });
 
-            const bnMembers = sorted.map((m) => ({
-                name: m.bn.name,
-                role: m.bn.role,
-                subDetail: m.bn.subDetail,
-                bio: m.bn.bio,
-                badge: m.badge,
-                image: m.image,
-                order: m.order,
-                hidden: m.hidden,
-                socials: m.socials,
-            }));
+            const bnMembers = sorted.map((m, idx) => {
+                const id = m.id || (m.en.name ? m.en.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `leader-${idx + 1}`);
+                return {
+                    id,
+                    name: m.bn.name,
+                    role: m.bn.role,
+                    subDetail: m.bn.subDetail,
+                    bio: m.bn.bio,
+                    badge: m.badge,
+                    image: m.image,
+                    order: m.order,
+                    hidden: m.hidden,
+                    socials: m.socials,
+                };
+            });
 
             const enOk = await updateSection('leadership', 'en', {
                 title: sectionInfo.en.title,
@@ -659,7 +716,8 @@ export default function AdminLeadership() {
                         title: sectionInfo.en.title,
                         subtitle: sectionInfo.en.subtitle,
                         tagline: sectionInfo.en.tagline,
-                        members: members.map(m => ({
+                        members: members.map((m, idx) => ({
+                            id: m.id || (m.en.name ? m.en.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `leader-${idx + 1}`),
                             name: m.en.name,
                             role: m.en.role,
                             subDetail: m.en.subDetail,
@@ -675,7 +733,8 @@ export default function AdminLeadership() {
                         title: sectionInfo.bn.title,
                         subtitle: sectionInfo.bn.subtitle,
                         tagline: sectionInfo.bn.tagline,
-                        members: members.map(m => ({
+                        members: members.map((m, idx) => ({
+                            id: m.id || (m.en.name ? m.en.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `leader-${idx + 1}`),
                             name: m.bn.name,
                             role: m.bn.role,
                             subDetail: m.bn.subDetail,
@@ -711,7 +770,11 @@ export default function AdminLeadership() {
                                 mergedSocials[p] = existingSocials[p];
                             }
                         }
+                        const fallbackSlug = en.name
+                            ? en.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                            : `leader-${i + 1}`;
                         merged.push({
+                            id: en.id || bn.id || fallbackSlug,
                             image: en.image || bn.image || '',
                             badge: en.badge || bn.badge || '',
                             order: en.order ?? bn.order ?? i + 1,

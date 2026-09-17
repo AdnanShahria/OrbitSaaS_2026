@@ -1,6 +1,7 @@
 export type Lang = 'en' | 'bn';
 
 export interface LeadershipMember {
+  id?: string;
   name: string;
   role: string;
   subDetail?: string;

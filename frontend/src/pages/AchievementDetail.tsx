@@ -14,6 +14,8 @@ import { ensureAbsoluteUrl } from '@/lib/utils';
 import { ImageWithSkeleton } from '@/components/orbit/ImageWithSkeleton';
 import { RichText } from '@/components/ui/RichText';
 import { toast } from 'sonner';
+import DOMPurify from 'dompurify';
+import { ZoomableLightbox } from '@/components/orbit/ZoomableLightbox';
 
 type MediaItem = { type: 'image'; url: string } | { type: 'video'; url: string };
 
@@ -32,7 +34,49 @@ function extractYouTubeId(url: string): string | null {
 
 function stripHtml(html: string): string {
     if (!html) return '';
-    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+    return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function formatDescriptionHtml(rawText: string): string {
+    if (!rawText) return '';
+
+    let text = rawText;
+
+    // 1. Repair collapsed sentence boundaries like "organizations.Our Journey:" or "participants.Our Innovation:"
+    text = text.replace(/([.!?])([A-Z][a-zA-Z0-9\s]{2,30}:)/g, '$1\n\n$2');
+
+    // 2. Check if text has rich HTML structure
+    const hasHtmlTags = /<(p|div|h[1-6]|ul|ol|li|strong|b|em|i|blockquote|hr|br)[^>]*>/i.test(text);
+
+    if (!hasHtmlTags) {
+        // Markdown bold support: **text** -> <strong>text</strong>
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // Split paragraphs by double newlines or single newlines
+        const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+        
+        text = paragraphs.map(p => {
+            // Check if paragraph starts with a heading like "Our Journey:"
+            const headingMatch = p.match(/^([A-Za-z0-9\s]{2,35}:)\s*(.*)/s);
+            if (headingMatch) {
+                const heading = headingMatch[1];
+                const rest = headingMatch[2];
+                return `<div class="mb-5 sm:mb-6"><h4 class="text-base sm:text-lg font-bold text-zinc-950 flex items-center gap-2 mb-2"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0"></span>${heading}</h4><div class="text-zinc-600 text-sm sm:text-base leading-relaxed pl-3.5 sm:pl-4 border-l-2 border-emerald-500/30">${rest.replace(/\n/g, '<br/>')}</div></div>`;
+            }
+            return `<p class="text-zinc-600 text-sm sm:text-base leading-relaxed mb-4">${p.replace(/\n/g, '<br/>')}</p>`;
+        }).join('');
+    }
+
+    // 3. Auto-linkify raw URLs (not already inside <a href="...">)
+    text = text.replace(/(?<!href=["'])(https?:\/\/[^\s<,)]+)/g, (url) => {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-emerald-600 hover:text-emerald-700 underline font-semibold transition-colors break-all inline-flex items-center gap-1">${url}</a>`;
+    });
+
+    // 4. Sanitize with DOMPurify
+    return DOMPurify.sanitize(text, {
+        ADD_ATTR: ['target', 'rel', 'class'],
+        ALLOWED_TAGS: ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'u', 'blockquote', 'hr', 'br', 'a', 'span']
+    });
 }
 
 function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: string[]; title: string; videoUrl?: string; onLightboxChange?: (open: boolean) => void }) {
@@ -152,42 +196,18 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                 )}
             </motion.div>
 
-            {/* Lightbox */}
-            <AnimatePresence>
-                {lightboxOpen && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
-                        className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-8" onClick={closeLightbox}>
-                        <button onClick={closeLightbox} className="absolute top-6 right-6 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"><X className="w-8 h-8" /></button>
-                        {media.length > 1 && (
-                            <>
-                                <button onClick={(e) => { e.stopPropagation(); paginate(-1); }} className="absolute left-4 md:left-8 z-20 p-4 rounded-full border border-border bg-card text-foreground transition-colors hover:bg-muted hidden sm:flex items-center justify-center"><ChevronLeft className="w-8 h-8" /></button>
-                                <button onClick={(e) => { e.stopPropagation(); paginate(1); }} className="absolute right-4 md:right-8 z-20 p-4 rounded-full border border-border bg-card text-foreground transition-colors hover:bg-muted hidden sm:flex items-center justify-center"><ChevronRight className="w-8 h-8" /></button>
-                            </>
-                        )}
-                        {currentMedia.type === 'video' ? (
-                            <div className="w-full max-w-[85vw] aspect-video" onClick={(e) => e.stopPropagation()}>{renderVideo(currentMedia, true)}</div>
-                        ) : (
-                            <motion.img key={currentIndex} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }}
-                                src={getImageUrl(currentMedia.url)} alt="Fullscreen view" drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={1} onDragEnd={handleDragEnd} draggable="false"
-                                className="max-w-full max-h-full md:max-w-[85vw] md:max-h-[85vh] object-contain select-none shadow-2xl touch-pan-y no-browser-trigger" onClick={(e) => e.stopPropagation()}
-                                onError={(e) => {
-                                    const fb = getFallbackUrl(currentMedia.url);
-                                    if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
-                                }}
-                            />
-                        )}
-                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
-                            <div className="relative p-[1.5px] rounded-full border border-border">
-                                <div className="flex items-center gap-4 text-white font-medium bg-[#0A0A0B]/90 px-4 py-2 rounded-full backdrop-blur-xl">
-                                    <button onClick={(e) => { e.stopPropagation(); paginate(-1); }} className="flex sm:hidden p-2 -ml-1 bg-[#22C55E] hover:bg-[#16A34A] text-white rounded-full transition-colors shadow-sm"><ChevronLeft className="w-5 h-5" /></button>
-                                    <span className="text-base min-w-[3.5rem] text-center tracking-wider tabular-nums font-semibold">{currentIndex + 1} <span className="text-[#FFD700] mx-0.5">/</span> {media.length}</span>
-                                    <button onClick={(e) => { e.stopPropagation(); paginate(1); }} className="flex sm:hidden p-2 -mr-1 bg-[#22C55E] hover:bg-[#16A34A] text-white rounded-full transition-colors shadow-sm"><ChevronRight className="w-5 h-5" /></button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* Modern Zoomable Lightbox with 2-finger pinch & high z-index */}
+            <ZoomableLightbox
+                isOpen={lightboxOpen}
+                onClose={closeLightbox}
+                media={media}
+                currentIndex={currentIndex}
+                onIndexChange={(idx) => {
+                    setDirection(idx > currentIndex ? 1 : -1);
+                    setCurrentIndex(idx);
+                }}
+                title={title}
+            />
         </>
     );
 }
@@ -234,9 +254,10 @@ function CollapsibleCards({ blocks }: { blocks: string[] }) {
                         <AnimatePresence initial={false}>
                             {isExpanded && (
                                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }} className="overflow-hidden border-t border-zinc-100">
-                                    <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-4 text-zinc-600 text-sm sm:text-base leading-relaxed space-y-4">
-                                        <RichText text={stripHtml(bodyHtml)} />
-                                    </div>
+                                    <div 
+                                        className="px-6 sm:px-8 pb-6 sm:pb-8 pt-4 text-zinc-600 text-sm sm:text-base leading-relaxed space-y-4 achievement-rich-content"
+                                        dangerouslySetInnerHTML={{ __html: formatDescriptionHtml(bodyHtml) }}
+                                    />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -370,7 +391,6 @@ export default function AchievementDetail() {
                 <meta data-rh="true" name="twitter:image" content={ogImage} />
                 <meta data-rh="true" name="twitter:image:alt" content={seoTitle} />
             </Helmet>
-            {!lightboxOpen && <Navbar />}
             <main className="pt-20 relative z-10">
                 <ImageGallery images={allImages} title={achievement.title} videoUrl={achievement.videoPreview} onLightboxChange={setLightboxOpen} />
 
@@ -458,9 +478,10 @@ export default function AchievementDetail() {
                                     transition={{ duration: 0.5, delay: 0.2 }}
                                     className="rounded-2xl border border-zinc-200/90 bg-white px-6 sm:px-10 py-8 sm:py-10 shadow-2xs mb-6"
                                 >
-                                    <div className="text-zinc-600 text-base sm:text-lg leading-relaxed">
-                                        <RichText text={stripHtml(html)} />
-                                    </div>
+                                    <div 
+                                        className="text-zinc-600 text-base sm:text-lg leading-relaxed achievement-rich-content"
+                                        dangerouslySetInnerHTML={{ __html: formatDescriptionHtml(html) }}
+                                    />
                                 </motion.div>
                             );
                         })()}
