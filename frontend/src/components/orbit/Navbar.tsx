@@ -87,6 +87,9 @@ export function Navbar() {
         rafPending = false;
         setScrolled(window.scrollY > 20);
 
+        // Skip homepage section scroll spy on dedicated subpages
+        if (isProjectPage || isAchievementPage) return;
+
         // Scroll Spy Logic
         const sections = ['hero', 'services', 'why-us', 'projects', 'achievements', 'reviews', 'leadership', 'contact'];
         for (let i = sections.length - 1; i >= 0; i--) {
@@ -141,8 +144,8 @@ export function Navbar() {
         ? scrolled ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.85)'
         : scrolled ? 'rgba(6, 6, 8, 0.85)' : 'rgba(10, 10, 12, 0.35)',
     border: isLightMode
-        ? scrolled ? 'rgba(0, 0, 0, 0.08)' : 'rgba(0, 0, 0, 0.06)'
-        : scrolled ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+        ? scrolled ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.09)'
+        : scrolled ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.10)',
     text: isLightMode ? '#09090B' : '#FFFFFF',
     textMuted: isLightMode ? 'rgba(24, 24, 27, 0.7)' : 'rgba(255, 255, 255, 0.65)',
     accent: '#10B981', // Emerald 500
@@ -165,10 +168,13 @@ export function Navbar() {
             backgroundColor: theme.bg,
             borderColor: theme.border,
             boxShadow: isLightMode
-              ? '0 4px 20px -2px rgba(0, 0, 0, 0.04)'
+              ? '0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02)'
               : '0 10px 30px -15px rgba(0,0,0,0.5)'
           }}
         >
+          {/* Subtle Apple Liquid Glass bottom hairline accent */}
+          <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-emerald-500/35 to-transparent pointer-events-none" />
+
           {/* Premium Emerald Shimmer Sweep (Left to Right) */}
           <motion.div
             initial={{ x: '-100%', opacity: 0 }}

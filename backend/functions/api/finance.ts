@@ -373,6 +373,7 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
         const offset = (page - 1) * limit;
         const type = url.searchParams.get('type') || '';
         const category = url.searchParams.get('category') || '';
+        const parentId = url.searchParams.get('parent_id') || '';
         const dateFrom = url.searchParams.get('from') || '';
         const dateTo = url.searchParams.get('to') || '';
         const search = url.searchParams.get('search') || '';
@@ -382,6 +383,7 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
 
         if (type) { whereClause += ` AND type = ?`; args.push(type); }
         if (category) { whereClause += ` AND category = ?`; args.push(category); }
+        if (parentId) { whereClause += ` AND parent_id = ?`; args.push(parentId); }
         if (dateFrom) { whereClause += ` AND date >= ?`; args.push(dateFrom); }
         if (dateTo) { whereClause += ` AND date <= ?`; args.push(dateTo); }
         if (search) { whereClause += ` AND (description LIKE ? OR client_name LIKE ? OR notes LIKE ? OR recipient LIKE ?)`; args.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`); }
@@ -509,6 +511,50 @@ async function handleTransactions(request: Request, env: Env): Promise<Response>
                 body.notes || null, body.recipient || null, body.parent_id || null, authorEmail, id,
             ],
         });
+
+        // If it is an Income transaction and contains distribution splits, synchronize them
+        let updatedDistributions = 0;
+        if (body.type === 'income' && body.distributions && Array.isArray(body.distributions)) {
+            await db.execute({
+                sql: `DELETE FROM finance_transactions WHERE parent_id = ? AND type = 'distribution'`,
+                args: [id]
+            });
+            for (const dist of body.distributions) {
+                if (dist.amount > 0) {
+                    const distId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+                    await db.execute({
+                        sql: `INSERT INTO finance_transactions (id, type, amount, currency, category, subcategory, description, date, recipient, parent_id, notes, payment_method, created_by, updated_by)
+                              VALUES (?, 'distribution', ?, ?, 'Distribution', 'Pending', ?, ?, ?, ?, ?, 'bank_transfer', ?, ?)`,
+                        args: [
+                            distId, dist.amount, body.currency || 'BDT',
+                            `Split: ${dist.recipient} Share from "${body.description}"`,
+                            body.date, dist.recipient, id, 'Automatic split share', authorEmail, authorEmail
+                        ]
+                    });
+                    updatedDistributions++;
+                }
+            }
+        }
+
+        // If miscellaneous expense is updated, synchronize it as a linked expense
+        if (body.type === 'income' && body.misc_amount !== undefined) {
+            await db.execute({
+                sql: `DELETE FROM finance_transactions WHERE parent_id = ? AND type = 'expense' AND subcategory = 'Misc Income Deduction'`,
+                args: [id]
+            });
+            if (body.misc_amount > 0) {
+                const miscId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+                await db.execute({
+                    sql: `INSERT INTO finance_transactions (id, type, amount, currency, category, subcategory, description, date, parent_id, notes, payment_method, recipient, created_by, updated_by)
+                          VALUES (?, 'expense', ?, ?, 'Miscellaneous', 'Misc Income Deduction', ?, ?, ?, ?, ?, 'Company Funding', ?, ?)`,
+                    args: [
+                        miscId, body.misc_amount, body.currency || 'BDT',
+                        body.misc_description || 'Miscellaneous Expense (Bus/Tea)',
+                        body.date, id, 'Deducted directly from Company Funding split', body.payment_method || 'cash', authorEmail, authorEmail
+                    ]
+                });
+            }
+        }
 
         // Audit log
         const meta = getRequestMeta(request);

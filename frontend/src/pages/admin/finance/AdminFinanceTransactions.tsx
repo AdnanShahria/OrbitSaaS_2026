@@ -34,6 +34,69 @@ function formatCurrency(amount: number, currency = 'BDT') {
     return `৳${amount.toLocaleString()}`;
 }
 
+/** Parses string or number to a scaled BigInt along with its decimal place count */
+function parseToScaledBigInt(str: string | number) {
+    const s = String(str ?? '').trim();
+    if (!s) return { val: 0n, decimals: 0 };
+    const parts = s.split('.');
+    const intPart = parts[0] || '0';
+    const fracPart = parts[1] || '';
+    const cleanStr = (intPart.replace(/^-/, '') || '0') + fracPart;
+    return { val: BigInt(cleanStr), decimals: fracPart.length };
+}
+
+/** Auto-calculates percentage with up to 25+ digits after the decimal point */
+function calcPercentageExact(amountStr: string | number, totalStr: string | number, precision = 28): string {
+    const amt = parseToScaledBigInt(amountStr);
+    const tot = parseToScaledBigInt(totalStr);
+    if (tot.val <= 0n || amt.val <= 0n) return '0';
+    
+    let num = amt.val;
+    let den = tot.val;
+    const scaleDiff = tot.decimals - amt.decimals;
+    if (scaleDiff > 0) {
+        num = num * (10n ** BigInt(scaleDiff));
+    } else if (scaleDiff < 0) {
+        den = den * (10n ** BigInt(-scaleDiff));
+    }
+    
+    const effPrecision = Math.max(precision, amt.decimals + 5);
+    const mult = 10n ** BigInt(effPrecision);
+    const quotient = (num * 100n * mult) / den;
+    
+    let qStr = quotient.toString();
+    if (qStr.length <= effPrecision) {
+        qStr = qStr.padStart(effPrecision + 1, '0');
+    }
+    const intPart = qStr.slice(0, -effPrecision);
+    let fracPart = qStr.slice(-effPrecision);
+    fracPart = fracPart.replace(/0+$/, '');
+    return fracPart.length > 0 ? `${intPart}.${fracPart}` : intPart;
+}
+
+/** Calculates Tk amount from percentage string with high decimal precision */
+function calcAmountFromPercent(percentStr: string | number, totalStr: string | number, precision = 2): string {
+    const pct = parseToScaledBigInt(percentStr);
+    const tot = parseToScaledBigInt(totalStr);
+    if (tot.val <= 0n || pct.val <= 0n) return '0';
+
+    const denPower = BigInt(tot.decimals + pct.decimals + 2);
+    const effPrecision = Math.max(precision, pct.decimals);
+    const mult = 10n ** BigInt(effPrecision);
+    const num = tot.val * pct.val * mult;
+    const den = 10n ** denPower;
+    const quotient = num / den;
+
+    let qStr = quotient.toString();
+    if (qStr.length <= effPrecision) {
+        qStr = qStr.padStart(effPrecision + 1, '0');
+    }
+    const intPart = qStr.slice(0, -effPrecision);
+    let fracPart = qStr.slice(-effPrecision);
+    fracPart = fracPart.replace(/0+$/, '');
+    return fracPart.length > 0 ? `${intPart}.${fracPart}` : intPart;
+}
+
 const emptyTx: Omit<Transaction, 'id'> = {
     type: 'income', amount: 0, currency: 'BDT', category: '', description: '',
     date: new Date().toISOString().split('T')[0], payment_method: 'Bank Transfer',
@@ -57,14 +120,18 @@ export default function AdminFinanceTransactions() {
     const [saving, setSaving] = useState(false);
     const [selectedTeamForDist, setSelectedTeamForDist] = useState<string>('');
 
-    // Distribution split percentages (for Income form)
-    const [companyFundingPercent, setCompanyFundingPercent] = useState(30);
-    const [brokerPercent, setBrokerPercent] = useState(10);
-    const [marketingPercent, setMarketingPercent] = useState(25);
-    const [devPercent, setDevPercent] = useState(35);
+    // Distribution split percentages (for Income form) - stored as high precision strings (supporting 25+ decimal places)
+    const [companyFundingPercent, setCompanyFundingPercent] = useState<string>('30');
+    const [brokerPercent, setBrokerPercent] = useState<string>('10');
+    const [marketingPercent, setMarketingPercent] = useState<string>('25');
+    const [devPercent, setDevPercent] = useState<string>('35');
 
-    // Temporary state to hold amount inputs while editing to prevent cursor jumps and rounding feedback loops
+    // Explicitly tracked split Tk amounts
+    const [splitAmounts, setSplitAmounts] = useState<{ company?: string; broker?: string; marketing?: string; dev?: string }>({});
+
+    // Temporary states to hold amount & percentage inputs while editing to prevent cursor jumps and decimal truncation
     const [activeTempAmount, setActiveTempAmount] = useState<{ field: string; value: string } | null>(null);
+    const [activeTempPercent, setActiveTempPercent] = useState<{ field: string; value: string } | null>(null);
 
     // Miscellaneous Expense inside Income Modal State
     const [miscExpenseAmount, setMiscExpenseAmount] = useState(0);
@@ -299,15 +366,64 @@ export default function AdminFinanceTransactions() {
         setForm({ ...emptyTx, subcategory: 'Pending' });
         setMiscExpenseAmount(0);
         setMiscExpenseDescription('Tea/coffee & bus fare');
+        setCompanyFundingPercent('30');
+        setBrokerPercent('10');
+        setMarketingPercent('25');
+        setDevPercent('35');
+        setSplitAmounts({});
+        setActiveTempAmount(null);
+        setActiveTempPercent(null);
         setShowModal(true);
     };
 
-    const openEdit = (tx: Transaction) => {
+    const openEdit = async (tx: Transaction) => {
         setEditTx(tx);
         setForm({ ...tx });
         setMiscExpenseAmount(0);
         setMiscExpenseDescription('Tea/coffee & bus fare');
+        setSplitAmounts({});
+        setActiveTempAmount(null);
+        setActiveTempPercent(null);
         setShowModal(true);
+
+        if (tx.type === 'income') {
+            try {
+                const res = await fetch(`${API_BASE}/api/finance?action=transactions&parent_id=${tx.id}&limit=20&_t=${Date.now()}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    cache: 'no-store'
+                });
+                if (res.ok) {
+                    const json = await res.json();
+                    const linked: Transaction[] = json.transactions || [];
+                    const miscTx = linked.find(t => t.type === 'expense' && t.subcategory === 'Misc Income Deduction');
+                    if (miscTx) {
+                        setMiscExpenseAmount(miscTx.amount);
+                        setMiscExpenseDescription(miscTx.description || 'Tea/coffee & bus fare');
+                    }
+                    const netAmt = Math.max(0, tx.amount - (miscTx ? miscTx.amount : 0));
+                    if (netAmt > 0) {
+                        const compTx = linked.find(t => t.type === 'distribution' && t.recipient === 'Company Funding');
+                        const brokTx = linked.find(t => t.type === 'distribution' && t.recipient === 'Broker Allowance');
+                        const mktTx = linked.find(t => t.type === 'distribution' && t.recipient === 'Marketing Team');
+                        const devTx = linked.find(t => t.type === 'distribution' && t.recipient === 'Development Team');
+
+                        if (compTx || brokTx || mktTx || devTx) {
+                            const cAmt = compTx ? String(compTx.amount) : '0';
+                            const bAmt = brokTx ? String(brokTx.amount) : '0';
+                            const mAmt = mktTx ? String(mktTx.amount) : '0';
+                            const dAmt = devTx ? String(devTx.amount) : '0';
+                            setSplitAmounts({ company: cAmt, broker: bAmt, marketing: mAmt, dev: dAmt });
+                            setCompanyFundingPercent(compTx ? calcPercentageExact(cAmt, netAmt, 28) : '0');
+                            setBrokerPercent(brokTx ? calcPercentageExact(bAmt, netAmt, 28) : '0');
+                            setMarketingPercent(mktTx ? calcPercentageExact(mAmt, netAmt, 28) : '0');
+                            setDevPercent(devTx ? calcPercentageExact(dAmt, netAmt, 28) : '0');
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load linked transactions for edit:', e);
+            }
+        }
     };
 
     const handleSave = async () => {
@@ -321,7 +437,7 @@ export default function AdminFinanceTransactions() {
                 const payload = { ...form };
 
                 // For Income type: Calculate & inject the automatic distributions
-                if (form.type === 'income' && !editTx) {
+                if (form.type === 'income') {
                     payload.misc_amount = miscExpenseAmount;
                     payload.misc_description = miscExpenseDescription;
 
@@ -329,10 +445,14 @@ export default function AdminFinanceTransactions() {
                     payload.amount = form.amount;
                     const netIncomeAmount = Math.max(0, form.amount - miscExpenseAmount);
 
-                    const companyAmt = Math.round((netIncomeAmount * companyFundingPercent) / 100);
-                    const brokerAmt = Math.round((netIncomeAmount * brokerPercent) / 100);
-                    const marketingAmt = Math.round((netIncomeAmount * marketingPercent) / 100);
-                    const devAmt = Math.round((netIncomeAmount * devPercent) / 100);
+                    let companyAmt = parseFloat(parseFloat(String(companyFundingShare)).toFixed(2)) || 0;
+                    let brokerAmt = parseFloat(parseFloat(String(brokerShare)).toFixed(2)) || 0;
+                    let marketingAmt = parseFloat(parseFloat(String(marketingShare)).toFixed(2)) || 0;
+                    const allocatedFirstThree = parseFloat((companyAmt + brokerAmt + marketingAmt).toFixed(2));
+                    let devAmt = parseFloat(parseFloat(String(devShare)).toFixed(2)) || 0;
+                    if (Math.abs((allocatedFirstThree + devAmt) - netIncomeAmount) <= 0.05) {
+                        devAmt = parseFloat(Math.max(0, netIncomeAmount - allocatedFirstThree).toFixed(2));
+                    }
 
                     payload.distributions = [
                         { recipient: 'Company Funding', amount: companyAmt },
@@ -446,46 +566,87 @@ export default function AdminFinanceTransactions() {
         } catch { toast.error('Error'); }
     };
 
-    // Manual Split Change Logic (Auto percentage system turned off)
-    const handleSplitChange = (field: 'company' | 'broker' | 'marketing' | 'dev', key: 'percent' | 'amount', value: number) => {
+    // Split Change Logic supporting exact amounts and full 25+ digit decimal percentages
+    const handleSplitChange = (field: 'company' | 'broker' | 'marketing' | 'dev', key: 'percent' | 'amount', valueStr: string | number) => {
         const netAmt = Math.max(0, (form.amount || 0) - miscExpenseAmount);
+        const val = String(valueStr ?? '').trim();
 
-        let targetPct = 0;
         if (key === 'percent') {
-            targetPct = Math.min(100, Math.max(0, value));
+            let cleanPct = val;
+            const num = parseFloat(cleanPct);
+            if (!isNaN(num) && num > 100) cleanPct = '100';
+
+            if (field === 'company') setCompanyFundingPercent(cleanPct);
+            else if (field === 'broker') setBrokerPercent(cleanPct);
+            else if (field === 'marketing') setMarketingPercent(cleanPct);
+            else if (field === 'dev') setDevPercent(cleanPct);
+
+            // Recalculate Tk amount for this field
+            if (netAmt > 0 && cleanPct !== '') {
+                const calculatedAmt = calcAmountFromPercent(cleanPct, netAmt, 2);
+                setSplitAmounts(prev => ({ ...prev, [field]: calculatedAmt }));
+            }
+
+            if (activeTempAmount?.field === field) {
+                setActiveTempAmount(null);
+            }
         } else {
             if (netAmt <= 0) {
                 toast.error('Please enter valid transaction amount first!');
                 return;
             }
-            targetPct = Math.min(100, Math.max(0, Math.round((value / netAmt) * 100)));
-        }
 
-        // Each slider/input updates independently (auto-balancing turned off)
-        if (field === 'company') setCompanyFundingPercent(targetPct);
-        else if (field === 'broker') setBrokerPercent(targetPct);
-        else if (field === 'marketing') setMarketingPercent(targetPct);
-        else if (field === 'dev') setDevPercent(targetPct);
+            // Track the explicit entered Tk amount directly
+            setSplitAmounts(prev => ({ ...prev, [field]: val }));
+
+            // Auto-calculate percentage with full 25+ digits precision
+            const calculatedPct = calcPercentageExact(val, netAmt, 28);
+
+            if (field === 'company') setCompanyFundingPercent(calculatedPct);
+            else if (field === 'broker') setBrokerPercent(calculatedPct);
+            else if (field === 'marketing') setMarketingPercent(calculatedPct);
+            else if (field === 'dev') setDevPercent(calculatedPct);
+
+            // Clear active temp percent so the percentage input displays the newly calculated float
+            if (activeTempPercent?.field === field) {
+                setActiveTempPercent(null);
+            }
+        }
     };
 
     const handleAutoBalance = () => {
-        const sum = companyFundingPercent + brokerPercent + marketingPercent + devPercent;
-        if (sum === 0) {
-            setCompanyFundingPercent(30);
-            setBrokerPercent(10);
-            setMarketingPercent(25);
-            setDevPercent(35);
+        const c = parseFloat(String(companyFundingPercent)) || 0;
+        const b = parseFloat(String(brokerPercent)) || 0;
+        const m = parseFloat(String(marketingPercent)) || 0;
+        const d = parseFloat(String(devPercent)) || 0;
+        const sum = c + b + m + d;
+        if (sum <= 0) {
+            setCompanyFundingPercent('30');
+            setBrokerPercent('10');
+            setMarketingPercent('25');
+            setDevPercent('35');
+            setSplitAmounts({});
             return;
         }
-        const factor = 100 / sum;
-        const cVal = Math.round(companyFundingPercent * factor);
-        const bVal = Math.round(brokerPercent * factor);
-        const mVal = Math.round(marketingPercent * factor);
-        const dVal = 100 - (cVal + bVal + mVal);
+        const netAmt = Math.max(0, (form.amount || 0) - miscExpenseAmount);
+        const cVal = calcPercentageExact(c, sum, 28);
+        const bVal = calcPercentageExact(b, sum, 28);
+        const mVal = calcPercentageExact(m, sum, 28);
+        const dVal = calcPercentageExact(d, sum, 28);
         setCompanyFundingPercent(cVal);
         setBrokerPercent(bVal);
         setMarketingPercent(mVal);
         setDevPercent(dVal);
+        if (netAmt > 0) {
+            setSplitAmounts({
+                company: calcAmountFromPercent(cVal, netAmt, 2),
+                broker: calcAmountFromPercent(bVal, netAmt, 2),
+                marketing: calcAmountFromPercent(mVal, netAmt, 2),
+                dev: calcAmountFromPercent(dVal, netAmt, 2),
+            });
+        }
+        setActiveTempAmount(null);
+        setActiveTempPercent(null);
     };
 
     const handleExport = async () => {
@@ -666,12 +827,27 @@ export default function AdminFinanceTransactions() {
 
     // Live split calculations (miscellaneous expense counted during calculation)
     const netIncomeAmount = Math.max(0, (form.amount || 0) - miscExpenseAmount);
-    const totalSplitPercent = companyFundingPercent + brokerPercent + marketingPercent + devPercent;
-    const companyFundingShare = Math.round((netIncomeAmount * companyFundingPercent) / 100);
-    const brokerShare = Math.round((netIncomeAmount * brokerPercent) / 100);
-    const marketingShare = Math.round((netIncomeAmount * marketingPercent) / 100);
-    const devShare = Math.round((netIncomeAmount * devPercent) / 100);
-    const totalAllocatedAmount = companyFundingShare + brokerShare + marketingShare + devShare + miscExpenseAmount;
+
+    const companyFundingShare = splitAmounts.company ?? (netIncomeAmount > 0 ? calcAmountFromPercent(companyFundingPercent, netIncomeAmount, 2) : '0');
+    const brokerShare = splitAmounts.broker ?? (netIncomeAmount > 0 ? calcAmountFromPercent(brokerPercent, netIncomeAmount, 2) : '0');
+    const marketingShare = splitAmounts.marketing ?? (netIncomeAmount > 0 ? calcAmountFromPercent(marketingPercent, netIncomeAmount, 2) : '0');
+    const devShare = splitAmounts.dev ?? (netIncomeAmount > 0 ? calcAmountFromPercent(devPercent, netIncomeAmount, 2) : '0');
+
+    const numComp = parseFloat(String(companyFundingPercent)) || 0;
+    const numBrok = parseFloat(String(brokerPercent)) || 0;
+    const numMkt = parseFloat(String(marketingPercent)) || 0;
+    const numDev = parseFloat(String(devPercent)) || 0;
+    const rawTotalSplitPercent = numComp + numBrok + numMkt + numDev;
+    const totalSplitPercent = parseFloat(rawTotalSplitPercent.toFixed(6));
+
+    const numCompShare = parseFloat(String(companyFundingShare)) || 0;
+    const numBrokShare = parseFloat(String(brokerShare)) || 0;
+    const numMktShare = parseFloat(String(marketingShare)) || 0;
+    const numDevShare = parseFloat(String(devShare)) || 0;
+    const totalAllocatedAmount = parseFloat((numCompShare + numBrokShare + numMktShare + numDevShare + (miscExpenseAmount || 0)).toFixed(2));
+
+    // Valid if percentage totals ~100% or allocated amounts total form.amount
+    const isSplitValid = Math.abs(rawTotalSplitPercent - 100) <= 0.05 || Math.abs(totalAllocatedAmount - (form.amount || 0)) <= 0.5;
 
     // Disabled state for Save button when totals aren't properly calculated or percentages don't sum to 100%
     const isSaveDisabled = useMemo(() => {
@@ -680,13 +856,13 @@ export default function AdminFinanceTransactions() {
         if (form.type !== 'distribution' && !form.category) return true;
         if (form.type === 'distribution' && !form.recipient) return true;
 
-        if (form.type === 'income' && !editTx) {
+        if (form.type === 'income') {
             if (miscExpenseAmount < 0 || miscExpenseAmount > form.amount) return true;
-            if (totalSplitPercent !== 100) return true;
+            if (!isSplitValid) return true;
         }
 
         return false;
-    }, [saving, form, editTx, miscExpenseAmount, totalSplitPercent]);
+    }, [saving, form, miscExpenseAmount, isSplitValid]);
 
     return (
         <div className="space-y-6 relative">
@@ -1349,200 +1525,274 @@ export default function AdminFinanceTransactions() {
                                             </div>
                                         </div>
 
-                                        {!editTx && (
-                                            <div className="bg-secondary/40 border border-primary/20 rounded-xl p-4 space-y-4">
-                                                <div className="flex items-center justify-between border-b border-border/80 pb-2">
-                                                    <span className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1">
-                                                        <Share2 className="w-3.5 h-3.5 text-primary" /> Live Distribution Split (Manual)
+                                        <div className="bg-secondary/40 border border-primary/20 rounded-xl p-4 space-y-4">
+                                            {editTx && (
+                                                <div className="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs flex items-center gap-2">
+                                                    <span>ℹ️</span> Editing this income transaction will update and synchronize its linked team distributions and deductions.
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between border-b border-border/80 pb-2">
+                                                <span className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+                                                    <Share2 className="w-3.5 h-3.5 text-primary" /> Live Distribution Split (Manual & Auto-Calculated)
+                                                </span>
+                                                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${isSplitValid ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'}`}>
+                                                    Total: {parseFloat(rawTotalSplitPercent.toFixed(4))}%
+                                                </span>
+                                            </div>
+
+                                            {/* Live Calculation Summary & Miscellaneous Counting Display */}
+                                            <div className="bg-background/60 border border-border/70 rounded-xl p-3 space-y-2">
+                                                <div className="flex flex-wrap items-center justify-between text-xs gap-2">
+                                                    <span className="text-muted-foreground">Total Income: <strong className="text-foreground">{formatCurrency(form.amount || 0, form.currency)}</strong></span>
+                                                    <span className="text-muted-foreground">Misc Expense: <strong className="text-amber-400">-{formatCurrency(miscExpenseAmount || 0, form.currency)}</strong></span>
+                                                    <span className="text-muted-foreground">Net Split Pool: <strong className="text-emerald-400">{formatCurrency(netIncomeAmount, form.currency)}</strong></span>
+                                                </div>
+                                                <div className="flex items-center justify-between pt-1.5 border-t border-border/40 text-xs">
+                                                    <span className="text-muted-foreground font-medium">Counted Total (Misc + 4 Splits):</span>
+                                                    <span className={`font-bold font-mono ${isSplitValid && miscExpenseAmount <= (form.amount || 0) ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                        {formatCurrency(totalAllocatedAmount, form.currency)} / {formatCurrency(form.amount || 0, form.currency)}
                                                     </span>
-                                                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${totalSplitPercent === 100 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'}`}>
-                                                        Total: {totalSplitPercent}%
-                                                    </span>
-                                                </div>
-
-                                                {/* Live Calculation Summary & Miscellaneous Counting Display */}
-                                                <div className="bg-background/60 border border-border/70 rounded-xl p-3 space-y-2">
-                                                    <div className="flex flex-wrap items-center justify-between text-xs gap-2">
-                                                        <span className="text-muted-foreground">Total Income: <strong className="text-foreground">{formatCurrency(form.amount || 0, form.currency)}</strong></span>
-                                                        <span className="text-muted-foreground">Misc Expense: <strong className="text-amber-400">-{formatCurrency(miscExpenseAmount || 0, form.currency)}</strong></span>
-                                                        <span className="text-muted-foreground">Net Split Pool: <strong className="text-emerald-400">{formatCurrency(netIncomeAmount, form.currency)}</strong></span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between pt-1.5 border-t border-border/40 text-xs">
-                                                        <span className="text-muted-foreground font-medium">Counted Total (Misc + 4 Splits):</span>
-                                                        <span className={`font-bold font-mono ${totalSplitPercent === 100 && miscExpenseAmount <= (form.amount || 0) ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                                            {formatCurrency(totalAllocatedAmount, form.currency)} / {formatCurrency(form.amount || 0, form.currency)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-4">
-                                                    {/* Company Funding */}
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center justify-between text-xs font-semibold">
-                                                            <span className="text-muted-foreground flex items-center gap-1">🏢 Company Funding:</span>
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                <input type="number" min="0" 
-                                                                    value={activeTempAmount?.field === 'company' ? activeTempAmount.value : (companyFundingShare || '')}
-                                                                    onFocus={e => setActiveTempAmount({ field: 'company', value: e.target.value })}
-                                                                    onChange={e => {
-                                                                        setActiveTempAmount({ field: 'company', value: e.target.value });
-                                                                        handleSplitChange('company', 'amount', parseFloat(e.target.value) || 0);
-                                                                    }}
-                                                                    onBlur={() => setActiveTempAmount(null)}
-                                                                    className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <input type="range" min="0" max="100" value={companyFundingPercent}
-                                                                onChange={e => handleSplitChange('company', 'percent', parseInt(e.target.value) || 0)}
-                                                                className="flex-1 accent-emerald-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
-                                                            <div className="flex items-center gap-1">
-                                                                <input type="number" min="0" max="100" value={companyFundingPercent}
-                                                                    onChange={e => handleSplitChange('company', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                                                                    className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                                <span className="text-xs text-muted-foreground">%</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Broker Allowance */}
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center justify-between text-xs font-semibold">
-                                                            <span className="text-muted-foreground flex items-center gap-1">💼 Broker Allowance:</span>
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                <input type="number" min="0" 
-                                                                    value={activeTempAmount?.field === 'broker' ? activeTempAmount.value : (brokerShare || '')}
-                                                                    onFocus={e => setActiveTempAmount({ field: 'broker', value: e.target.value })}
-                                                                    onChange={e => {
-                                                                        setActiveTempAmount({ field: 'broker', value: e.target.value });
-                                                                        handleSplitChange('broker', 'amount', parseFloat(e.target.value) || 0);
-                                                                    }}
-                                                                    onBlur={() => setActiveTempAmount(null)}
-                                                                    className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <input type="range" min="0" max="100" value={brokerPercent}
-                                                                onChange={e => handleSplitChange('broker', 'percent', parseInt(e.target.value) || 0)}
-                                                                className="flex-1 accent-indigo-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
-                                                            <div className="flex items-center gap-1">
-                                                                <input type="number" min="0" max="100" value={brokerPercent}
-                                                                    onChange={e => handleSplitChange('broker', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                                                                    className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                                <span className="text-xs text-muted-foreground">%</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Marketing Percentage */}
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center justify-between text-xs font-semibold">
-                                                            <span className="text-muted-foreground flex items-center gap-1">📢 Marketing Share:</span>
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                <input type="number" min="0" 
-                                                                    value={activeTempAmount?.field === 'marketing' ? activeTempAmount.value : (marketingShare || '')}
-                                                                    onFocus={e => setActiveTempAmount({ field: 'marketing', value: e.target.value })}
-                                                                    onChange={e => {
-                                                                        setActiveTempAmount({ field: 'marketing', value: e.target.value });
-                                                                        handleSplitChange('marketing', 'amount', parseFloat(e.target.value) || 0);
-                                                                    }}
-                                                                    onBlur={() => setActiveTempAmount(null)}
-                                                                    className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <input type="range" min="0" max="100" value={marketingPercent}
-                                                                onChange={e => handleSplitChange('marketing', 'percent', parseInt(e.target.value) || 0)}
-                                                                className="flex-1 accent-pink-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
-                                                            <div className="flex items-center gap-1">
-                                                                <input type="number" min="0" max="100" value={marketingPercent}
-                                                                    onChange={e => handleSplitChange('marketing', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                                                                    className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                                <span className="text-xs text-muted-foreground">%</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Development Percentage */}
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center justify-between text-xs font-semibold">
-                                                            <span className="text-muted-foreground flex items-center gap-1">🛠️ Development Share:</span>
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="text-[10px] text-muted-foreground">Amt:</span>
-                                                                <input type="number" min="0" 
-                                                                    value={activeTempAmount?.field === 'dev' ? activeTempAmount.value : (devShare || '')}
-                                                                    onFocus={e => setActiveTempAmount({ field: 'dev', value: e.target.value })}
-                                                                    onChange={e => {
-                                                                        setActiveTempAmount({ field: 'dev', value: e.target.value });
-                                                                        handleSplitChange('dev', 'amount', parseFloat(e.target.value) || 0);
-                                                                    }}
-                                                                    onBlur={() => setActiveTempAmount(null)}
-                                                                    className="w-20 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <input type="range" min="0" max="100" value={devPercent}
-                                                                onChange={e => handleSplitChange('dev', 'percent', parseInt(e.target.value) || 0)}
-                                                                className="flex-1 accent-amber-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
-                                                            <div className="flex items-center gap-1">
-                                                                <input type="number" min="0" max="100" value={devPercent}
-                                                                    onChange={e => handleSplitChange('dev', 'percent', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                                                                    className="w-12 bg-secondary border border-border text-center text-xs font-bold rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50" />
-                                                                <span className="text-xs text-muted-foreground">%</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-2 pt-2 border-t border-border/80">
-                                                    <button type="button" onClick={handleAutoBalance}
-                                                        className="flex-1 py-1.5 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-[10px] font-bold text-foreground transition-all flex items-center justify-center gap-1">
-                                                        ⚖️ Auto-Balance splits to 100%
-                                                    </button>
-                                                    <button type="button" onClick={() => { setCompanyFundingPercent(25); setBrokerPercent(25); setMarketingPercent(25); setDevPercent(25); }}
-                                                        className="py-1.5 px-3 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all">
-                                                        Equal (25% each)
-                                                    </button>
-                                                </div>
-                                                {totalSplitPercent !== 100 && (
-                                                    <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium text-center space-y-1">
-                                                        <p className="font-bold flex items-center justify-center gap-1">
-                                                            ⚠️ Manual Adjustment Needed (Sum is {totalSplitPercent}%)
-                                                        </p>
-                                                        <p className="text-[11px] text-amber-400/80">
-                                                            The split percentages must equal 100% before you can save. The save button is grayed out until total is 100%.
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {/* ☕ Miscellaneous Expense Input Inside Income Modal */}
-                                                <div className="border-t border-border/80 pt-3 mt-3 space-y-2">
-                                                    <label className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                                                        ☕ Miscellaneous Expense Deduction
-                                                    </label>
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        <div className="col-span-1">
-                                                            <label className="text-[10px] text-muted-foreground block mb-1">Deduct Amount</label>
-                                                            <input type="number" min="0" value={miscExpenseAmount || ''} onChange={e => setMiscExpenseAmount(parseFloat(e.target.value) || 0)}
-                                                                className="w-full bg-secondary border border-border rounded px-2 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-amber-500/50 font-bold" placeholder="0" />
-                                                        </div>
-                                                        <div className="col-span-2">
-                                                            <label className="text-[10px] text-muted-foreground block mb-1">Expense Remarks</label>
-                                                            <input type="text" value={miscExpenseDescription} onChange={e => setMiscExpenseDescription(e.target.value)}
-                                                                className="w-full bg-secondary border border-border rounded px-2 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-amber-500/50" placeholder="e.g. Bus fare & tea" />
-                                                        </div>
-                                                    </div>
-                                                    {miscExpenseAmount > 0 && (
-                                                        <p className="text-[9px] text-muted-foreground leading-normal mt-1">
-                                                            💡 <strong>{formatCurrency(miscExpenseAmount, form.currency)}</strong> will be subtracted from the income total. The net split amount will be <strong>{formatCurrency(netIncomeAmount, form.currency)}</strong>. A linked operational expense will be created in Company Funding!
-                                                        </p>
-                                                    )}
                                                 </div>
                                             </div>
-                                        )}
+
+                                            <div className="space-y-4">
+                                                {/* Company Funding */}
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center justify-between text-xs font-semibold">
+                                                        <span className="text-muted-foreground flex items-center gap-1">🏢 Company Funding:</span>
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[10px] text-muted-foreground">Amt:</span>
+                                                            <input type="text" inputMode="decimal"
+                                                                title={String(companyFundingShare)}
+                                                                value={activeTempAmount?.field === 'company' ? activeTempAmount.value : (companyFundingShare || '')}
+                                                                onFocus={e => setActiveTempAmount({ field: 'company', value: e.target.value })}
+                                                                onChange={e => {
+                                                                    const valStr = e.target.value;
+                                                                    if (/^[0-9]*\.?[0-9]*$/.test(valStr)) {
+                                                                        setActiveTempAmount({ field: 'company', value: valStr });
+                                                                        handleSplitChange('company', 'amount', valStr);
+                                                                    }
+                                                                }}
+                                                                onBlur={() => setActiveTempAmount(null)}
+                                                                className="w-24 md:w-28 bg-secondary border border-border text-center text-xs font-bold font-mono rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50 px-1" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <input type="range" min="0" max="100" step="any" value={parseFloat(String(companyFundingPercent)) || 0}
+                                                            onChange={e => handleSplitChange('company', 'percent', e.target.value)}
+                                                            className="flex-1 accent-emerald-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
+                                                        <div className="flex items-center gap-1">
+                                                            <input type="text" inputMode="decimal"
+                                                                title={String(companyFundingPercent)}
+                                                                value={activeTempPercent?.field === 'company' ? activeTempPercent.value : (companyFundingPercent !== undefined && companyFundingPercent !== null ? String(companyFundingPercent) : '')}
+                                                                onFocus={e => setActiveTempPercent({ field: 'company', value: e.target.value })}
+                                                                onChange={e => {
+                                                                    const valStr = e.target.value;
+                                                                    if (/^[0-9]*\.?[0-9]*$/.test(valStr)) {
+                                                                        setActiveTempPercent({ field: 'company', value: valStr });
+                                                                        handleSplitChange('company', 'percent', valStr);
+                                                                    }
+                                                                }}
+                                                                onBlur={() => setActiveTempPercent(null)}
+                                                                className="w-28 md:w-36 bg-secondary border border-border text-center text-xs font-bold font-mono rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50 px-1 overflow-x-auto" />
+                                                            <span className="text-xs text-muted-foreground">%</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Broker Allowance */}
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center justify-between text-xs font-semibold">
+                                                        <span className="text-muted-foreground flex items-center gap-1">💼 Broker Allowance:</span>
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[10px] text-muted-foreground">Amt:</span>
+                                                            <input type="text" inputMode="decimal"
+                                                                title={String(brokerShare)}
+                                                                value={activeTempAmount?.field === 'broker' ? activeTempAmount.value : (brokerShare || '')}
+                                                                onFocus={e => setActiveTempAmount({ field: 'broker', value: e.target.value })}
+                                                                onChange={e => {
+                                                                    const valStr = e.target.value;
+                                                                    if (/^[0-9]*\.?[0-9]*$/.test(valStr)) {
+                                                                        setActiveTempAmount({ field: 'broker', value: valStr });
+                                                                        handleSplitChange('broker', 'amount', valStr);
+                                                                    }
+                                                                }}
+                                                                onBlur={() => setActiveTempAmount(null)}
+                                                                className="w-24 md:w-28 bg-secondary border border-border text-center text-xs font-bold font-mono rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50 px-1" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <input type="range" min="0" max="100" step="any" value={parseFloat(String(brokerPercent)) || 0}
+                                                            onChange={e => handleSplitChange('broker', 'percent', e.target.value)}
+                                                            className="flex-1 accent-indigo-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
+                                                        <div className="flex items-center gap-1">
+                                                            <input type="text" inputMode="decimal"
+                                                                title={String(brokerPercent)}
+                                                                value={activeTempPercent?.field === 'broker' ? activeTempPercent.value : (brokerPercent !== undefined && brokerPercent !== null ? String(brokerPercent) : '')}
+                                                                onFocus={e => setActiveTempPercent({ field: 'broker', value: e.target.value })}
+                                                                onChange={e => {
+                                                                    const valStr = e.target.value;
+                                                                    if (/^[0-9]*\.?[0-9]*$/.test(valStr)) {
+                                                                        setActiveTempPercent({ field: 'broker', value: valStr });
+                                                                        handleSplitChange('broker', 'percent', valStr);
+                                                                    }
+                                                                }}
+                                                                onBlur={() => setActiveTempPercent(null)}
+                                                                className="w-28 md:w-36 bg-secondary border border-border text-center text-xs font-bold font-mono rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50 px-1 overflow-x-auto" />
+                                                            <span className="text-xs text-muted-foreground">%</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Marketing Percentage */}
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center justify-between text-xs font-semibold">
+                                                        <span className="text-muted-foreground flex items-center gap-1">📢 Marketing Share:</span>
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[10px] text-muted-foreground">Amt:</span>
+                                                            <input type="text" inputMode="decimal"
+                                                                title={String(marketingShare)}
+                                                                value={activeTempAmount?.field === 'marketing' ? activeTempAmount.value : (marketingShare || '')}
+                                                                onFocus={e => setActiveTempAmount({ field: 'marketing', value: e.target.value })}
+                                                                onChange={e => {
+                                                                    const valStr = e.target.value;
+                                                                    if (/^[0-9]*\.?[0-9]*$/.test(valStr)) {
+                                                                        setActiveTempAmount({ field: 'marketing', value: valStr });
+                                                                        handleSplitChange('marketing', 'amount', valStr);
+                                                                    }
+                                                                }}
+                                                                onBlur={() => setActiveTempAmount(null)}
+                                                                className="w-24 md:w-28 bg-secondary border border-border text-center text-xs font-bold font-mono rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50 px-1" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <input type="range" min="0" max="100" step="any" value={parseFloat(String(marketingPercent)) || 0}
+                                                            onChange={e => handleSplitChange('marketing', 'percent', e.target.value)}
+                                                            className="flex-1 accent-pink-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
+                                                        <div className="flex items-center gap-1">
+                                                            <input type="text" inputMode="decimal"
+                                                                title={String(marketingPercent)}
+                                                                value={activeTempPercent?.field === 'marketing' ? activeTempPercent.value : (marketingPercent !== undefined && marketingPercent !== null ? String(marketingPercent) : '')}
+                                                                onFocus={e => setActiveTempPercent({ field: 'marketing', value: e.target.value })}
+                                                                onChange={e => {
+                                                                    const valStr = e.target.value;
+                                                                    if (/^[0-9]*\.?[0-9]*$/.test(valStr)) {
+                                                                        setActiveTempPercent({ field: 'marketing', value: valStr });
+                                                                        handleSplitChange('marketing', 'percent', valStr);
+                                                                    }
+                                                                }}
+                                                                onBlur={() => setActiveTempPercent(null)}
+                                                                className="w-28 md:w-36 bg-secondary border border-border text-center text-xs font-bold font-mono rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50 px-1 overflow-x-auto" />
+                                                            <span className="text-xs text-muted-foreground">%</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Development Percentage */}
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center justify-between text-xs font-semibold">
+                                                        <span className="text-muted-foreground flex items-center gap-1">🛠️ Development Share:</span>
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[10px] text-muted-foreground">Amt:</span>
+                                                            <input type="text" inputMode="decimal"
+                                                                title={String(devShare)}
+                                                                value={activeTempAmount?.field === 'dev' ? activeTempAmount.value : (devShare || '')}
+                                                                onFocus={e => setActiveTempAmount({ field: 'dev', value: e.target.value })}
+                                                                onChange={e => {
+                                                                    const valStr = e.target.value;
+                                                                    if (/^[0-9]*\.?[0-9]*$/.test(valStr)) {
+                                                                        setActiveTempAmount({ field: 'dev', value: valStr });
+                                                                        handleSplitChange('dev', 'amount', valStr);
+                                                                    }
+                                                                }}
+                                                                onBlur={() => setActiveTempAmount(null)}
+                                                                className="w-24 md:w-28 bg-secondary border border-border text-center text-xs font-bold font-mono rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50 px-1" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <input type="range" min="0" max="100" step="any" value={parseFloat(String(devPercent)) || 0}
+                                                            onChange={e => handleSplitChange('dev', 'percent', e.target.value)}
+                                                            className="flex-1 accent-amber-500 bg-secondary h-1.5 rounded-lg appearance-none cursor-pointer" />
+                                                        <div className="flex items-center gap-1">
+                                                            <input type="text" inputMode="decimal"
+                                                                title={String(devPercent)}
+                                                                value={activeTempPercent?.field === 'dev' ? activeTempPercent.value : (devPercent !== undefined && devPercent !== null ? String(devPercent) : '')}
+                                                                onFocus={e => setActiveTempPercent({ field: 'dev', value: e.target.value })}
+                                                                onChange={e => {
+                                                                    const valStr = e.target.value;
+                                                                    if (/^[0-9]*\.?[0-9]*$/.test(valStr)) {
+                                                                        setActiveTempPercent({ field: 'dev', value: valStr });
+                                                                        handleSplitChange('dev', 'percent', valStr);
+                                                                    }
+                                                                }}
+                                                                onBlur={() => setActiveTempPercent(null)}
+                                                                className="w-28 md:w-36 bg-secondary border border-border text-center text-xs font-bold font-mono rounded py-0.5 text-foreground outline-none focus:ring-1 focus:ring-primary/50 px-1 overflow-x-auto" />
+                                                            <span className="text-xs text-muted-foreground">%</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 pt-2 border-t border-border/80">
+                                                <button type="button" onClick={handleAutoBalance}
+                                                    className="flex-1 py-1.5 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-[10px] font-bold text-foreground transition-all flex items-center justify-center gap-1">
+                                                    ⚖️ Auto-Balance splits to 100%
+                                                </button>
+                                                <button type="button" onClick={() => {
+                                                    setCompanyFundingPercent('25');
+                                                    setBrokerPercent('25');
+                                                    setMarketingPercent('25');
+                                                    setDevPercent('25');
+                                                    if (netIncomeAmount > 0) {
+                                                        setSplitAmounts({
+                                                            company: calcAmountFromPercent('25', netIncomeAmount, 2),
+                                                            broker: calcAmountFromPercent('25', netIncomeAmount, 2),
+                                                            marketing: calcAmountFromPercent('25', netIncomeAmount, 2),
+                                                            dev: calcAmountFromPercent('25', netIncomeAmount, 2),
+                                                        });
+                                                    }
+                                                    setActiveTempAmount(null);
+                                                    setActiveTempPercent(null);
+                                                }}
+                                                    className="py-1.5 px-3 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all">
+                                                    Equal (25% each)
+                                                </button>
+                                            </div>
+                                            {!isSplitValid && (
+                                                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium text-center space-y-1">
+                                                    <p className="font-bold flex items-center justify-center gap-1">
+                                                        ⚠️ Manual Adjustment Needed (Sum is {parseFloat(rawTotalSplitPercent.toFixed(4))}%)
+                                                    </p>
+                                                    <p className="text-[11px] text-amber-400/80">
+                                                        The split percentages must equal 100% (or allocated Tk amounts must equal the net pool) before you can save.
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* ☕ Miscellaneous Expense Input Inside Income Modal */}
+                                            <div className="border-t border-border/80 pt-3 mt-3 space-y-2">
+                                                <label className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                                                    ☕ Miscellaneous Expense Deduction
+                                                </label>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <div className="col-span-1">
+                                                        <label className="text-[10px] text-muted-foreground block mb-1">Deduct Amount</label>
+                                                        <input type="number" min="0" step="any" value={miscExpenseAmount || ''} onChange={e => setMiscExpenseAmount(parseFloat(e.target.value) || 0)}
+                                                            className="w-full bg-secondary border border-border rounded px-2 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-amber-500/50 font-bold" placeholder="0" />
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <label className="text-[10px] text-muted-foreground block mb-1">Expense Remarks</label>
+                                                        <input type="text" value={miscExpenseDescription} onChange={e => setMiscExpenseDescription(e.target.value)}
+                                                            className="w-full bg-secondary border border-border rounded px-2 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-amber-500/50" placeholder="e.g. Bus fare & tea" />
+                                                    </div>
+                                                </div>
+                                                {miscExpenseAmount > 0 && (
+                                                    <p className="text-[9px] text-muted-foreground leading-normal mt-1">
+                                                        💡 <strong>{formatCurrency(miscExpenseAmount, form.currency)}</strong> will be subtracted from the income total. The net split amount will be <strong>{formatCurrency(netIncomeAmount, form.currency)}</strong>. A linked operational expense will be created in Company Funding!
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
                                     </>
                                 )}
 

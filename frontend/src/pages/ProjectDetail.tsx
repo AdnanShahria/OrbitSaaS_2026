@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ExternalLink, ChevronLeft, ChevronRight, ChevronDown, X, ArrowRight, Star, ArrowUpRight, Share2, Check } from 'lucide-react';
+import { ArrowLeft, ExternalLink, ChevronLeft, ChevronRight, ChevronDown, X, ArrowRight, Star, ArrowUpRight, Share2, Check, Maximize2, Lock, Play } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { useContent } from '@/contexts/ContentContext';
 import { Navbar } from '@/components/orbit/Navbar';
@@ -23,6 +23,9 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
     const [direction, setDirection] = useState(0);
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [autoPlayKey, setAutoPlayKey] = useState(0);
+    const [isInView, setIsInView] = useState(true);
+    const thumbnailContainerRef = useRef<HTMLDivElement>(null);
+    const galleryRef = useRef<HTMLDivElement>(null);
 
     // Build mixed media array: images + video at position 1 (2nd slide)
     const media: MediaItem[] = (() => {
@@ -34,14 +37,67 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
         return items;
     })();
 
+    // Only autoplay when gallery is actively visible and user hasn't scrolled down the page
     useEffect(() => {
-        if (media.length <= 1 || lightboxOpen) return;
+        const el = galleryRef.current;
+        if (!el || typeof IntersectionObserver === 'undefined') return;
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                // Gallery must be at least 25% visible in viewport to consider in-view
+                setIsInView(entry.isIntersecting);
+            },
+            { threshold: 0.25 }
+        );
+        observer.observe(el);
+
+        // Also stop autoplay if user has scrolled down into the project content
+        const handleScroll = () => {
+            if (window.scrollY > 180) {
+                setIsInView(false);
+            }
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (media.length <= 1 || lightboxOpen || !isInView) return;
         const timer = setInterval(() => {
             setDirection(1);
             setCurrentIndex((prev) => (prev + 1) % media.length);
-        }, 4000);
+        }, 5000);
         return () => clearInterval(timer);
-    }, [media.length, lightboxOpen, autoPlayKey]);
+    }, [media.length, lightboxOpen, isInView, autoPlayKey]);
+
+    // Keep active thumbnail centered within the filmstrip only, without touching the window scroll
+    useEffect(() => {
+        if (thumbnailContainerRef.current) {
+            const container = thumbnailContainerRef.current;
+            const activeBtn = container.children[currentIndex] as HTMLElement;
+            if (activeBtn) {
+                const scrollTarget = activeBtn.offsetLeft - (container.clientWidth / 2) + (activeBtn.clientWidth / 2);
+                container.scrollTo({ left: Math.max(0, scrollTarget), behavior: 'smooth' });
+            }
+        }
+    }, [currentIndex]);
+
+    // Lock body and html scroll when lightbox is active to prevent page scrolling underneath
+    useEffect(() => {
+        if (lightboxOpen) {
+            const originalBodyOverflow = document.body.style.overflow;
+            const originalHtmlOverflow = document.documentElement.style.overflow;
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
+            return () => {
+                document.body.style.overflow = originalBodyOverflow;
+                document.documentElement.style.overflow = originalHtmlOverflow;
+            };
+        }
+    }, [lightboxOpen]);
 
     if (media.length === 0) return null;
 
@@ -118,88 +174,177 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
 
     return (
         <>
-            {/* Main Carousel */}
+            {/* Main Apple Studio Showcase */}
             <motion.div
+                ref={galleryRef}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-8"
+                className="w-full max-w-5xl mx-auto px-3 sm:px-6 pt-5 sm:pt-8 relative"
             >
-                <div className="relative w-full aspect-video bg-zinc-100 rounded-2xl sm:rounded-3xl overflow-hidden border border-zinc-200/90 shadow-[0_12px_40px_-15px_rgba(0,0,0,0.08)] group">
-                    {/* Main Media */}
-                    <div className={`absolute inset-0 ${currentMedia.type === 'image' ? 'cursor-pointer' : ''}`} onClick={currentMedia.type === 'image' ? openLightbox : undefined}>
-                        {currentMedia.type === 'video' ? (
-                            renderMediaSlide(currentMedia)
-                        ) : (
-                            <AnimatePresence initial={false} custom={direction}>
-                                <motion.img
-                                    key={currentIndex}
-                                    src={getImageUrl(currentMedia.url)}
-                                    custom={direction}
-                                    variants={variants}
-                                    initial="enter"
-                                    animate="center"
-                                    exit="exit"
-                                    transition={{
-                                        x: { type: "spring", stiffness: 300, damping: 30 },
-                                        opacity: { duration: 0.2 }
-                                    }}
-                                    drag="x"
-                                    dragConstraints={{ left: 0, right: 0 }}
-                                    dragElastic={1}
-                                    onDragEnd={handleDragEnd}
-                                    draggable="false"
-                                    loading="eager"
-                                    {...({ fetchpriority: 'high' })}
-                                    className="absolute inset-0 w-full h-full object-contain bg-black/5 touch-pan-y no-browser-trigger"
-                                    alt={`${title} - slide ${currentIndex + 1}`}
-                                    onError={(e) => {
-                                        const fb = getFallbackUrl(currentMedia.url);
-                                        if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
-                                    }}
-                                />
-                            </AnimatePresence>
-                        )}
+                {/* Dynamic Ambient Backlight Glow (Apple TV / Studio Style) */}
+                <div className="absolute inset-0 sm:-inset-6 bg-gradient-to-r from-emerald-500/15 via-teal-400/10 to-indigo-500/15 rounded-3xl blur-xl sm:blur-3xl opacity-60 pointer-events-none -z-10" />
+                {currentMedia.type === 'image' && (
+                    <div className="absolute inset-0 sm:-inset-4 rounded-3xl blur-xl opacity-30 pointer-events-none -z-10 hidden sm:block overflow-hidden transition-all duration-700">
+                        <img
+                            src={getImageUrl(currentMedia.url)}
+                            alt=""
+                            className="w-full h-full object-cover scale-105 blur-lg"
+                            aria-hidden="true"
+                        />
+                    </div>
+                )}
+
+                {/* Apple Studio / macOS Window Display Container */}
+                <div className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-zinc-200/90 bg-white/95 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.09)] group">
+                    {/* macOS Studio Window Chrome Header */}
+                    <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur-md select-none gap-2">
+                        {/* Traffic light window controls */}
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FF5F56] border border-[#E0443E]/40 inline-block shadow-xs" />
+                            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FFBD2E] border border-[#DEA123]/40 inline-block shadow-xs" />
+                            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#27C93F] border border-[#1AAB29]/40 inline-block shadow-xs" />
+                        </div>
+
+                        {/* Centered Apple-Style Project Name Pill (Shows ONLY Project Name) */}
+                        <div className="flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-white/95 border border-zinc-200/90 text-zinc-800 text-[11px] sm:text-xs font-semibold max-w-[160px] sm:max-w-xs md:max-w-md truncate shadow-2xs">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+                            <span className="truncate">{title}</span>
+                        </div>
+
+                        {/* Right side: Counter & Zoom */}
+                        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                            <span className="text-[10px] sm:text-[11px] font-bold text-zinc-500 tabular-nums px-2 sm:px-2.5 py-0.5 rounded-full bg-zinc-200/70">
+                                {currentIndex + 1} / {media.length}
+                            </span>
+                            {currentMedia.type === 'image' && (
+                                <button
+                                    onClick={openLightbox}
+                                    className="flex items-center justify-center p-1 sm:p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/70 transition-all cursor-pointer active:scale-95"
+                                    title="Open Fullscreen Album View"
+                                    aria-label="Expand image"
+                                >
+                                    <Maximize2 className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Main Media Stage */}
+                    <div className="relative w-full aspect-video bg-zinc-950/5">
+                        <div className={`absolute inset-0 ${currentMedia.type === 'image' ? 'cursor-pointer' : ''}`} onClick={currentMedia.type === 'image' ? openLightbox : undefined}>
+                            {currentMedia.type === 'video' ? (
+                                renderMediaSlide(currentMedia)
+                            ) : (
+                                <AnimatePresence initial={false} custom={direction}>
+                                    <motion.img
+                                        key={currentIndex}
+                                        src={getImageUrl(currentMedia.url)}
+                                        custom={direction}
+                                        variants={variants}
+                                        initial="enter"
+                                        animate="center"
+                                        exit="exit"
+                                        transition={{
+                                            x: { type: "spring", stiffness: 300, damping: 30 },
+                                            opacity: { duration: 0.2 }
+                                        }}
+                                        drag="x"
+                                        dragConstraints={{ left: 0, right: 0 }}
+                                        dragElastic={1}
+                                        onDragEnd={handleDragEnd}
+                                        draggable="false"
+                                        loading="eager"
+                                        {...({ fetchpriority: 'high' })}
+                                        className="absolute inset-0 w-full h-full object-contain bg-black/5 touch-pan-y no-browser-trigger"
+                                        alt={`${title} - slide ${currentIndex + 1}`}
+                                        onError={(e) => {
+                                            const fb = getFallbackUrl(currentMedia.url);
+                                            if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
+                                        }}
+                                    />
+                                </AnimatePresence>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                {/* Premium Navigation & Dots Indicator */}
+                {/* Interactive Apple Album Filmstrip / Thumbnail Reel */}
                 {media.length > 1 && (
-                    <div className="flex justify-center items-center gap-2 sm:gap-6 mt-6 relative z-10 px-4">
-                        {/* Premium Backward Button */}
+                    <div className="mt-4 sm:mt-5 flex items-center justify-between gap-1.5 sm:gap-3 w-full max-w-full relative z-10 px-0 sm:px-2">
+                        {/* Backward Navigation */}
                         <button
                             onClick={(e) => { e.stopPropagation(); paginate(-1); }}
-                            className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-zinc-200/90 bg-white text-zinc-700 hover:text-zinc-950 hover:bg-zinc-50 shadow-xs hover:shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
-                            aria-label="Previous image"
+                            className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-zinc-200/90 bg-white text-zinc-700 hover:text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50/60 shadow-xs hover:shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
+                            aria-label="Previous slide"
                         >
-                            <ChevronLeft className="w-5 h-5" />
+                            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
 
-                        <div className="flex justify-center flex-wrap gap-2.5 max-w-[70%] sm:max-w-none">
-                            {media.map((item, idx) => (
-                                <motion.button
-                                    key={idx}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setDirection(idx > currentIndex ? 1 : -1);
-                                        setCurrentIndex(idx);
-                                    }}
-                                    className={`h-2 sm:h-2.5 rounded-full transition-all duration-300 shrink-0 ${idx === currentIndex
-                                        ? 'bg-emerald-600 w-8 sm:w-10'
-                                        : 'bg-zinc-300 hover:bg-zinc-400 w-2 sm:w-2.5'
+                        {/* Filmstrip Strip Container */}
+                        <div
+                            ref={thumbnailContainerRef}
+                            className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto py-1.5 px-1 scroll-smooth no-scrollbar"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        >
+                            {media.map((item, idx) => {
+                                const isActive = idx === currentIndex;
+                                return (
+                                    <motion.button
+                                        key={idx}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDirection(idx > currentIndex ? 1 : -1);
+                                            setCurrentIndex(idx);
+                                            setAutoPlayKey(prev => prev + 1);
+                                        }}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className={`relative flex-shrink-0 rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 cursor-pointer ${
+                                            isActive
+                                                ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#FDFBF7] shadow-md scale-105 opacity-100'
+                                                : 'opacity-50 hover:opacity-90 border border-zinc-200/80 bg-zinc-100 hover:border-zinc-300'
                                         }`}
-                                    title={item.type === 'video' ? 'Video' : `Image ${idx + 1}`}
-                                />
-                            ))}
+                                        style={{
+                                            width: '58px',
+                                            height: '38px',
+                                        }}
+                                        title={item.type === 'video' ? 'Video preview' : `Screen ${idx + 1}`}
+                                    >
+                                        {item.type === 'video' ? (
+                                            <div className="w-full h-full bg-zinc-900 flex flex-col items-center justify-center text-white relative">
+                                                <Play className="w-3 h-3 text-emerald-400 fill-emerald-400" />
+                                                <span className="text-[7px] font-bold uppercase tracking-tighter text-emerald-200">Video</span>
+                                            </div>
+                                        ) : (
+                                            <img
+                                                src={getImageUrl(item.url)}
+                                                alt={`Thumbnail ${idx + 1}`}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    const fb = getFallbackUrl(item.url);
+                                                    if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
+                                                }}
+                                            />
+                                        )}
+                                        {/* Slide Number Badge */}
+                                        <div className={`absolute bottom-0.5 right-0.5 text-[8px] font-bold px-1 rounded tabular-nums ${
+                                            isActive ? 'bg-emerald-600 text-white' : 'bg-black/60 text-white'
+                                        }`}>
+                                            {idx + 1}
+                                        </div>
+                                    </motion.button>
+                                );
+                            })}
                         </div>
 
-                        {/* Premium Forward Button */}
+                        {/* Forward Navigation */}
                         <button
                             onClick={(e) => { e.stopPropagation(); paginate(1); }}
-                            className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-zinc-200/90 bg-white text-zinc-700 hover:text-zinc-950 hover:bg-zinc-50 shadow-xs hover:shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
-                            aria-label="Next image"
+                            className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-zinc-200/90 bg-white text-zinc-700 hover:text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50/60 shadow-xs hover:shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
+                            aria-label="Next slide"
                         >
-                            <ChevronRight className="w-5 h-5" />
+                            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                     </div>
                 )}
@@ -213,29 +358,29 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-8"
+                        className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4 md:p-8 w-screen h-[100dvh] max-w-[100vw] max-h-[100dvh] overflow-hidden touch-none"
                         onClick={closeLightbox}
                     >
                         <button
                             onClick={closeLightbox}
-                            className="absolute top-6 right-6 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                            className="absolute top-4 sm:top-6 right-4 sm:right-6 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
                         >
-                            <X className="w-8 h-8" />
+                            <X className="w-6 h-6 sm:w-8 sm:h-8" />
                         </button>
 
                         {media.length > 1 && (
                             <>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); paginate(-1); }}
-                                    className="absolute left-4 md:left-8 z-20 p-4 rounded-full border border-border bg-card text-foreground transition-colors hover:bg-muted hidden sm:flex items-center justify-center"
+                                    className="absolute left-2 sm:left-4 md:left-8 z-20 p-3 sm:p-4 rounded-full border border-white/15 bg-white/10 text-white transition-colors hover:bg-white/20 hidden sm:flex items-center justify-center cursor-pointer"
                                 >
-                                    <ChevronLeft className="w-8 h-8" />
+                                    <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
                                 </button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); paginate(1); }}
-                                    className="absolute right-4 md:right-8 z-20 p-4 rounded-full border border-border bg-card text-foreground transition-colors hover:bg-muted hidden sm:flex items-center justify-center"
+                                    className="absolute right-2 sm:right-4 md:right-8 z-20 p-3 sm:p-4 rounded-full border border-white/15 bg-white/10 text-white transition-colors hover:bg-white/20 hidden sm:flex items-center justify-center cursor-pointer"
                                 >
-                                    <ChevronRight className="w-8 h-8" />
+                                    <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
                                 </button>
                             </>
                         )}
@@ -258,7 +403,7 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                                 dragElastic={1}
                                 onDragEnd={handleDragEnd}
                                 draggable="false"
-                                className="max-w-full max-h-full md:max-w-[85vw] md:max-h-[85vh] object-contain select-none shadow-2xl touch-pan-y no-browser-trigger"
+                                className="max-w-[95vw] max-h-[80vh] md:max-w-[85vw] md:max-h-[85vh] object-contain select-none shadow-2xl touch-pan-y no-browser-trigger"
                                 onClick={(e) => e.stopPropagation()}
                                 onError={(e) => {
                                     const fb = getFallbackUrl(currentMedia.url);
@@ -267,27 +412,27 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                             />
                         )}
 
-                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 group">
-                            {/* Premium Golden Gradient Border Wrapper */}
-                            <div className="relative p-[1.5px] rounded-full border border-border">
-                                <div className="flex items-center gap-4 text-white font-medium bg-[#0A0A0B]/90 px-4 py-2 rounded-full backdrop-blur-xl">
+                        <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 group max-w-[92vw] overflow-hidden">
+                            {/* Premium Gradient Border Wrapper */}
+                            <div className="relative p-[1.5px] rounded-full border border-white/20">
+                                <div className="flex items-center gap-3 sm:gap-4 text-white font-medium bg-[#0A0A0B]/90 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-xl">
                                     {/* Mobile specific navigation inside indicator row */}
                                     <button
                                         onClick={(e) => { e.stopPropagation(); paginate(-1); }}
-                                        className="flex sm:hidden p-2 -ml-1 bg-[#22C55E] hover:bg-[#16A34A] text-white rounded-full transition-colors shadow-sm"
+                                        className="flex sm:hidden p-1.5 bg-[#22C55E] hover:bg-[#16A34A] text-white rounded-full transition-colors shadow-sm cursor-pointer"
                                     >
-                                        <ChevronLeft className="w-5 h-5" />
+                                        <ChevronLeft className="w-4 h-4" />
                                     </button>
 
-                                    <span className="text-base min-w-[3.5rem] text-center tracking-wider tabular-nums font-semibold">
+                                    <span className="text-xs sm:text-base min-w-[3rem] text-center tracking-wider tabular-nums font-semibold">
                                         {currentIndex + 1} <span className="text-[#FFD700] mx-0.5">/</span> {media.length}
                                     </span>
 
                                     <button
                                         onClick={(e) => { e.stopPropagation(); paginate(1); }}
-                                        className="flex sm:hidden p-2 -mr-1 bg-[#22C55E] hover:bg-[#16A34A] text-white rounded-full transition-colors shadow-sm"
+                                        className="flex sm:hidden p-1.5 bg-[#22C55E] hover:bg-[#16A34A] text-white rounded-full transition-colors shadow-sm cursor-pointer"
                                     >
-                                        <ChevronRight className="w-5 h-5" />
+                                        <ChevronRight className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
@@ -319,6 +464,37 @@ function extractYouTubeId(url: string): string | null {
 }
 
 
+const CARD_PALETTES = [
+    {
+        border: 'from-emerald-500 via-teal-400 to-cyan-500',
+        borderIdle: 'from-emerald-500/35 via-teal-400/25 to-cyan-500/35',
+        accentBg: 'bg-emerald-50 text-emerald-600 border-emerald-200/80',
+        line: 'bg-gradient-to-b from-emerald-500 to-teal-400',
+        glow: 'shadow-[0_12px_32px_rgba(16,185,129,0.12)]',
+    },
+    {
+        border: 'from-cyan-500 via-blue-500 to-indigo-500',
+        borderIdle: 'from-cyan-500/35 via-blue-400/25 to-indigo-500/35',
+        accentBg: 'bg-cyan-50 text-cyan-600 border-cyan-200/80',
+        line: 'bg-gradient-to-b from-cyan-500 to-indigo-500',
+        glow: 'shadow-[0_12px_32px_rgba(6,182,212,0.12)]',
+    },
+    {
+        border: 'from-indigo-500 via-purple-500 to-pink-500',
+        borderIdle: 'from-indigo-500/35 via-purple-400/25 to-pink-500/35',
+        accentBg: 'bg-indigo-50 text-indigo-600 border-indigo-200/80',
+        line: 'bg-gradient-to-b from-indigo-500 to-purple-500',
+        glow: 'shadow-[0_12px_32px_rgba(99,102,241,0.12)]',
+    },
+    {
+        border: 'from-teal-500 via-emerald-400 to-amber-500',
+        borderIdle: 'from-teal-500/35 via-emerald-400/25 to-amber-500/35',
+        accentBg: 'bg-teal-50 text-teal-600 border-teal-200/80',
+        line: 'bg-gradient-to-b from-teal-500 to-emerald-400',
+        glow: 'shadow-[0_12px_32px_rgba(20,184,166,0.12)]',
+    },
+];
+
 function CollapsibleCards({ blocks }: { blocks: string[] }) {
     // First card expanded, rest collapsed by default
     const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -333,71 +509,80 @@ function CollapsibleCards({ blocks }: { blocks: string[] }) {
     };
 
     return (
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-4 sm:space-y-5">
             {blocks.map((block: string, i: number) => {
                 // Extract heading from block if present
                 const headingMatch = block.match(/^<h3([^>]*)>(.*?)<\/h3>/i);
                 const heading = headingMatch ? headingMatch[2].replace(/<[^>]*>/g, '').trim() : '';
-                const headingColor = headingMatch ? (headingMatch[1].match(/data-color="([^"]*)"/i)?.[1] || '') : '';
                 const bodyHtml = headingMatch ? block.replace(/^<h3[^>]*>.*?<\/h3>/i, '').trim() : block;
                 const isExpanded = expanded.has(i);
 
                 // For cards without heading, show a text preview
                 const label = heading || `Section ${i + 1}`;
                 const preview = !heading ? stripHtml(bodyHtml).slice(0, 60) : '';
+                const palette = CARD_PALETTES[i % CARD_PALETTES.length];
 
                 return (
                     <motion.div
                         key={i}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.3 + i * 0.08 }}
-                        className="rounded-2xl border border-zinc-200/90 bg-white overflow-hidden shadow-2xs hover:shadow-md transition-all duration-300 mb-4"
+                        transition={{ duration: 0.5, delay: 0.2 + i * 0.06 }}
+                        className={`p-[1.5px] rounded-2xl sm:rounded-3xl transition-all duration-300 mb-4 sm:mb-5 group/card bg-gradient-to-r ${
+                            isExpanded
+                                ? `${palette.border} ${palette.glow}`
+                                : `${palette.borderIdle} hover:${palette.border} shadow-2xs hover:shadow-md`
+                        }`}
                     >
-                        {/* Clickable heading bar */}
-                        <button
-                            type="button"
-                            onClick={() => toggle(i)}
-                            className={`w-full flex items-center gap-4 px-6 sm:px-8 py-5 text-left transition-colors duration-200 cursor-pointer ${isExpanded ? 'bg-zinc-50/70' : 'hover:bg-zinc-50/40'}`}
-                        >
-                            <div className="relative flex-shrink-0 group-hover/toggle:scale-105 transition-transform duration-300">
-                                <div className="relative flex items-center justify-center w-9 h-9 rounded-full border border-emerald-500/20 bg-emerald-50 text-emerald-600">
-                                    <ChevronDown
-                                        className={`w-4 h-4 text-emerald-600 transition-transform duration-300 ${isExpanded ? '' : '-rotate-90'}`}
-                                    />
-                                </div>
-                            </div>
+                        <div className="rounded-[calc(1rem-1.5px)] sm:rounded-[calc(1.5rem-1.5px)] bg-white overflow-hidden">
+                            {/* Clickable heading bar */}
+                            <button
+                                type="button"
+                                onClick={() => toggle(i)}
+                                className={`w-full flex items-center gap-3.5 sm:gap-4 px-5 sm:px-8 py-4.5 sm:py-5 text-left transition-colors duration-200 cursor-pointer ${isExpanded ? 'bg-zinc-50/80' : 'hover:bg-zinc-50/40'}`}
+                            >
+                                {/* Colorful vertical indicator line */}
+                                <div className={`w-1.5 h-7 rounded-full ${palette.line} shrink-0 transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-40 group-hover/card:opacity-90'}`} />
 
-                            <div className="flex flex-col gap-1 min-w-0">
-                                <h3
-                                    className="text-lg sm:text-xl font-bold tracking-tight text-zinc-950 transition-colors duration-200"
-                                    style={{ fontFamily: "var(--font-display)" }}
-                                >
-                                    {label}
-                                </h3>
-                                {!isExpanded && preview && (
-                                    <span className="text-sm text-zinc-400 truncate font-normal">{preview}…</span>
-                                )}
-                            </div>
-                        </button>
-                        {/* Collapsible body */}
-                        <AnimatePresence initial={false}>
-                            {isExpanded && (
-                                <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                                    className="overflow-hidden border-t border-zinc-100"
-                                >
-                                    <div
-                                        className="px-6 sm:px-8 pb-6 sm:pb-8 pt-4 text-zinc-600 text-sm sm:text-base leading-relaxed space-y-4"
-                                    >
-                                        <RichText text={stripHtml(bodyHtml)} />
+                                <div className="relative flex-shrink-0 group-hover/card:scale-105 transition-transform duration-300">
+                                    <div className={`relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border ${palette.accentBg}`}>
+                                        <ChevronDown
+                                            className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? '' : '-rotate-90'}`}
+                                        />
                                     </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                </div>
+
+                                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                    <h3
+                                        className="text-base sm:text-xl font-bold tracking-tight text-zinc-950 transition-colors duration-200"
+                                        style={{ fontFamily: "var(--font-display)" }}
+                                    >
+                                        {label}
+                                    </h3>
+                                    {!isExpanded && preview && (
+                                        <span className="text-xs sm:text-sm text-zinc-400 truncate font-normal">{preview}…</span>
+                                    )}
+                                </div>
+                            </button>
+                            {/* Collapsible body */}
+                            <AnimatePresence initial={false}>
+                                {isExpanded && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                                        className="overflow-hidden border-t border-zinc-100/90"
+                                    >
+                                        <div
+                                            className="px-6 sm:px-8 pb-6 sm:pb-8 pt-4 text-zinc-600 text-sm sm:text-base leading-relaxed space-y-4"
+                                        >
+                                            <RichText text={stripHtml(bodyHtml)} />
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
                     </motion.div>
                 );
             })}
@@ -474,36 +659,38 @@ function SuggestedProjectCard({ item, routeId }: { item: any, routeId: string })
     return (
         <Link
             to={`/project/${routeId}`}
-            className="group relative flex gap-3.5 rounded-2xl overflow-hidden border border-zinc-200/80 bg-white p-3 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/40 hover:shadow-[0_12px_28px_rgba(16,185,129,0.08)] shadow-2xs"
+            className="group relative flex rounded-2xl overflow-hidden p-[1.5px] bg-gradient-to-r from-zinc-200/90 via-emerald-300/35 to-zinc-200/90 hover:from-emerald-500/70 hover:via-teal-400/60 hover:to-indigo-500/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(16,185,129,0.12)] shadow-2xs"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            <div className="relative w-24 sm:w-28 flex-shrink-0 aspect-[16/10] rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200/60">
-                <AnimatePresence mode="popLayout">
-                    <motion.div
-                        key={currentImage + "_wrapper"}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                        className="w-full h-full relative"
-                    >
-                        <ImageWithSkeleton
-                            src={currentImage}
-                            alt={item.title}
-                            showSkeleton={activeIndex === -1}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 no-browser-trigger"
-                        />
-                    </motion.div>
-                </AnimatePresence>
-            </div>
-            <div className="flex flex-col justify-center min-w-0 z-10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1 line-clamp-1">
-                    {itemCats.slice(0, 2).join(' · ')}
-                </span>
-                <h3 className="font-display text-xs sm:text-sm font-bold text-zinc-900 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-snug">
-                    {item.title}
-                </h3>
+            <div className="flex gap-3.5 w-full bg-white p-3 rounded-[calc(1rem-1.5px)] items-center">
+                <div className="relative w-24 sm:w-28 flex-shrink-0 aspect-[16/10] rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200/60">
+                    <AnimatePresence mode="popLayout">
+                        <motion.div
+                            key={currentImage + "_wrapper"}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5, ease: "easeInOut" }}
+                            className="w-full h-full relative"
+                        >
+                            <ImageWithSkeleton
+                                src={currentImage}
+                                alt={item.title}
+                                showSkeleton={activeIndex === -1}
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 no-browser-trigger"
+                            />
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+                <div className="flex flex-col justify-center min-w-0 z-10 flex-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1 line-clamp-1">
+                        {itemCats.slice(0, 2).join(' · ')}
+                    </span>
+                    <h3 className="font-display text-xs sm:text-sm font-bold text-zinc-900 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-snug">
+                        {item.title}
+                    </h3>
+                </div>
             </div>
         </Link>
     );
@@ -583,11 +770,24 @@ export default function ProjectDetail() {
 
 
     return (
-        <div className="min-h-[100dvh] relative bg-[#FDFBF7] text-zinc-900 selection:bg-zinc-900 selection:text-white">
-            {/* Ambient Apple Lighting Effect */}
+        <div className="min-h-[100dvh] relative bg-gradient-to-b from-[#F8FAFC] via-[#FDFBF7] to-[#F8FAFC] text-zinc-900 selection:bg-zinc-900 selection:text-white">
+            {/* Ambient Apple Studio Canvas Lighting & Micro-Dot Grid */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden select-none" aria-hidden="true">
-                <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-emerald-100/30 rounded-full blur-[130px] -translate-y-1/2" />
-                <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] bg-amber-100/25 rounded-full blur-[140px]" />
+                {/* Subtle Apple Studio Dot-Matrix Texture to eliminate stark white emptiness */}
+                <div
+                    className="absolute inset-0 opacity-[0.035]"
+                    style={{
+                        backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, #000 1px, transparent 0)',
+                        backgroundSize: '24px 24px'
+                    }}
+                />
+                {/* Top-Right Emerald & Teal Radiant Glow */}
+                <div className="absolute top-0 right-[-10%] w-[750px] h-[750px] bg-gradient-to-bl from-emerald-200/35 via-teal-100/20 to-transparent rounded-full blur-[140px] -translate-y-1/3" />
+                {/* Top-Left Indigo & Cyan Radiant Glow */}
+                <div className="absolute top-10 left-[-10%] w-[700px] h-[700px] bg-gradient-to-br from-indigo-200/25 via-cyan-100/20 to-transparent rounded-full blur-[150px] -translate-y-1/4" />
+                {/* Left & Right Atmospheric Light Cones specifically filling the empty margins */}
+                <div className="absolute top-[420px] left-[-8%] w-[550px] h-[550px] bg-emerald-100/35 rounded-full blur-[130px]" />
+                <div className="absolute top-[580px] right-[-8%] w-[550px] h-[550px] bg-amber-100/30 rounded-full blur-[140px]" />
             </div>
             <Helmet>
                 <title data-rh="true">{seoTitle}</title>
@@ -620,69 +820,72 @@ export default function ProjectDetail() {
                     {/* Left: Main Content */}
                     <div className="flex-1 min-w-0">
 
-
-
-                        {/* Project Title Card */}
+                        {/* Project Title Card with Apple Gradient Border */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.05 }}
-                            className="rounded-2xl sm:rounded-3xl border border-zinc-200/90 bg-white/95 backdrop-blur-xl px-6 sm:px-10 py-7 sm:py-9 mb-8 relative overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.03)] text-center"
+                            className="relative p-[1.5px] rounded-2xl sm:rounded-3xl bg-gradient-to-r from-emerald-500/50 via-teal-400/40 to-indigo-500/50 shadow-[0_8px_32px_rgba(16,185,129,0.08)] mb-8 overflow-hidden group"
                         >
-                            {/* Top row: Breadcrumb + Share Button */}
-                            <div className="flex items-center justify-between gap-4 mb-4">
-                                <Link
-                                    to="/#projects"
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 hover:bg-emerald-50 text-zinc-600 hover:text-emerald-700 border border-zinc-200/80 text-xs font-semibold transition-colors group/back shadow-2xs"
-                                >
-                                    <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover/back:-translate-x-0.5" />
-                                    <span>All Projects</span>
-                                </Link>
+                            {/* Top iridescent hairline */}
+                            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400 pointer-events-none opacity-80" />
 
-                                <button 
-                                    onClick={async () => {
-                                        const url = currentUrl;
-                                        if (navigator.share) {
-                                            try { await navigator.share({ title: seoTitle, url }); }
-                                            catch (e) { console.error('Share error:', e); }
-                                        } else {
-                                            await navigator.clipboard.writeText(url);
-                                            setIsCopied(true);
-                                            toast.success("Link copied to clipboard");
-                                            setTimeout(() => setIsCopied(false), 2000);
-                                        }
-                                    }}
-                                    title={isCopied ? 'Copied!' : 'Share'}
-                                    className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-100 hover:bg-emerald-50 text-zinc-600 hover:text-emerald-700 border border-zinc-200/80 transition-all shadow-2xs cursor-pointer"
-                                    aria-label="Share"
-                                >
-                                    {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
-                                </button>
-                            </div>
-
-                            {/* Title — Centered */}
-                            <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-snug text-zinc-950 mb-4 max-w-4xl mx-auto">
-                                {project.title}
-                            </h1>
-
-                            {/* Tags + Categories combined */}
-                            <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
-                                {(project.categories || (project.category ? [project.category] : [])).map((cat: string, ci: number) => (
-                                    <span
-                                        key={`cat-${ci}`}
-                                        className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] sm:text-xs font-bold uppercase tracking-wider border border-emerald-200/80 shadow-2xs"
+                            <div className="rounded-[calc(1rem-1.5px)] sm:rounded-[calc(1.5rem-1.5px)] bg-white/95 backdrop-blur-xl px-6 sm:px-10 py-7 sm:py-9 relative z-10 text-center">
+                                {/* Top row: Breadcrumb + Share Button */}
+                                <div className="flex items-center justify-between gap-4 mb-4">
+                                    <Link
+                                        to="/#projects"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 hover:bg-emerald-50 text-zinc-600 hover:text-emerald-700 border border-zinc-200/80 text-xs font-semibold transition-colors group/back shadow-2xs"
                                     >
-                                        {cat}
-                                    </span>
-                                ))}
-                                {project.tags && project.tags.map((tag: string, j: number) => (
-                                    <span
-                                        key={`tag-${j}`}
-                                        className="px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 text-[11px] sm:text-xs font-medium border border-zinc-200/80"
+                                        <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover/back:-translate-x-0.5" />
+                                        <span>All Projects</span>
+                                    </Link>
+
+                                    <button 
+                                        onClick={async () => {
+                                            const url = currentUrl;
+                                            if (navigator.share) {
+                                                try { await navigator.share({ title: seoTitle, url }); }
+                                                catch (e) { console.error('Share error:', e); }
+                                            } else {
+                                                await navigator.clipboard.writeText(url);
+                                                setIsCopied(true);
+                                                toast.success("Link copied to clipboard");
+                                                setTimeout(() => setIsCopied(false), 2000);
+                                            }
+                                        }}
+                                        title={isCopied ? 'Copied!' : 'Share'}
+                                        className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-100 hover:bg-emerald-50 text-zinc-600 hover:text-emerald-700 border border-zinc-200/80 transition-all shadow-2xs cursor-pointer"
+                                        aria-label="Share"
                                     >
-                                        {tag}
-                                    </span>
-                                ))}
+                                        {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
+                                    </button>
+                                </div>
+
+                                {/* Title — Centered */}
+                                <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-snug text-zinc-950 mb-4 max-w-4xl mx-auto">
+                                    {project.title}
+                                </h1>
+
+                                {/* Tags + Categories combined */}
+                                <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
+                                    {(project.categories || (project.category ? [project.category] : [])).map((cat: string, ci: number) => (
+                                        <span
+                                            key={`cat-${ci}`}
+                                            className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] sm:text-xs font-bold uppercase tracking-wider border border-emerald-200/80 shadow-2xs"
+                                        >
+                                            {cat}
+                                        </span>
+                                    ))}
+                                    {project.tags && project.tags.map((tag: string, j: number) => (
+                                        <span
+                                            key={`tag-${j}`}
+                                            className="px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 text-[11px] sm:text-xs font-medium border border-zinc-200/80"
+                                        >
+                                            {tag}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         </motion.div>
 
@@ -775,28 +978,30 @@ export default function ProjectDetail() {
                                                             initial={{ opacity: 0, y: 10 }}
                                                             animate={{ opacity: 1, y: 0 }}
                                                             transition={{ delay: 0.1 * ri }}
-                                                            className="relative group p-5 rounded-2xl border border-zinc-200/80 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:border-emerald-500/40 hover:shadow-md transition-all duration-300 overflow-hidden"
+                                                            className="relative group p-[1.5px] rounded-2xl bg-gradient-to-r from-amber-400/35 via-emerald-400/30 to-teal-400/35 hover:from-amber-500/70 hover:via-emerald-500/60 hover:to-teal-500/70 transition-all duration-300 shadow-2xs hover:shadow-md"
                                                         >
-                                                            {/* Top row: Stars */}
-                                                            <div className="flex gap-1 mb-3">
-                                                                {Array.from({ length: 5 }).map((_, si) => (
-                                                                    <Star key={si} className={`w-3.5 h-3.5 ${si < (review.rating || 5) ? 'text-amber-500 fill-amber-500' : 'text-zinc-200'}`} />
-                                                                ))}
-                                                            </div>
-
-                                                            <blockquote className="relative">
-                                                                <p className="text-zinc-600 text-sm leading-relaxed mb-4 italic font-normal">
-                                                                    "{review.text}"
-                                                                </p>
-                                                            </blockquote>
-
-                                                            <div className="flex items-center gap-3 pt-3.5 border-t border-zinc-100">
-                                                                <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs flex items-center justify-center">
-                                                                    {review.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                                                            <div className="p-5 rounded-[calc(1rem-1.5px)] bg-white overflow-hidden">
+                                                                {/* Top row: Stars */}
+                                                                <div className="flex gap-1 mb-3">
+                                                                    {Array.from({ length: 5 }).map((_, si) => (
+                                                                        <Star key={si} className={`w-3.5 h-3.5 ${si < (review.rating || 5) ? 'text-amber-500 fill-amber-500' : 'text-zinc-200'}`} />
+                                                                    ))}
                                                                 </div>
-                                                                <div className="min-w-0">
-                                                                    <span className="font-bold text-zinc-950 text-sm block truncate">{review.name}</span>
-                                                                    <span className="text-emerald-700 text-[11px] font-semibold uppercase tracking-wider">{review.role}</span>
+
+                                                                <blockquote className="relative">
+                                                                    <p className="text-zinc-600 text-sm leading-relaxed mb-4 italic font-normal">
+                                                                        "{review.text}"
+                                                                    </p>
+                                                                </blockquote>
+
+                                                                <div className="flex items-center gap-3 pt-3.5 border-t border-zinc-100">
+                                                                    <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs flex items-center justify-center">
+                                                                        {review.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <span className="font-bold text-zinc-950 text-sm block truncate">{review.name}</span>
+                                                                        <span className="text-emerald-700 text-[11px] font-semibold uppercase tracking-wider">{review.role}</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </motion.div>
