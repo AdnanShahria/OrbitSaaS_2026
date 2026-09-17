@@ -15,9 +15,10 @@ interface CustomSelectProps {
     placeholder?: string;
     className?: string;
     disabled?: boolean;
+    themeMode?: 'light' | 'dark';
 }
 
-export function CustomSelect({ value, onChange, options, placeholder = "Select...", className = "", disabled = false }: CustomSelectProps) {
+export function CustomSelect({ value, onChange, options, placeholder = "Select...", className = "", disabled = false, themeMode }: CustomSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -33,6 +34,7 @@ export function CustomSelect({ value, onChange, options, placeholder = "Select..
     }, []);
 
     const selectedOption = options.find(opt => opt.value === value);
+    const isLight = themeMode === 'light';
 
     return (
         <div className={`relative ${className}`} ref={containerRef}>
@@ -40,28 +42,36 @@ export function CustomSelect({ value, onChange, options, placeholder = "Select..
                 type="button"
                 disabled={disabled}
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full flex items-center justify-between bg-secondary rounded-lg px-3 py-2.5 text-sm text-foreground outline-none border border-border transition-colors focus:ring-2 focus:ring-primary/50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${isOpen ? 'ring-2 ring-primary/50 border-primary/50' : 'hover:border-primary/50'}`}
+                className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isLight
+                        ? `bg-white text-[#1d1d1f] border shadow-xs ${isOpen ? 'border-[#0071e3] ring-2 ring-[#0071e3]/20' : 'border-black/[0.12] hover:border-black/[0.25]'}`
+                        : `bg-secondary text-foreground border border-border ${isOpen ? 'ring-2 ring-primary/50 border-primary/50' : 'hover:border-primary/50'}`
+                }`}
             >
-                <span className={`truncate ${!selectedOption ? 'text-muted-foreground' : 'font-medium'}`}>
+                <span className={`truncate ${!selectedOption ? (isLight ? 'text-neutral-400' : 'text-muted-foreground') : 'font-medium'}`}>
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>
                 <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    <ChevronDown className={`w-4 h-4 ${isLight ? 'text-neutral-400' : 'text-muted-foreground'}`} />
                 </motion.div>
             </button>
 
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        initial={{ opacity: 0, y: -6, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.98 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute z-[100] w-full mt-2 bg-card border border-border/80 rounded-xl shadow-xl overflow-hidden"
+                        className={`absolute z-[100] w-full mt-1.5 rounded-2xl shadow-xl overflow-hidden backdrop-blur-xl ${
+                            isLight
+                                ? 'bg-white/95 border border-black/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.12)] text-[#1d1d1f]'
+                                : 'bg-card/95 border border-border/80 shadow-2xl text-foreground'
+                        }`}
                     >
                         <div className="max-h-60 overflow-y-auto custom-scrollbar p-1.5 flex flex-col gap-0.5">
                             {options.length === 0 ? (
-                                <div className="px-3 py-3 text-sm text-muted-foreground text-center">No options</div>
+                                <div className={`px-3 py-3 text-xs text-center ${isLight ? 'text-neutral-400' : 'text-muted-foreground'}`}>No options</div>
                             ) : (
                                 options.map((opt) => (
                                     <button
@@ -71,10 +81,16 @@ export function CustomSelect({ value, onChange, options, placeholder = "Select..
                                             onChange(opt.value);
                                             setIsOpen(false);
                                         }}
-                                        className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg transition-colors ${value === opt.value ? 'bg-primary/10 text-primary font-bold' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`}
+                                        className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-xl transition-colors cursor-pointer ${
+                                            value === opt.value
+                                                ? (isLight ? 'bg-[#0071e3]/10 text-[#0071e3] font-semibold' : 'bg-primary/10 text-primary font-bold')
+                                                : (isLight ? 'text-[#1d1d1f] hover:bg-black/[0.04]' : 'text-muted-foreground hover:bg-secondary hover:text-foreground')
+                                        }`}
                                     >
                                         <span className="truncate">{opt.label}</span>
-                                        {value === opt.value && <Check className="w-4 h-4 text-primary shrink-0 ml-2" />}
+                                        {value === opt.value && (
+                                            <Check className={`w-4 h-4 shrink-0 ml-2 ${isLight ? 'text-[#0071e3]' : 'text-primary'}`} />
+                                        )}
                                     </button>
                                 ))
                             )}
