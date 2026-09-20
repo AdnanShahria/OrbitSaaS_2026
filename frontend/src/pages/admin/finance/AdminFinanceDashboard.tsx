@@ -189,6 +189,8 @@ function FinanceDashboardContent() {
                         monthNet={data.monthNet}
                         incomeChange={data.incomeChange}
                         expenseChange={data.expenseChange}
+                        netBalance={data.netBalance}
+                        totalDistribution={data.totalDistribution}
                     />
 
                     {/* Charts Row */}

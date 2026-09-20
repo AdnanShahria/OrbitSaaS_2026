@@ -9,6 +9,9 @@ interface StatCardsProps {
     monthNet: number;
     incomeChange: number;
     expenseChange: number;
+    // All-time totals for company fund & distributions
+    netBalance: number;
+    totalDistribution: number;
 }
 
 function formatCurrency(amount: number) {
@@ -17,6 +20,7 @@ function formatCurrency(amount: number) {
 
 interface StatCardConfig {
     title: string;
+    subtitle?: string;
     value: number;
     change?: number | null;
     icon: any;
@@ -26,7 +30,7 @@ interface StatCardConfig {
     isLight: boolean;
 }
 
-const StatCard = ({ title, value, change, icon: Icon, accentColor, lightTint, darkTint, isLight }: StatCardConfig) => {
+const StatCard = ({ title, subtitle, value, change, icon: Icon, accentColor, lightTint, darkTint, isLight }: StatCardConfig) => {
     const isPositive = change !== undefined && change !== null && change >= 0;
 
     return (
@@ -48,9 +52,16 @@ const StatCard = ({ title, value, change, icon: Icon, accentColor, lightTint, da
 
             <div className="relative flex items-start justify-between gap-3">
                 <div className="space-y-2.5">
-                    <p className={`text-[11px] font-semibold tracking-wider uppercase ${isLight ? 'text-[#6e6e73]' : 'text-[#86868b]'}`}>
-                        {title}
-                    </p>
+                    <div>
+                        <p className={`text-[11px] font-semibold tracking-wider uppercase ${isLight ? 'text-[#6e6e73]' : 'text-[#86868b]'}`}>
+                            {title}
+                        </p>
+                        {subtitle && (
+                            <p className={`text-[10px] font-medium mt-0.5 ${isLight ? 'text-[#86868b]' : 'text-[#636366]'}`}>
+                                {subtitle}
+                            </p>
+                        )}
+                    </div>
                     <p className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
                         {formatCurrency(value)}
                     </p>
@@ -90,9 +101,10 @@ export default function DashboardStatCards({
     monthIncome,
     monthExpense,
     monthDistribution,
-    monthNet,
     incomeChange,
-    expenseChange
+    expenseChange,
+    netBalance,
+    totalDistribution,
 }: StatCardsProps) {
     const { isLight } = useFinanceTheme();
 
@@ -100,6 +112,7 @@ export default function DashboardStatCards({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
                 title="This Month Income"
+                subtitle="Revenue this month"
                 value={monthIncome}
                 change={incomeChange}
                 icon={TrendingUp}
@@ -110,6 +123,7 @@ export default function DashboardStatCards({
             />
             <StatCard
                 title="Expense (Funding)"
+                subtitle="This month spending"
                 value={monthExpense}
                 change={expenseChange}
                 icon={TrendingDown}
@@ -120,7 +134,8 @@ export default function DashboardStatCards({
             />
             <StatCard
                 title="Distributions Shared"
-                value={monthDistribution}
+                subtitle="All-time partner payouts"
+                value={totalDistribution}
                 change={null}
                 icon={Share2}
                 accentColor={isLight ? '#5856d6' : '#5e5ce6'}
@@ -129,11 +144,12 @@ export default function DashboardStatCards({
                 isLight={isLight}
             />
             <StatCard
-                title="Net Balance"
-                value={monthNet}
+                title="Company Fund"
+                subtitle="Net retained balance"
+                value={netBalance}
                 change={null}
                 icon={DollarSign}
-                accentColor={monthNet >= 0 ? (isLight ? '#0071e3' : '#0a84ff') : (isLight ? '#ff3b30' : '#ff453a')}
+                accentColor={netBalance >= 0 ? (isLight ? '#0071e3' : '#0a84ff') : (isLight ? '#ff3b30' : '#ff453a')}
                 lightTint="#0071e333"
                 darkTint="#0a84ff22"
                 isLight={isLight}
