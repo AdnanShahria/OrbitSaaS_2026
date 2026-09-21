@@ -3,13 +3,16 @@ import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
-    Receipt, Plus, Search, Filter, Mail, Download, Eye, Edit, Trash2,
+    Receipt, Plus, Search, Mail, Download, Eye, Edit, Trash2,
     CheckCircle2, Clock, AlertTriangle, Send, RefreshCw, DollarSign,
     Layers, User, Phone, MapPin, Calendar, FileText, ArrowRight,
     Copy, X, Sparkles, Check, ChevronDown, ExternalLink, ShieldAlert
 } from 'lucide-react';
 import { generateInvoicePdf, formatCurrency, loadLogoBase64, InvoiceData, InvoiceItem } from '@/utils/invoicePdf';
 import { buildInvoiceEmailTemplate } from '@/utils/invoiceEmailTemplate';
+import { useAdminTheme } from '@/contexts/AdminThemeContext';
+import { CustomSelect } from '@/components/ui/CustomSelect';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -45,17 +48,187 @@ const DEFAULT_NOTES = `1. Payment is due within the specified due date.
 2. In case of inquiries regarding this invoice, please reach us at contact@orbitsaas.cloud.
 3. Thank you for choosing ORBIT SaaS for your digital innovation!`;
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; border: string; icon: any }> = {
-    draft: { bg: 'bg-slate-500/10', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-500/20', icon: Clock },
-    sent: { bg: 'bg-indigo-500/10', text: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-500/20', icon: Send },
-    paid: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20', icon: CheckCircle2 },
-    partially_paid: { bg: 'bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-500/20', icon: AlertTriangle },
-    overdue: { bg: 'bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400', border: 'border-rose-500/20', icon: AlertTriangle },
-    cancelled: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20', icon: X },
+function formatLedgerCurrency(amount: number, currency = 'BDT') {
+    const formatted = Number(amount || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+    switch (currency?.toUpperCase()) {
+        case 'USD': return `$${formatted}`;
+        case 'EUR': return `€${formatted}`;
+        case 'GBP': return `£${formatted}`;
+        case 'BDT':
+        default: return `৳${formatted}`;
+    }
+}
+
+interface StatusConfig {
+    label: string;
+    lightBg: string;
+    lightText: string;
+    lightBorder: string;
+    darkBg: string;
+    darkText: string;
+    darkBorder: string;
+    dot: string;
+    icon: any;
+}
+
+const STATUS_CONFIG: Record<string, StatusConfig> = {
+    paid: {
+        label: 'Paid',
+        lightBg: 'bg-emerald-50',
+        lightText: 'text-emerald-700',
+        lightBorder: 'border-emerald-200/80',
+        darkBg: 'bg-emerald-500/10',
+        darkText: 'text-emerald-400',
+        darkBorder: 'border-emerald-500/20',
+        dot: 'bg-emerald-500',
+        icon: CheckCircle2,
+    },
+    partially_paid: {
+        label: 'Partially Paid',
+        lightBg: 'bg-amber-50',
+        lightText: 'text-amber-700',
+        lightBorder: 'border-amber-200/80',
+        darkBg: 'bg-amber-500/10',
+        darkText: 'text-amber-400',
+        darkBorder: 'border-amber-500/20',
+        dot: 'bg-amber-500',
+        icon: AlertTriangle,
+    },
+    sent: {
+        label: 'Sent',
+        lightBg: 'bg-indigo-50',
+        lightText: 'text-indigo-700',
+        lightBorder: 'border-indigo-200/80',
+        darkBg: 'bg-indigo-500/10',
+        darkText: 'text-indigo-400',
+        darkBorder: 'border-indigo-500/20',
+        dot: 'bg-indigo-500',
+        icon: Send,
+    },
+    draft: {
+        label: 'Draft',
+        lightBg: 'bg-black/[0.04]',
+        lightText: 'text-[#6e6e73]',
+        lightBorder: 'border-black/[0.08]',
+        darkBg: 'bg-white/[0.06]',
+        darkText: 'text-neutral-400',
+        darkBorder: 'border-white/[0.08]',
+        dot: 'bg-neutral-400',
+        icon: Clock,
+    },
+    overdue: {
+        label: 'Overdue',
+        lightBg: 'bg-rose-50',
+        lightText: 'text-rose-700',
+        lightBorder: 'border-rose-200/80',
+        darkBg: 'bg-rose-500/10',
+        darkText: 'text-rose-400',
+        darkBorder: 'border-rose-500/20',
+        dot: 'bg-rose-500',
+        icon: AlertTriangle,
+    },
+    cancelled: {
+        label: 'Cancelled',
+        lightBg: 'bg-red-50',
+        lightText: 'text-red-700',
+        lightBorder: 'border-red-200/80',
+        darkBg: 'bg-red-500/10',
+        darkText: 'text-red-400',
+        darkBorder: 'border-red-500/20',
+        dot: 'bg-red-500',
+        icon: X,
+    },
+};
+
+interface InvoiceStatCardProps {
+    title: string;
+    value: string;
+    badgeText?: string;
+    badgeType?: 'neutral' | 'success' | 'warning' | 'danger';
+    icon: any;
+    accentColor: string;
+    lightTint: string;
+    darkTint: string;
+    isLight: boolean;
+}
+
+const InvoiceStatCard = ({
+    title,
+    value,
+    badgeText,
+    badgeType = 'neutral',
+    icon: Icon,
+    accentColor,
+    lightTint,
+    darkTint,
+    isLight,
+}: InvoiceStatCardProps) => {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -2, transition: { duration: 0.18 } }}
+            className={`rounded-3xl p-5 relative overflow-hidden transition-all duration-300 ${
+                isLight
+                    ? 'bg-white/85 backdrop-blur-xl border border-black/[0.06] shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.07)] hover:border-black/[0.12]'
+                    : 'bg-[#1c1c1e]/80 backdrop-blur-xl border border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.4)] hover:shadow-[0_12px_36px_rgba(0,0,0,0.6)] hover:border-white/[0.16]'
+            }`}
+        >
+            {/* Subtle Apple ambient glow on card corner */}
+            <div
+                className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-2xl pointer-events-none opacity-40 transition-opacity duration-500"
+                style={{ backgroundColor: isLight ? lightTint : darkTint }}
+            />
+
+            <div className="relative flex items-start justify-between gap-3">
+                <div className="space-y-2">
+                    <div>
+                        <p className={`text-[11px] font-semibold tracking-wider uppercase ${isLight ? 'text-[#6e6e73]' : 'text-[#86868b]'}`}>
+                            {title}
+                        </p>
+                    </div>
+                    <p className={`text-2xl sm:text-3xl font-extrabold tracking-tight font-mono tabular-nums ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
+                        {value}
+                    </p>
+                    {badgeText && (
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                            <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium leading-none ${
+                                    badgeType === 'success'
+                                        ? (isLight ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30')
+                                        : badgeType === 'warning'
+                                        ? (isLight ? 'bg-amber-50 text-amber-700 border border-amber-200/80' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30')
+                                        : badgeType === 'danger'
+                                        ? (isLight ? 'bg-rose-50 text-rose-700 border border-rose-200/80' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30')
+                                        : (isLight ? 'bg-black/[0.04] text-[#6e6e73] border border-black/[0.06]' : 'bg-white/[0.06] text-neutral-300 border border-white/[0.08]')
+                                }`}
+                            >
+                                {badgeText}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                <div
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs transition-transform duration-300 ${
+                        isLight
+                            ? 'bg-black/[0.03] border border-black/[0.04]'
+                            : 'bg-white/[0.06] border border-white/[0.08]'
+                    }`}
+                >
+                    <Icon className="w-5 h-5" style={{ color: accentColor }} />
+                </div>
+            </div>
+        </motion.div>
+    );
 };
 
 export default function AdminInvoices() {
     const token = localStorage.getItem('admin_token') || '';
+    const { isLight } = useAdminTheme();
 
     // Data State
     const [invoices, setInvoices] = useState<InvoiceData[]>([]);
@@ -538,6 +711,18 @@ export default function AdminInvoices() {
         toast.info(`Duplicated as new draft ${nextNum}`);
     };
 
+    // Direct Live Preview of existing invoice
+    const handleOpenPreview = (inv: InvoiceData) => {
+        try {
+            const pdfRes = generateInvoicePdf(inv, logoRef.current);
+            setBuilderPreviewUrl(pdfRes.getBlobUrl());
+            setFormData(inv);
+            setBuilderPreviewOpen(true);
+        } catch (e: any) {
+            toast.error('Failed to preview invoice: ' + e.message);
+        }
+    };
+
     // Live HTML Email Content in Preview
     const emailPreviewHtml = useMemo(() => {
         if (!selectedInvoice) return '';
@@ -545,343 +730,414 @@ export default function AdminInvoices() {
     }, [selectedInvoice, emailForm.message]);
 
     return (
-        <div className="min-h-full text-foreground space-y-8 p-1 md:p-2">
+        <div className={`min-h-full space-y-6 p-1 md:p-2 transition-colors duration-300 ${isLight ? 'text-[#1d1d1f]' : 'text-foreground'}`}>
             <Helmet>
                 <title>Customer Invoices & Billing — Admin | ORBIT SaaS</title>
             </Helmet>
 
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto space-y-6">
                 
-                {/* ─── Header & Top Actions ─── */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+                {/* ─── Header & Top Actions (Apple HIG Style) ─── */}
+                <div
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b transition-colors duration-300"
+                    style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)' }}
+                >
                     <div>
-                        <div className="flex items-center gap-3 mb-1">
-                            <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 shadow-lg shadow-indigo-500/20 text-white">
-                                <Receipt className="w-6 h-6" />
+                        <div className="flex items-center gap-2.5">
+                            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shadow-xs transition-colors ${
+                                isLight ? 'bg-indigo-500/10 text-indigo-600' : 'bg-indigo-500/15 text-indigo-400'
+                            }`}>
+                                <Receipt className="w-5 h-5" />
                             </div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                            <h1 className={`text-xl sm:text-2xl font-extrabold tracking-tight ${isLight ? 'text-[#1d1d1f]' : 'text-white'} flex items-center gap-2.5`}>
                                 Customer Invoices
-                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-mono">
+                                <span className={`text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-full ${
+                                    isLight
+                                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80'
+                                        : 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/20'
+                                }`}>
                                     Direct Billing
                                 </span>
                             </h1>
                         </div>
-                        <p className="text-muted-foreground text-sm">
+                        <p className={`text-xs mt-1 ml-11.5 font-medium ${isLight ? 'text-[#6e6e73]' : 'text-[#86868b]'}`}>
                             Generate branded invoices, review live HTML/PDF previews, and dispatch directly to customer inboxes.
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
                         <button
                             onClick={fetchInvoices}
-                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-secondary hover:bg-secondary/80 border border-border text-sm font-medium transition-all"
+                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                                isLight
+                                    ? 'bg-white hover:bg-black/[0.04] text-[#1d1d1f] border-black/[0.08] shadow-xs'
+                                    : 'bg-white/[0.06] hover:bg-white/[0.1] text-white border-white/[0.1] shadow-xs'
+                            }`}
                             title="Refresh Invoices"
                         >
-                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">Refresh</span>
+                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                            <span>Refresh</span>
                         </button>
 
                         <button
                             onClick={handleOpenCreate}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
+                                isLight
+                                    ? 'bg-[#0071e3] hover:bg-[#0062c4] text-white shadow-[#0071e333]'
+                                    : 'bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-[#0071e344]'
+                            }`}
                         >
                             <Plus className="w-4 h-4" />
-                            Create Invoice
+                            <span>Create Invoice</span>
                         </button>
                     </div>
                 </div>
 
-                {/* ─── Dashboard Metrics ─── */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="p-5 rounded-2xl bg-card border border-border backdrop-blur-md relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 text-muted-foreground/20 group-hover:text-indigo-500/20 transition-all">
-                            <Receipt className="w-12 h-12" />
-                        </div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total Invoiced</div>
-                        <div className="text-2xl font-bold text-foreground tracking-tight">
-                            {formatCurrency(stats.total_invoiced, 'BDT')}
-                        </div>
-                        <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-2 font-medium">
-                            {stats.total_invoices} total invoices logged
-                        </div>
-                    </div>
-
-                    <div className="p-5 rounded-2xl bg-card border border-border backdrop-blur-md relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 text-muted-foreground/20 group-hover:text-emerald-500/20 transition-all">
-                            <CheckCircle2 className="w-12 h-12" />
-                        </div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Collected Revenue</div>
-                        <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
-                            {formatCurrency(stats.total_collected, 'BDT')}
-                        </div>
-                        <div className="text-xs text-emerald-500/80 mt-2 font-medium">
-                            {stats.paid_count} fully settled invoices
-                        </div>
-                    </div>
-
-                    <div className="p-5 rounded-2xl bg-card border border-border backdrop-blur-md relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 text-muted-foreground/20 group-hover:text-rose-500/20 transition-all">
-                            <DollarSign className="w-12 h-12" />
-                        </div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Outstanding Balance</div>
-                        <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">
-                            {formatCurrency(stats.total_due, 'BDT')}
-                        </div>
-                        <div className="text-xs text-rose-600 dark:text-rose-400/80 mt-2 font-medium">
-                            Pending customer payments
-                        </div>
-                    </div>
-
-                    <div className="p-5 rounded-2xl bg-card border border-border backdrop-blur-md relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 text-muted-foreground/20 group-hover:text-amber-500/20 transition-all">
-                            <Send className="w-12 h-12" />
-                        </div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Sent / Dispatched</div>
-                        <div className="text-2xl font-bold text-purple-300 tracking-tight">
-                            {stats.sent_count} <span className="text-xs text-muted-foreground font-normal">Sent ({stats.draft_count} Drafts)</span>
-                        </div>
-                        <div className="text-xs text-amber-700 dark:text-amber-400 mt-2 font-medium">
-                            {stats.overdue_count} Overdue attention needed
-                        </div>
-                    </div>
+                {/* ─── Dashboard Metrics (Apple Translucent Cards) ─── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <InvoiceStatCard
+                        title="Total Invoiced"
+                        value={formatLedgerCurrency(stats.total_invoiced, 'BDT')}
+                        badgeText={`${stats.total_invoices} total invoices logged`}
+                        icon={Receipt}
+                        accentColor={isLight ? '#0071e3' : '#0a84ff'}
+                        lightTint="#0071e333"
+                        darkTint="#0a84ff22"
+                        isLight={isLight}
+                    />
+                    <InvoiceStatCard
+                        title="Collected Revenue"
+                        value={formatLedgerCurrency(stats.total_collected, 'BDT')}
+                        badgeText={`${stats.paid_count} fully settled invoices`}
+                        badgeType="success"
+                        icon={CheckCircle2}
+                        accentColor={isLight ? '#28cd41' : '#30d158'}
+                        lightTint="#28cd4133"
+                        darkTint="#30d15822"
+                        isLight={isLight}
+                    />
+                    <InvoiceStatCard
+                        title="Outstanding Balance"
+                        value={formatLedgerCurrency(stats.total_due, 'BDT')}
+                        badgeText="Pending customer payments"
+                        badgeType={stats.total_due > 0 ? 'danger' : 'neutral'}
+                        icon={DollarSign}
+                        accentColor={isLight ? '#ff3b30' : '#ff453a'}
+                        lightTint="#ff3b3033"
+                        darkTint="#ff453a22"
+                        isLight={isLight}
+                    />
+                    <InvoiceStatCard
+                        title="Dispatched & Activity"
+                        value={`${stats.sent_count} Sent`}
+                        badgeText={stats.overdue_count > 0 ? `${stats.overdue_count} overdue attention` : `${stats.draft_count} drafts saved`}
+                        badgeType={stats.overdue_count > 0 ? 'warning' : 'neutral'}
+                        icon={Send}
+                        accentColor={isLight ? '#5856d6' : '#5e5ce6'}
+                        lightTint="#5856d633"
+                        darkTint="#5e5ce622"
+                        isLight={isLight}
+                    />
                 </div>
 
-                {/* ─── Search & Filters Bar ─── */}
-                <div className="p-4 rounded-2xl bg-card border border-border flex flex-col md:flex-row gap-4 items-center justify-between">
-                    <div className="relative w-full md:w-96">
-                        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                {/* ─── Search & Filters Bar (Apple Style) ─── */}
+                <div className={`flex flex-wrap items-center gap-3 rounded-2xl p-2.5 transition-all relative z-20 border shadow-none ${
+                    isLight
+                        ? 'bg-white/90 border-black/[0.08]'
+                        : 'bg-[#161618] border-white/[0.08]'
+                }`}>
+                    <div className="relative flex-1 min-w-[200px]">
+                        <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`} />
                         <input
                             type="text"
                             placeholder="Search by invoice #, client, email, project..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:border-indigo-500 text-white placeholder:text-muted-foreground"
+                            className={`w-full rounded-xl pl-10 pr-4 py-2 text-[13px] outline-none transition-all ${
+                                isLight
+                                    ? 'bg-black/[0.03] text-[#1d1d1f] placeholder:text-[#86868b] border border-black/[0.08] focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]/20'
+                                    : 'bg-secondary text-foreground placeholder:text-muted-foreground border border-border focus:ring-1 focus:ring-primary/50'
+                            }`}
                         />
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                        {/* Status Filter */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Status:</span>
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-3 py-1.5 rounded-xl bg-secondary border border-border text-xs font-medium text-white focus:outline-none focus:border-indigo-500"
-                            >
-                                <option value="all" className="bg-card text-foreground">All Statuses</option>
-                                <option value="draft" className="bg-card text-foreground">Draft</option>
-                                <option value="sent" className="bg-card text-foreground">Sent to Customer</option>
-                                <option value="paid" className="bg-card text-foreground">Paid</option>
-                                <option value="partially_paid" className="bg-card text-foreground">Partially Paid</option>
-                                <option value="overdue" className="bg-card text-foreground">Overdue</option>
-                            </select>
-                        </div>
+                    <div className="w-[170px] min-w-[170px]">
+                        <CustomSelect
+                            themeMode={isLight ? 'light' : 'dark'}
+                            value={statusFilter}
+                            onChange={(v) => setStatusFilter(v)}
+                            options={[
+                                { value: 'all', label: 'All Statuses' },
+                                { value: 'draft', label: 'Draft' },
+                                { value: 'sent', label: 'Sent to Customer' },
+                                { value: 'paid', label: 'Paid' },
+                                { value: 'partially_paid', label: 'Partially Paid' },
+                                { value: 'overdue', label: 'Overdue' },
+                            ]}
+                        />
+                    </div>
 
-                        {/* Service Type Filter */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Service:</span>
-                            <select
-                                value={serviceFilter}
-                                onChange={(e) => setServiceFilter(e.target.value)}
-                                className="px-3 py-1.5 rounded-xl bg-secondary border border-border text-xs font-medium text-white focus:outline-none focus:border-indigo-500"
-                            >
-                                <option value="all" className="bg-card text-foreground">All Services</option>
-                                {SERVICE_TYPE_OPTIONS.map(opt => (
-                                    <option key={opt} value={opt} className="bg-card text-foreground">{opt}</option>
-                                ))}
-                            </select>
-                        </div>
+                    <div className="w-[220px] min-w-[220px]">
+                        <CustomSelect
+                            themeMode={isLight ? 'light' : 'dark'}
+                            value={serviceFilter}
+                            onChange={(v) => setServiceFilter(v)}
+                            options={[
+                                { value: 'all', label: 'All Services' },
+                                ...SERVICE_TYPE_OPTIONS.map((opt) => ({ value: opt, label: opt })),
+                            ]}
+                        />
                     </div>
                 </div>
 
-                {/* ─── Invoices Index Table ─── */}
-                <div className="rounded-2xl bg-card border border-border overflow-hidden shadow-2xl">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm border-collapse">
-                            <thead>
-                                <tr className="border-b border-border bg-card text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                                    <th className="py-4 px-5">Invoice #</th>
-                                    <th className="py-4 px-5">Customer / Identity</th>
-                                    <th className="py-4 px-5">Service Type</th>
-                                    <th className="py-4 px-5">Dates</th>
-                                    <th className="py-4 px-5 text-right">Amount / Due</th>
-                                    <th className="py-4 px-5 text-center">Status</th>
-                                    <th className="py-4 px-5 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={7} className="text-center py-16 text-muted-foreground">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <RefreshCw className="w-6 h-6 animate-spin text-indigo-500" />
-                                                <span>Loading invoice history...</span>
-                                            </div>
-                                        </td>
+                {/* ─── Invoices Index Table (Admin Finance Ledger Style) ─── */}
+                {loading ? (
+                    <div className="space-y-1.5">
+                        {[1, 2, 3, 4, 5, 6].map(i => (
+                            <Skeleton key={i} className={`h-[44px] rounded-xl ${isLight ? 'bg-black/5' : 'bg-white/5'}`} />
+                        ))}
+                    </div>
+                ) : (
+                    <div className={`rounded-2xl overflow-hidden transition-all duration-300 relative z-10 border shadow-none ${
+                        isLight
+                            ? 'bg-white border-black/[0.08]'
+                            : 'bg-[#161618] border-white/[0.08]'
+                    }`}>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left text-[13px] whitespace-nowrap">
+                                <thead className={`uppercase tracking-wider text-[11px] font-semibold border-b transition-colors select-none ${
+                                    isLight
+                                        ? 'bg-black/[0.02] text-[#86868b] border-black/[0.06]'
+                                        : 'bg-white/[0.02] text-[#86868b] border-white/[0.08]'
+                                }`}>
+                                    <tr className="h-[36px]">
+                                        <th className="px-3.5 py-0 h-[36px] align-middle font-medium w-[160px]">Invoice #</th>
+                                        <th className="px-3.5 py-0 h-[36px] align-middle font-medium min-w-[220px]">Customer / Identity</th>
+                                        <th className="px-3.5 py-0 h-[36px] align-middle font-medium min-w-[170px]">Service Type</th>
+                                        <th className="px-3.5 py-0 h-[36px] align-middle font-medium min-w-[150px]">Dates</th>
+                                        <th className="px-3.5 py-0 h-[36px] align-middle font-medium text-right min-w-[140px]">Amount / Due</th>
+                                        <th className="px-3.5 py-0 h-[36px] align-middle font-medium text-center w-[130px]">Status</th>
+                                        <th className="px-3.5 py-0 h-[36px] align-middle font-medium text-right w-[160px]">Actions</th>
                                     </tr>
-                                ) : invoices.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={7} className="text-center py-16 text-muted-foreground">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <Receipt className="w-10 h-10 text-muted-foreground/30" />
-                                                <p className="text-base font-semibold text-foreground">No invoices found</p>
-                                                <p className="text-xs max-w-sm">
-                                                    {search || statusFilter !== 'all' || serviceFilter !== 'all'
-                                                        ? 'Try clearing the filters to see historical invoices.'
-                                                        : 'Create your first customer invoice to start billing and tracking payments.'}
-                                                </p>
-                                                <button
-                                                    onClick={handleOpenCreate}
-                                                    className="mt-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition-all"
-                                                >
-                                                    + Create First Invoice
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    invoices.map((inv) => {
-                                        const statusStyle = STATUS_COLORS[inv.status || 'draft'] || STATUS_COLORS.draft;
-                                        const StatusIcon = statusStyle.icon;
-
-                                        return (
-                                            <tr key={inv.id || inv.invoice_number} className="hover:bg-card transition-colors group">
-                                                
-                                                {/* Invoice # */}
-                                                <td className="py-4 px-5">
-                                                    <div className="font-mono font-bold text-foreground text-sm">
-                                                        {inv.invoice_number}
-                                                    </div>
-                                                    {inv.project_name && (
-                                                        <div className="text-xs text-muted-foreground truncate max-w-[140px]">
-                                                            Proj: {inv.project_name}
-                                                        </div>
-                                                    )}
-                                                </td>
-
-                                                {/* Customer */}
-                                                <td className="py-4 px-5">
-                                                    <div className="font-semibold text-foreground flex items-center gap-1.5">
-                                                        {inv.client_name}
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                                        <span>{inv.client_email}</span>
-                                                    </div>
-                                                    {inv.client_phone && (
-                                                        <div className="text-[11px] text-muted-foreground/80">
-                                                            {inv.client_phone}
-                                                        </div>
-                                                    )}
-                                                </td>
-
-                                                {/* Service Type */}
-                                                <td className="py-4 px-5">
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                                                        {inv.service_type || 'Digital Services'}
-                                                    </span>
-                                                </td>
-
-                                                {/* Dates */}
-                                                <td className="py-4 px-5 text-xs text-muted-foreground space-y-0.5">
-                                                    <div><span className="text-muted-foreground">Issued:</span> {inv.issue_date}</div>
-                                                    <div className="font-medium text-rose-600 dark:text-rose-400/90"><span className="text-muted-foreground">Due:</span> {inv.due_date}</div>
-                                                </td>
-
-                                                {/* Amount / Due */}
-                                                <td className="py-4 px-5 text-right">
-                                                    <div className="font-bold text-foreground text-sm">
-                                                        {formatCurrency(inv.total_amount, inv.currency)}
-                                                    </div>
-                                                    {Number(inv.due_amount) > 0 ? (
-                                                        <div className="text-xs font-semibold text-rose-600 dark:text-rose-400">
-                                                            Due: {formatCurrency(inv.due_amount, inv.currency)}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                                                            Paid in full
-                                                        </div>
-                                                    )}
-                                                </td>
-
-                                                {/* Status Badge */}
-                                                <td className="py-4 px-5 text-center">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-                                                        <StatusIcon className="w-3 h-3" />
-                                                        {(inv.status || 'draft').toUpperCase()}
-                                                    </span>
-                                                </td>
-
-                                                {/* Actions */}
-                                                <td className="py-4 px-5 text-right">
-                                                    <div className="flex items-center justify-end gap-1.5">
-                                                        
-                                                        {/* Send Email Button */}
+                                </thead>
+                                <tbody className={`divide-y text-[13px] ${isLight ? 'divide-black/[0.04]' : 'divide-white/[0.05]'}`}>
+                                    <AnimatePresence>
+                                        {invoices.length === 0 ? (
+                                            <tr className="h-[90px]">
+                                                <td colSpan={7} className={`px-4 text-center text-[13px] font-medium ${isLight ? 'text-[#86868b]' : 'text-neutral-500'}`}>
+                                                    <div className="flex flex-col items-center justify-center py-6 gap-2">
+                                                        <Receipt className="w-8 h-8 opacity-30" />
+                                                        <span>No customer invoices found matching your filters.</span>
                                                         <button
-                                                            onClick={() => handleOpenEmailModal(inv)}
-                                                            className="p-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 transition-all"
-                                                            title="Compose & Send Email to Customer"
+                                                            onClick={handleOpenCreate}
+                                                            className={`mt-1 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer ${
+                                                                isLight ? 'bg-black/[0.05] hover:bg-black/10 text-[#1d1d1f]' : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'
+                                                            }`}
                                                         >
-                                                            <Mail className="w-4 h-4" />
+                                                            + Create New Invoice
                                                         </button>
-
-                                                        {/* Download PDF Button */}
-                                                        <button
-                                                            onClick={() => handleDownloadPdf(inv)}
-                                                            className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-white/80 hover:text-white border border-border transition-all"
-                                                            title="Download PDF"
-                                                        >
-                                                            <Download className="w-4 h-4" />
-                                                        </button>
-
-                                                        {/* Edit Button */}
-                                                        <button
-                                                            onClick={() => handleOpenEdit(inv)}
-                                                            className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-white/80 hover:text-white border border-border transition-all"
-                                                            title="Edit Invoice"
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-
-                                                        {/* Duplicate */}
-                                                        <button
-                                                            onClick={() => handleDuplicate(inv)}
-                                                            className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-white/60 hover:text-white border border-border transition-all hidden sm:inline-flex"
-                                                            title="Duplicate Invoice"
-                                                        >
-                                                            <Copy className="w-4 h-4" />
-                                                        </button>
-
-                                                        {/* Quick Mark Paid Toggle */}
-                                                        {inv.status !== 'paid' && (
-                                                            <button
-                                                                onClick={() => handleQuickStatus(inv, 'paid')}
-                                                                className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 transition-all"
-                                                                title="Mark as Paid in full"
-                                                            >
-                                                                <Check className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-
-                                                        {/* Delete */}
-                                                        <button
-                                                            onClick={() => { setInvoiceToDelete(inv); setDeleteModalOpen(true); }}
-                                                            className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 hover:text-rose-300 border border-rose-500/20 transition-all"
-                                                            title="Delete Invoice"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-
                                                     </div>
                                                 </td>
-
                                             </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
+                                        ) : (
+                                            invoices.map((inv) => {
+                                                const st = STATUS_CONFIG[inv.status || 'draft'] || STATUS_CONFIG.draft;
+                                                return (
+                                                    <tr
+                                                        key={inv.id || inv.invoice_number}
+                                                        onClick={() => handleOpenPreview(inv)}
+                                                        className={`h-[48px] cursor-pointer transition-colors group select-none ${
+                                                            isLight
+                                                                ? 'hover:bg-black/[0.03]'
+                                                                : 'hover:bg-white/[0.04]'
+                                                        }`}
+                                                    >
+                                                        {/* Invoice # */}
+                                                        <td className="h-[48px] py-0 px-3.5 align-middle text-[13px] font-mono tabular-nums">
+                                                            <div className="flex items-center gap-2 leading-none">
+                                                                <div className={`p-1.5 rounded-lg shrink-0 ${isLight ? 'bg-black/[0.04] text-black/60' : 'bg-white/[0.06] text-white/70'}`}>
+                                                                    <Receipt className="w-3.5 h-3.5" />
+                                                                </div>
+                                                                <div>
+                                                                    <span className={`font-bold tracking-tight block ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
+                                                                        {inv.invoice_number}
+                                                                    </span>
+                                                                    {inv.project_name && (
+                                                                        <span className={`text-[11px] font-sans font-medium block truncate max-w-[130px] mt-0.5 ${isLight ? 'text-[#86868b]' : 'text-[#86868b]'}`}>
+                                                                            Proj: {inv.project_name}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Customer / Identity */}
+                                                        <td className="h-[48px] py-0 px-3.5 align-middle">
+                                                            <div className="leading-tight">
+                                                                <div className={`font-medium text-[13px] truncate max-w-[240px] ${isLight ? 'text-[#1d1d1f]' : 'text-neutral-100'}`}>
+                                                                    {inv.client_name || 'Anonymous Client'}
+                                                                </div>
+                                                                <div className={`text-[11px] font-mono truncate max-w-[240px] mt-0.5 ${isLight ? 'text-[#6e6e73]' : 'text-neutral-400'}`}>
+                                                                    {inv.client_email || '—'}
+                                                                    {inv.client_phone && <span className="ml-1 opacity-70">· {inv.client_phone}</span>}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Service Type */}
+                                                        <td className="h-[48px] py-0 px-3.5 align-middle">
+                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium leading-none ${
+                                                                isLight
+                                                                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80'
+                                                                    : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
+                                                            }`}>
+                                                                {inv.service_type || 'Digital Services'}
+                                                            </span>
+                                                        </td>
+
+                                                        {/* Dates */}
+                                                        <td className="h-[48px] py-0 px-3.5 align-middle text-[12px] font-mono tabular-nums">
+                                                            <div className="leading-tight space-y-0.5">
+                                                                <div className={`flex items-center gap-1.5 ${isLight ? 'text-[#6e6e73]' : 'text-muted-foreground'}`}>
+                                                                    <Calendar className="w-3 h-3 text-[#86868b] shrink-0" />
+                                                                    <span>{inv.issue_date}</span>
+                                                                </div>
+                                                                <div className={`flex items-center gap-1.5 font-medium ${
+                                                                    inv.status === 'paid'
+                                                                        ? (isLight ? 'text-[#86868b]' : 'text-[#636366]')
+                                                                        : 'text-rose-500 dark:text-rose-400'
+                                                                }`}>
+                                                                    <Clock className="w-3 h-3 shrink-0 opacity-70" />
+                                                                    <span className="text-[10px] uppercase font-sans font-semibold opacity-70">Due</span>
+                                                                    <span>{inv.due_date}</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Amount / Due */}
+                                                        <td className="h-[48px] py-0 px-3.5 align-middle text-right font-mono tabular-nums whitespace-nowrap">
+                                                            <div className="leading-tight">
+                                                                <span className={`text-[13px] font-bold block ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
+                                                                    {formatLedgerCurrency(inv.total_amount, inv.currency)}
+                                                                </span>
+                                                                {Number(inv.due_amount) > 0 ? (
+                                                                    <span className="text-[11px] font-semibold text-rose-500 dark:text-rose-400 block mt-0.5">
+                                                                        Due: {formatLedgerCurrency(inv.due_amount, inv.currency)}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                                                                        Paid in full
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Status */}
+                                                        <td className="h-[48px] py-0 px-3.5 align-middle text-center">
+                                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold leading-none ${
+                                                                isLight
+                                                                    ? `${st.lightBg} ${st.lightText} ${st.lightBorder} border`
+                                                                    : `${st.darkBg} ${st.darkText} ${st.darkBorder} border`
+                                                            }`}>
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${st.dot} shrink-0`} />
+                                                                {st.label}
+                                                            </span>
+                                                        </td>
+
+                                                        {/* Actions */}
+                                                        <td className="h-[48px] py-0 px-3.5 align-middle text-right w-[160px]">
+                                                            <div className="flex items-center justify-end gap-1 leading-none" onClick={(e) => e.stopPropagation()}>
+                                                                {/* Send Mail */}
+                                                                <button
+                                                                    onClick={() => handleOpenEmailModal(inv)}
+                                                                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                                                        isLight
+                                                                            ? 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50'
+                                                                            : 'text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10'
+                                                                    }`}
+                                                                    title="Compose & Send Email"
+                                                                >
+                                                                    <Mail className="w-4 h-4" />
+                                                                </button>
+
+                                                                {/* Download PDF */}
+                                                                <button
+                                                                    onClick={() => handleDownloadPdf(inv)}
+                                                                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                                                        isLight
+                                                                            ? 'text-sky-600 hover:text-sky-700 hover:bg-sky-50'
+                                                                            : 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10'
+                                                                    }`}
+                                                                    title="Download PDF"
+                                                                >
+                                                                    <Download className="w-4 h-4" />
+                                                                </button>
+
+                                                                {/* Edit */}
+                                                                <button
+                                                                    onClick={() => handleOpenEdit(inv)}
+                                                                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                                                        isLight
+                                                                            ? 'text-black/50 hover:text-black hover:bg-black/5'
+                                                                            : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.08]'
+                                                                    }`}
+                                                                    title="Edit Invoice"
+                                                                >
+                                                                    <Edit className="w-4 h-4" />
+                                                                </button>
+
+                                                                {/* Duplicate */}
+                                                                <button
+                                                                    onClick={() => handleDuplicate(inv)}
+                                                                    className={`p-1.5 rounded-lg transition-colors cursor-pointer hidden sm:inline-flex ${
+                                                                        isLight
+                                                                            ? 'text-black/50 hover:text-black hover:bg-black/5'
+                                                                            : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.08]'
+                                                                    }`}
+                                                                    title="Duplicate Invoice"
+                                                                >
+                                                                    <Copy className="w-4 h-4" />
+                                                                </button>
+
+                                                                {/* Quick Mark Paid Toggle */}
+                                                                {inv.status !== 'paid' && (
+                                                                    <button
+                                                                        onClick={() => handleQuickStatus(inv, 'paid')}
+                                                                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                                                            isLight
+                                                                                ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                                                                                : 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+                                                                        }`}
+                                                                        title="Mark Paid in full"
+                                                                    >
+                                                                        <Check className="w-4 h-4" />
+                                                                    </button>
+                                                                )}
+
+                                                                {/* Delete */}
+                                                                <button
+                                                                    onClick={() => { setInvoiceToDelete(inv); setDeleteModalOpen(true); }}
+                                                                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                                                        isLight
+                                                                            ? 'text-rose-600 hover:text-rose-700 hover:bg-rose-50'
+                                                                            : 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
+                                                                    }`}
+                                                                    title="Delete Invoice"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </AnimatePresence>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                )}
 
             </div>
 

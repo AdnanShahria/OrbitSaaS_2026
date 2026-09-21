@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useContent } from '@/contexts/ContentContext';
@@ -554,143 +555,148 @@ export function LeadershipSection() {
         )}
       </div>
 
-      {/* ─── "Read Bio" Modal Dialog ─── */}
-      <AnimatePresence>
-        {selectedMember && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={handleCloseModal}
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="bio-modal-title"
-          >
-            <motion.div
-              initial={{ scale: 0.94, opacity: 0, y: 8 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.94, opacity: 0, y: 8 }}
-              transition={{ duration: 0.2 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl max-w-md w-full my-auto max-h-[85vh] flex flex-col p-4 sm:p-6 relative border border-slate-100 overflow-hidden"
-            >
-              {/* Header Action Buttons: Share + Close */}
-              <div className="absolute top-3 sm:top-4 right-3 sm:right-4 flex items-center gap-1.5 z-20">
-                <button
-                  type="button"
-                  onClick={() => handleShareMember(selectedMember)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200/80 transition-colors cursor-pointer text-xs font-medium"
-                  title={lang === 'bn' ? 'সিভি লিংক কপি করুন' : 'Copy Direct Link for CV'}
+      {/* ─── "Read Bio" Modal Dialog (Portaled to document.body for true viewport centering) ─── */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {selectedMember && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={handleCloseModal}
+                className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
+                style={{ minHeight: '100dvh' }}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="bio-modal-title"
+              >
+                <motion.div
+                  initial={{ scale: 0.94, opacity: 0, y: 8 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.94, opacity: 0, y: 8 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-white rounded-2xl shadow-2xl max-w-md w-full my-auto max-h-[85vh] flex flex-col p-4 sm:p-6 relative border border-slate-100 overflow-hidden"
                 >
-                  {copied ? (
-                    <>
-                      <Check size={14} className="text-emerald-600" />
-                      <span className="text-[11px] text-emerald-600 font-semibold">{lang === 'bn' ? 'কপি হয়েছে' : 'Copied'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Share2 size={14} />
-                      <span className="text-[11px]">{lang === 'bn' ? 'শেয়ার' : 'Share'}</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                  aria-label="Close bio"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Modal Header: Avatar + Role + Name + SubDetail */}
-              <div className="flex items-center gap-3 pr-24 sm:pr-28 shrink-0">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 shadow-xs">
-                  {selectedMember.image || selectedMember.avatar ? (
-                    <img
-                      src={getImageUrl(selectedMember.image || selectedMember.avatar)}
-                      alt={selectedMember.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className="w-full h-full flex items-center justify-center text-white font-bold text-lg"
-                      style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}
+                  {/* Header Action Buttons: Share + Close */}
+                  <div className="absolute top-3 sm:top-4 right-3 sm:right-4 flex items-center gap-1.5 z-20">
+                    <button
+                      type="button"
+                      onClick={() => handleShareMember(selectedMember)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200/80 transition-colors cursor-pointer text-xs font-medium"
+                      title={lang === 'bn' ? 'সিভি লিংক কপি করুন' : 'Copy Direct Link for CV'}
                     >
-                      {selectedMember.name?.charAt(0) || 'O'}
-                    </div>
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 mb-0.5 truncate">
-                    {selectedMember.role || selectedMember.position || 'LEADERSHIP'}
-                  </p>
-                  <h3
-                    id="bio-modal-title"
-                    className="text-sm sm:text-base font-bold text-slate-900 leading-snug truncate"
-                    style={{ fontFamily: 'var(--font-display)' }}
-                  >
-                    {selectedMember.name}
-                  </h3>
-                  <p className="text-[10.5px] sm:text-xs text-slate-500 font-medium truncate">
-                    {selectedMember.subDetail ||
-                      (selectedMember.department
-                        ? `${selectedMember.department} · 2024-2025`
-                        : 'ORBIT Core · 2024-2025')}
-                  </p>
-                </div>
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-slate-100 my-3 sm:my-4 shrink-0" />
-
-              {/* Scrollable Content Body */}
-              <div className="overflow-y-auto custom-scrollbar flex-1 pr-1 -mr-1 space-y-3 sm:space-y-4">
-                {/* About Section */}
-                <div>
-                  <h4 className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    ABOUT
-                  </h4>
-                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line font-normal">
-                    {selectedMember.bio ||
-                      'Aim to serve the organization and lead with innovation, architectural excellence, and customer-first value.'}
-                  </p>
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-slate-100 my-2" />
-
-                {/* Connect Section */}
-                <div>
-                  <div className="flex items-center flex-wrap gap-2 pt-0.5">
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 shrink-0">
-                      CONNECT:
-                    </span>
-                    {getEnabledContacts(selectedMember).map((contact) => {
-                      const Icon = contact.icon;
-                      return (
-                        <a
-                          key={contact.key}
-                          href={contact.href}
-                          target={contact.key === 'email' ? undefined : '_blank'}
-                          rel={contact.key === 'email' ? undefined : 'noopener noreferrer'}
-                          className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border text-[11px] sm:text-xs font-semibold transition-colors shadow-2xs ${contact.pillClass}`}
-                        >
-                          <Icon size={12} />
-                          <span>{contact.label}</span>
-                        </a>
-                      );
-                    })}
+                      {copied ? (
+                        <>
+                          <Check size={14} className="text-emerald-600" />
+                          <span className="text-[11px] text-emerald-600 font-semibold">{lang === 'bn' ? 'কপি হয়েছে' : 'Copied'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Share2 size={14} />
+                          <span className="text-[11px]">{lang === 'bn' ? 'শেয়ার' : 'Share'}</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseModal}
+                      className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                      aria-label="Close bio"
+                    >
+                      <X size={18} />
+                    </button>
                   </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
+
+                  {/* Modal Header: Avatar + Role + Name + SubDetail */}
+                  <div className="flex items-center gap-3 pr-24 sm:pr-28 shrink-0">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 shadow-xs">
+                      {selectedMember.image || selectedMember.avatar ? (
+                        <img
+                          src={getImageUrl(selectedMember.image || selectedMember.avatar)}
+                          alt={selectedMember.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="w-full h-full flex items-center justify-center text-white font-bold text-lg"
+                          style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}
+                        >
+                          {selectedMember.name?.charAt(0) || 'O'}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 mb-0.5 truncate">
+                        {selectedMember.role || selectedMember.position || 'LEADERSHIP'}
+                      </p>
+                      <h3
+                        id="bio-modal-title"
+                        className="text-sm sm:text-base font-bold text-slate-900 leading-snug truncate"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                      >
+                        {selectedMember.name}
+                      </h3>
+                      <p className="text-[10.5px] sm:text-xs text-slate-500 font-medium truncate">
+                        {selectedMember.subDetail ||
+                          (selectedMember.department
+                            ? `${selectedMember.department} · 2024-2025`
+                            : 'ORBIT Core · 2024-2025')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-slate-100 my-3 sm:my-4 shrink-0" />
+
+                  {/* Scrollable Content Body */}
+                  <div className="overflow-y-auto custom-scrollbar flex-1 pr-1 -mr-1 space-y-3 sm:space-y-4">
+                    {/* About Section */}
+                    <div>
+                      <h4 className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                        ABOUT
+                      </h4>
+                      <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line font-normal">
+                        {selectedMember.bio ||
+                          'Aim to serve the organization and lead with innovation, architectural excellence, and customer-first value.'}
+                      </p>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-slate-100 my-2" />
+
+                    {/* Connect Section */}
+                    <div>
+                      <div className="flex items-center flex-wrap gap-2 pt-0.5">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 shrink-0">
+                          CONNECT:
+                        </span>
+                        {getEnabledContacts(selectedMember).map((contact) => {
+                          const Icon = contact.icon;
+                          return (
+                            <a
+                              key={contact.key}
+                              href={contact.href}
+                              target={contact.key === 'email' ? undefined : '_blank'}
+                              rel={contact.key === 'email' ? undefined : 'noopener noreferrer'}
+                              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border text-[11px] sm:text-xs font-semibold transition-colors shadow-2xs ${contact.pillClass}`}
+                            >
+                              <Icon size={12} />
+                              <span>{contact.label}</span>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
 
       <WaveDivider fill="#FFFFFF" />
     </section>
