@@ -8,7 +8,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { FinanceThemeProvider, useFinanceTheme } from './FinanceThemeContext';
-import AppleThemeToggle from './AppleThemeToggle';
 import {
     Plus, Trash2, Edit3, Search, Download, X, Save,
     Calendar, CreditCard, Loader2, ChevronLeft, ChevronRight, Settings, PlusCircle, Users, Share2, Shield, TrendingUp, TrendingDown, Landmark, HelpCircle, LayoutDashboard, Copy, Check
@@ -1034,9 +1033,6 @@ function AdminFinanceTransactionsContent() {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                    {/* Functional Apple Theme Toggle */}
-                    <AppleThemeToggle showLabel={true} />
-
                     <button
                         onClick={() => navigate('/admin/finance')}
                         className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer ${

@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { PieChart as PieChartIcon } from 'lucide-react';
+import { PieChart as PieChartIcon, Plus } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from 'recharts';
 import { useFinanceTheme } from './FinanceThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 interface ExpensePieChartProps {
     categoryBreakdown: { category: string; total: number }[];
     totalExpense: number;
+    allTimeBreakdown?: { category: string; total: number }[];
+    allTimeExpense?: number;
+    periodLabel?: string;
+    onSelectAllTime?: () => void;
 }
 
 // Apple HIG harmonious palette — vibrant & distinct
@@ -80,10 +85,10 @@ const CustomTooltip = ({ active, payload, isLight }: any) => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.12 }}
-            className={`rounded-2xl px-3.5 py-2.5 text-xs backdrop-blur-xl ${
+            className={`rounded-2xl px-3.5 py-2.5 text-xs ${
                 isLight
-                    ? 'bg-white/98 border border-black/[0.08] shadow-[0_8px_24px_rgba(0,0,0,0.12)]'
-                    : 'bg-[#1c1c1e]/98 border border-white/[0.12] shadow-[0_12px_32px_rgba(0,0,0,0.5)]'
+                    ? 'bg-white border border-black/[0.1] shadow-[0_8px_24px_rgba(0,0,0,0.14)] text-[#1d1d1f]'
+                    : 'bg-[#1c1c1e] border border-white/[0.14] shadow-[0_12px_32px_rgba(0,0,0,0.6)] text-white'
             }`}
         >
             <div className="flex items-center gap-2 mb-1">
@@ -96,15 +101,33 @@ const CustomTooltip = ({ active, payload, isLight }: any) => {
     );
 };
 
-export default function ExpensePieChart({ categoryBreakdown, totalExpense }: ExpensePieChartProps) {
+export default function ExpensePieChart({
+    categoryBreakdown,
+    totalExpense,
+    allTimeBreakdown,
+    allTimeExpense,
+    periodLabel,
+    onSelectAllTime
+}: ExpensePieChartProps) {
     const { isLight } = useFinanceTheme();
+    const navigate = useNavigate();
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const [viewMode, setViewMode] = useState<'period' | 'all_time'>('period');
+
+    const hasPeriodData = Boolean(categoryBreakdown && categoryBreakdown.length > 0);
+    const hasAllTimeData = Boolean(allTimeBreakdown && allTimeBreakdown.length > 0);
+
+    // Auto fallback to all-time if current period has 0 expenses but all-time has data
+    const isShowingAllTime = (viewMode === 'all_time') || (!hasPeriodData && hasAllTimeData);
+
+    const activeCategories = isShowingAllTime ? (allTimeBreakdown || []) : categoryBreakdown;
+    const activeTotal = isShowingAllTime ? (allTimeExpense ?? totalExpense) : totalExpense;
 
     // Add color and percent to data for tooltip
-    const enrichedData = categoryBreakdown.map((c, i) => ({
+    const enrichedData = activeCategories.map((c, i) => ({
         ...c,
         fill: APPLE_COLORS[i % APPLE_COLORS.length],
-        percent: totalExpense > 0 ? c.total / totalExpense : 0,
+        percent: activeTotal > 0 ? c.total / activeTotal : 0,
     }));
 
     return (
@@ -119,29 +142,89 @@ export default function ExpensePieChart({ categoryBreakdown, totalExpense }: Exp
             }`}
         >
             {/* Header */}
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isLight ? 'bg-amber-500/10 text-amber-600' : 'bg-amber-500/15 text-amber-400'}`}>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isLight ? 'bg-amber-500/10 text-amber-600' : 'bg-amber-500/15 text-amber-400'}`}>
                         <PieChartIcon className="w-4 h-4" />
                     </div>
                     <div>
-                        <h3 className={`text-sm font-bold ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
-                            Expense Categories
-                        </h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className={`text-sm font-bold ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
+                                Expense Categories
+                            </h3>
+                            {isShowingAllTime && !hasPeriodData && hasAllTimeData && (
+                                <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full ${
+                                    isLight ? 'bg-amber-500/10 text-amber-700' : 'bg-amber-500/20 text-amber-300'
+                                }`}>
+                                    All-Time
+                                </span>
+                            )}
+                        </div>
                         <p className={`text-[11px] ${isLight ? 'text-[#6e6e73]' : 'text-[#86868b]'}`}>
                             Funding Allocation Split
                         </p>
                     </div>
                 </div>
-                {/* Total badge */}
-                <div className={`px-2.5 py-1 rounded-xl text-[11px] font-black font-mono ${
-                    isLight ? 'bg-rose-500/[0.07] text-rose-700' : 'bg-rose-500/15 text-rose-400'
-                }`}>
-                    {formatCurrency(totalExpense)}
+
+                {/* Right controls: Scope toggle (if both available) + Total badge */}
+                <div className="flex items-center gap-2 shrink-0">
+                    {hasPeriodData && hasAllTimeData && (
+                        <div className={`flex items-center p-0.5 rounded-xl border text-[10px] font-semibold ${
+                            isLight ? 'bg-black/[0.04] border-black/[0.08]' : 'bg-white/[0.06] border-white/[0.1]'
+                        }`}>
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('period')}
+                                className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                                    viewMode === 'period'
+                                        ? (isLight ? 'bg-white text-black shadow-xs font-bold' : 'bg-white/20 text-white font-bold')
+                                        : (isLight ? 'text-neutral-500 hover:text-black' : 'text-neutral-400 hover:text-white')
+                                }`}
+                            >
+                                Period
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('all_time')}
+                                className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                                    viewMode === 'all_time'
+                                        ? (isLight ? 'bg-white text-black shadow-xs font-bold' : 'bg-white/20 text-white font-bold')
+                                        : (isLight ? 'text-neutral-500 hover:text-black' : 'text-neutral-400 hover:text-white')
+                                }`}
+                            >
+                                All-Time
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Total badge */}
+                    <div className={`px-2.5 py-1 rounded-xl text-[11px] font-black font-mono ${
+                        isLight ? 'bg-rose-500/[0.07] text-rose-700' : 'bg-rose-500/15 text-rose-400'
+                    }`}>
+                        {formatCurrency(activeTotal)}
+                    </div>
                 </div>
             </div>
 
-            {categoryBreakdown.length > 0 ? (
+            {/* Context notification if auto-showing all-time because current period has 0 expenses */}
+            {isShowingAllTime && !hasPeriodData && hasAllTimeData && (
+                <div className={`flex items-center justify-between px-3 py-1.5 rounded-xl mb-2 text-[11px] font-medium ${
+                    isLight ? 'bg-amber-500/[0.08] text-amber-900 border border-amber-500/20' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+                }`}>
+                    <span>No expenses in <strong>{periodLabel || 'selected period'}</strong>. Showing all-time breakdown.</span>
+                    {onSelectAllTime && (
+                        <button
+                            type="button"
+                            onClick={onSelectAllTime}
+                            className="underline font-bold ml-2 shrink-0 cursor-pointer hover:opacity-80"
+                        >
+                            Sync Dashboard
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {activeCategories.length > 0 ? (
                 <>
                     {/* Donut with animated segments */}
                     <div className="relative py-1">
@@ -191,13 +274,13 @@ export default function ExpensePieChart({ categoryBreakdown, totalExpense }: Exp
                                     className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
                                 >
                                     <p className={`text-[10px] font-semibold uppercase tracking-wider ${isLight ? 'text-[#86868b]' : 'text-[#636366]'}`}>
-                                        Total
+                                        {isShowingAllTime ? 'All-Time' : 'Total'}
                                     </p>
                                     <p className={`text-base font-black font-mono tabular-nums ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
-                                        {formatCurrency(totalExpense)}
+                                        {formatCurrency(activeTotal)}
                                     </p>
                                     <p className={`text-[10px] font-medium ${isLight ? 'text-[#86868b]' : 'text-[#636366]'}`}>
-                                        {categoryBreakdown.length} categor{categoryBreakdown.length === 1 ? 'y' : 'ies'}
+                                        {activeCategories.length} categor{activeCategories.length === 1 ? 'y' : 'ies'}
                                     </p>
                                 </motion.div>
                             )}
@@ -268,10 +351,22 @@ export default function ExpensePieChart({ categoryBreakdown, totalExpense }: Exp
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${isLight ? 'bg-black/[0.04]' : 'bg-white/[0.05]'}`}>
                         <PieChartIcon className="w-7 h-7 opacity-40" />
                     </div>
-                    <div className="text-center">
-                        <p className="text-sm font-medium">No recorded expenses</p>
-                        <p className="text-xs opacity-60 mt-0.5">Expense breakdowns will appear here</p>
+                    <div className="text-center space-y-1">
+                        <p className="text-sm font-semibold">No recorded expenses</p>
+                        <p className="text-xs opacity-60">Record an expense mutation to see breakdown here</p>
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/admin/finance/transactions')}
+                        className={`mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                            isLight
+                                ? 'bg-white hover:bg-black/[0.04] text-[#1d1d1f] border-black/[0.1] shadow-xs'
+                                : 'bg-white/[0.06] hover:bg-white/[0.1] text-white border-white/[0.1]'
+                        }`}
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Record Expense</span>
+                    </button>
                 </div>
             )}
         </motion.div>

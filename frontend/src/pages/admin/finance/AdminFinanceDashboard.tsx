@@ -10,7 +10,6 @@ import CorporateCharts from './CorporateCharts';
 import ExpensePieChart from './ExpensePieChart';
 import RecentMutations from './RecentMutations';
 import SavingsGoalsWidget from './SavingsGoalsWidget';
-import AppleThemeToggle from './AppleThemeToggle';
 import { FinanceThemeProvider, useFinanceTheme } from './FinanceThemeContext';
 
 interface DashboardData {
@@ -30,6 +29,8 @@ interface DashboardData {
     expenseChange: number | null;
     monthlyData: { month: string; income: number; expense: number; distribution: number; net: number }[];
     categoryBreakdown: { category: string; total: number }[];
+    allTimeCategoryBreakdown?: { category: string; total: number }[];
+    allTimeExpense?: number;
     recentTransactions: any[];
     savingsGoals: any[];
     topClients: any[];
@@ -169,10 +170,10 @@ function PeriodPicker({ mode, setMode, customFrom, setCustomFrom, customTo, setC
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -8, scale: 0.97 }}
                         transition={{ duration: 0.15 }}
-                        className={`absolute right-0 top-full mt-2 w-72 rounded-2xl shadow-2xl z-[99999] p-2.5 backdrop-blur-2xl ${
+                        className={`absolute right-0 top-full mt-2 w-72 rounded-2xl shadow-2xl z-[99999] p-2.5 ${
                             isLight
-                                ? 'bg-white/98 border border-black/[0.1] shadow-[0_16px_40px_rgba(0,0,0,0.16)] text-[#1d1d1f]'
-                                : 'bg-[#1c1c1e]/98 border border-white/[0.14] shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-white'
+                                ? 'bg-white border border-black/[0.12] shadow-[0_16px_40px_rgba(0,0,0,0.18)] text-[#1d1d1f]'
+                                : 'bg-[#1c1c1e] border border-white/[0.14] shadow-[0_20px_50px_rgba(0,0,0,0.85)] text-white'
                         }`}
                     >
                         <p className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1.5 ${isLight ? 'text-[#86868b]' : 'text-[#86868b]'}`}>
@@ -497,6 +498,18 @@ function FinanceDashboardContent() {
                 .map(([category, total]) => ({ category, total }))
                 .sort((a, b) => b.total - a.total);
 
+            // All-time categories breakdown (enables instant fallback and toggle in Expense card)
+            const allTimeCatMap: Record<string, number> = {};
+            allTransactions
+                .filter(t => t.type === 'expense')
+                .forEach(t => {
+                    const c = t.category || 'Uncategorized';
+                    allTimeCatMap[c] = (allTimeCatMap[c] || 0) + Number(t.amount || 0);
+                });
+            const allTimeCategoryBreakdown = Object.entries(allTimeCatMap)
+                .map(([category, total]) => ({ category, total }))
+                .sort((a, b) => b.total - a.total);
+
             // 5. Monthly breakdown for Corporate Flow History chart
             const monthMap: Record<string, { income: number; expense: number; distribution: number }> = {};
             const sourceForFlow = (periodMode === 'all_time' || periodMode === 'this_year')
@@ -534,6 +547,8 @@ function FinanceDashboardContent() {
                 expenseChange,
                 monthlyData: monthlyData.length > 0 ? monthlyData : (data?.monthlyData || []),
                 categoryBreakdown: categoryBreakdown.length > 0 ? categoryBreakdown : (data?.categoryBreakdown || []),
+                allTimeCategoryBreakdown,
+                allTimeExpense: totalExpense,
                 recentTransactions: (periodTxs.length > 0 ? periodTxs : allTransactions).slice(0, 10),
                 savingsGoals: data?.savingsGoals || [],
                 topClients: data?.topClients || [],
@@ -582,7 +597,6 @@ function FinanceDashboardContent() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                    <AppleThemeToggle showLabel={true} />
                     <button onClick={() => navigate('/admin/finance/transactions')} className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer ${isLight ? 'bg-white hover:bg-black/[0.04] text-[#1d1d1f] border-black/[0.08] shadow-xs' : 'bg-white/[0.06] hover:bg-white/[0.1] text-white border-white/[0.1]'}`}>
                         <Layers className="w-3.5 h-3.5" /><span>Ledger &amp; Log</span>
                     </button>
@@ -647,7 +661,14 @@ function FinanceDashboardContent() {
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <CorporateCharts monthlyData={currentStats.monthlyData} />
-                            <ExpensePieChart categoryBreakdown={currentStats.categoryBreakdown} totalExpense={currentStats.monthExpense} />
+                            <ExpensePieChart
+                                categoryBreakdown={currentStats.categoryBreakdown}
+                                totalExpense={currentStats.monthExpense}
+                                allTimeBreakdown={currentStats.allTimeCategoryBreakdown}
+                                allTimeExpense={currentStats.totalExpense}
+                                periodLabel={periodLabel}
+                                onSelectAllTime={() => setPeriodMode('all_time')}
+                            />
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
