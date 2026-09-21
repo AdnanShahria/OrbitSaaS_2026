@@ -11,7 +11,7 @@ import { FinanceThemeProvider, useFinanceTheme } from './FinanceThemeContext';
 import AppleThemeToggle from './AppleThemeToggle';
 import {
     Plus, Trash2, Edit3, Search, Download, X, Save,
-    Calendar, CreditCard, Loader2, ChevronLeft, ChevronRight, Settings, PlusCircle, Users, Share2, Shield, TrendingUp, TrendingDown, Landmark, HelpCircle, LayoutDashboard
+    Calendar, CreditCard, Loader2, ChevronLeft, ChevronRight, Settings, PlusCircle, Users, Share2, Shield, TrendingUp, TrendingDown, Landmark, HelpCircle, LayoutDashboard, Copy, Check
 } from 'lucide-react';
 
 interface Transaction {
@@ -157,6 +157,10 @@ function AdminFinanceTransactionsContent() {
 
     // Toggle exact timestamps state
     const [expandedTimestamps, setExpandedTimestamps] = useState<Record<string, boolean>>({});
+
+    // Transaction Details Modal State
+    const [selectedTxForDetail, setSelectedTxForDetail] = useState<Transaction | null>(null);
+    const [copiedTxId, setCopiedTxId] = useState(false);
 
     // OTP Modal States
     const [showOtpModal, setShowOtpModal] = useState(false);
@@ -876,7 +880,7 @@ function AdminFinanceTransactionsContent() {
     }, [saving, form, miscExpenseAmount, isSplitValid]);
 
     return (
-        <div className={`space-y-6 -m-4 sm:-m-5 lg:-m-8 p-4 sm:p-5 lg:p-8 min-h-[100dvh] transition-colors duration-300 font-sans relative ${isLight ? 'bg-[#f5f5f7] text-[#1d1d1f]' : 'bg-[#09090b] text-white'}`}>
+        <div className={`space-y-6 w-full transition-colors duration-300 font-sans relative ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
             {/* Financial OTP Modal */}
             <AnimatePresence>
                 {showOtpModal && (
@@ -1092,31 +1096,31 @@ function AdminFinanceTransactionsContent() {
             </div>
 
             {/* Filters */}
-            <div className={`flex flex-wrap items-center gap-3 rounded-2xl p-3 transition-all ${
+            <div className={`flex flex-wrap items-center gap-3 rounded-2xl p-2.5 transition-all relative z-20 border shadow-none ${
                 isLight
-                    ? 'bg-white/85 backdrop-blur-xl border border-black/[0.06] shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
-                    : 'bg-[#1c1c1e]/80 backdrop-blur-xl border border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.4)]'
+                    ? 'bg-white/90 border-black/[0.08]'
+                    : 'bg-[#161618] border-white/[0.08]'
             }`}>
                 <div className="relative flex-1 min-w-[200px]">
                     <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`} />
                     <input
                         type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
                         placeholder="Search descriptions, clients, recipients..."
-                        className={`w-full rounded-xl pl-10 pr-4 py-2 text-sm outline-none transition-all ${
+                        className={`w-full rounded-xl pl-10 pr-4 py-2 text-[13px] outline-none transition-all ${
                             isLight
-                                ? 'bg-black/[0.03] text-[#1d1d1f] placeholder:text-[#86868b] border border-black/[0.08] focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20'
-                                : 'bg-secondary text-foreground placeholder:text-muted-foreground border border-border focus:ring-2 focus:ring-primary/50'
+                                ? 'bg-black/[0.03] text-[#1d1d1f] placeholder:text-[#86868b] border border-black/[0.08] focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]/20'
+                                : 'bg-secondary text-foreground placeholder:text-muted-foreground border border-border focus:ring-1 focus:ring-primary/50'
                         }`}
                     />
                 </div>
-                <div className="w-[150px]">
+                <div className="w-[170px] min-w-[170px]">
                     <CustomSelect
                         themeMode={isLight ? 'light' : 'dark'}
                         value={filterType} onChange={v => { setFilterType(v); setPage(1); }}
                         options={[{value: '', label: 'All Types'}, ...TYPES.map(t => ({value: t.value, label: t.label}))]}
                     />
                 </div>
-                <div className="w-[200px]">
+                <div className="w-[200px] min-w-[200px]">
                     <CustomSelect
                         themeMode={isLight ? 'light' : 'dark'}
                         value={filterCategory} onChange={v => { setFilterCategory(v); setPage(1); }}
@@ -1127,43 +1131,52 @@ function AdminFinanceTransactionsContent() {
 
             {/* Table */}
             {loading ? (
-                <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className={`h-14 rounded-2xl ${isLight ? 'bg-black/5' : 'bg-white/5'}`} />)}</div>
+                <div className="space-y-1.5">{[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className={`h-[32px] rounded-lg ${isLight ? 'bg-black/5' : 'bg-white/5'}`} />)}</div>
             ) : (
-                <div className={`rounded-3xl overflow-hidden transition-all duration-300 ${
+                <div className={`rounded-2xl overflow-hidden transition-all duration-300 relative z-10 border shadow-none ${
                     isLight
-                        ? 'bg-white/85 backdrop-blur-xl border border-black/[0.06] shadow-[0_4px_24px_rgba(0,0,0,0.03)]'
-                        : 'bg-[#1c1c1e]/80 backdrop-blur-xl border border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.4)]'
+                        ? 'bg-white border-black/[0.08]'
+                        : 'bg-[#161618] border-white/[0.08]'
                 }`}>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className={`uppercase tracking-wider text-[11px] font-bold border-b transition-colors ${
+                    <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left text-[13px] whitespace-nowrap">
+                            <thead className={`uppercase tracking-wider text-[11px] font-semibold border-b transition-colors select-none ${
                                 isLight
-                                    ? 'bg-black/[0.02] text-[#6e6e73] border-black/[0.06]'
-                                    : 'bg-white/[0.03] text-[#86868b] border-white/[0.08]'
+                                    ? 'bg-black/[0.02] text-[#86868b] border-black/[0.06]'
+                                    : 'bg-white/[0.02] text-[#86868b] border-white/[0.08]'
                             }`}>
-                                <tr>
-                                    <th className="px-4 py-3.5">Date</th>
-                                    <th className="px-4 py-3.5">Type</th>
-                                    <th className="px-4 py-3.5">Description</th>
-                                    <th className="px-4 py-3.5">Category/Recipient</th>
-                                    <th className="px-4 py-3.5">Client</th>
-                                    <th className="px-4 py-3.5">Method</th>
-                                    <th className="px-4 py-3.5 text-right">Amount</th>
-                                    <th className="px-4 py-3.5 text-right">Actions</th>
+                                <tr className="h-[36px]">
+                                    <th className="px-3.5 py-0 h-[36px] align-middle font-medium w-[130px]">Date</th>
+                                    <th className="px-3.5 py-0 h-[36px] align-middle font-medium w-[120px]">Type</th>
+                                    <th className="px-3.5 py-0 h-[36px] align-middle font-medium min-w-[220px]">Description</th>
+                                    <th className="px-3.5 py-0 h-[36px] align-middle font-medium min-w-[180px]">Category / Recipient</th>
+                                    <th className="px-3.5 py-0 h-[36px] align-middle font-medium min-w-[130px]">Client</th>
+                                    <th className="px-3.5 py-0 h-[36px] align-middle font-medium min-w-[110px]">Method</th>
+                                    <th className="px-3.5 py-0 h-[36px] align-middle font-medium text-right min-w-[120px]">Amount</th>
+                                    <th className="px-3.5 py-0 h-[36px] align-middle font-medium text-right w-[90px]">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className={`divide-y ${isLight ? 'divide-black/[0.04]' : 'divide-white/[0.06]'}`}>
+                            <tbody className={`divide-y text-[13px] ${isLight ? 'divide-black/[0.04]' : 'divide-white/[0.05]'}`}>
                                 <AnimatePresence>
                                     {transactions.length === 0 ? (
-                                        <tr><td colSpan={8} className={`px-4 py-16 text-center text-sm font-medium ${isLight ? 'text-[#86868b]' : 'text-neutral-500'}`}>No transactions found.</td></tr>
+                                        <tr className="h-[64px]"><td colSpan={8} className={`px-4 text-center text-[13px] font-medium ${isLight ? 'text-[#86868b]' : 'text-neutral-500'}`}>No transactions found.</td></tr>
                                     ) : transactions.map(tx => {
                                         const ti = typeInfo(tx.type);
                                         return (
-                                            <motion.tr key={tx.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`transition-colors ${isLight ? 'hover:bg-black/[0.02]' : 'hover:bg-white/[0.03]'}`}>
-                                                <td className={`px-4 py-3.5 text-xs ${isLight ? 'text-[#6e6e73]' : 'text-muted-foreground'}`}>
-                                                    <div className="flex items-center gap-2">
-                                                        <Calendar className="w-3.5 h-3.5 opacity-60 shrink-0" />
-                                                        <span className="font-mono">
+                                            <tr
+                                                key={tx.id}
+                                                onClick={() => setSelectedTxForDetail(tx)}
+                                                className={`h-[36px] cursor-pointer transition-colors group select-none ${
+                                                    isLight
+                                                        ? 'hover:bg-black/[0.03]'
+                                                        : 'hover:bg-white/[0.04]'
+                                                }`}
+                                            >
+                                                {/* Date */}
+                                                <td className="h-[36px] py-0 px-3.5 align-middle text-[13px] font-mono tabular-nums">
+                                                    <div className="flex items-center gap-1.5 leading-none">
+                                                        <Calendar className="w-4 h-4 text-[#86868b] shrink-0" />
+                                                        <span className={isLight ? 'text-[#6e6e73]' : 'text-muted-foreground'}>
                                                             {expandedTimestamps[tx.id]
                                                                 ? formatExactTimestamp(tx.created_at, tx.date)
                                                                 : tx.date
@@ -1175,84 +1188,114 @@ function AdminFinanceTransactionsContent() {
                                                                 toggleTimestamp(tx.id);
                                                             }}
                                                             title="Toggle exact timestamp"
-                                                            className={`p-1 rounded-md transition-colors flex items-center justify-center shrink-0 cursor-pointer ${
-                                                                isLight ? 'hover:bg-black/5 text-black/40 hover:text-indigo-600' : 'hover:bg-secondary text-muted-foreground/50 hover:text-indigo-400'
+                                                            className={`p-0.5 rounded transition-colors flex items-center justify-center shrink-0 cursor-pointer ${
+                                                                isLight ? 'hover:bg-black/5 text-black/30 hover:text-indigo-600' : 'hover:bg-secondary text-muted-foreground/40 hover:text-indigo-400'
                                                             }`}
                                                         >
-                                                            <HelpCircle className="w-3.5 h-3.5" />
+                                                            <HelpCircle className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3.5">
-                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${ti.bg} ${ti.color}`}>{ti.label}</span>
+
+                                                {/* Type */}
+                                                <td className="h-[36px] py-0 px-3.5 align-middle">
+                                                    <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase leading-none tracking-wide ${ti.bg} ${ti.color}`}>
+                                                        {ti.label}
+                                                    </span>
                                                 </td>
-                                                <td className={`px-4 py-3.5 font-semibold max-w-[240px] truncate ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
-                                                    <div>{tx.description}</div>
-                                                    {tx.parent_id && <div className={`text-[10px] font-medium ${isLight ? 'text-[#0071e3]' : 'text-primary'}`}>Linked to Income Split</div>}
-                                                    {tx.created_by && (
-                                                        <div className={`text-[10px] mt-1 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
-                                                            By: <span className={isLight ? 'text-indigo-600 font-medium' : 'text-indigo-400'}>{tx.created_by.split('@')[0]}</span>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className={`px-4 py-3.5 text-xs ${isLight ? 'text-[#6e6e73]' : 'text-muted-foreground'}`}>
-                                                    {tx.type === 'distribution' ? (
-                                                        <div className="flex flex-col gap-1">
-                                                            <span className={`flex items-center gap-1.5 font-semibold ${isLight ? 'text-indigo-700' : 'text-indigo-400'}`}>
-                                                                <Users className="w-3.5 h-3.5" /> {tx.recipient || 'N/A'}
+
+                                                {/* Description */}
+                                                <td className="h-[36px] py-0 px-3.5 align-middle">
+                                                    <div className="flex items-center gap-1.5 leading-none max-w-[320px] lg:max-w-[440px] xl:max-w-[560px] 2xl:max-w-none">
+                                                        <span className={`truncate font-medium text-[13px] ${isLight ? 'text-[#1d1d1f]' : 'text-neutral-100'}`} title={tx.description}>
+                                                            {tx.description}
+                                                        </span>
+                                                        {tx.parent_id && (
+                                                            <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded leading-none ${isLight ? 'bg-indigo-50 text-indigo-600' : 'bg-indigo-500/15 text-indigo-400'}`}>
+                                                                Split
                                                             </span>
-                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold w-fit ${
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* Category/Recipient */}
+                                                <td className="h-[36px] py-0 px-3.5 align-middle text-[13px]">
+                                                    {tx.type === 'distribution' ? (
+                                                        <div className="flex items-center gap-1.5 leading-none max-w-[240px] xl:max-w-[320px]">
+                                                            <Users className="w-4 h-4 text-indigo-400 shrink-0" />
+                                                            <span className={`truncate text-[13px] font-medium ${isLight ? 'text-indigo-700' : 'text-indigo-400'}`}>
+                                                                {tx.recipient || 'N/A'}
+                                                            </span>
+                                                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none ${
                                                                 tx.subcategory === 'Distributed'
-                                                                    ? (isLight ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20')
-                                                                    : (isLight ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse')
+                                                                    ? (isLight ? 'bg-emerald-50 text-emerald-700' : 'bg-emerald-500/10 text-emerald-400')
+                                                                    : (isLight ? 'bg-amber-50 text-amber-700' : 'bg-amber-500/10 text-amber-400')
                                                             }`}>
                                                                 {tx.subcategory || 'Pending'}
                                                             </span>
                                                         </div>
                                                     ) : (
-                                                        tx.category
+                                                        <span className={`text-[13px] truncate block max-w-[200px] xl:max-w-[280px] ${isLight ? 'text-[#6e6e73]' : 'text-neutral-400'}`}>
+                                                            {tx.category || '—'}
+                                                        </span>
                                                     )}
                                                 </td>
-                                                <td className={`px-4 py-3.5 text-xs font-medium ${isLight ? 'text-[#1d1d1f]' : 'text-neutral-300'}`}>{tx.client_name || '—'}</td>
-                                                <td className="px-4 py-3.5">
-                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold ${
+
+                                                {/* Client */}
+                                                <td className="h-[36px] py-0 px-3.5 align-middle text-[13px]">
+                                                    <span className={`text-[13px] truncate block max-w-[160px] xl:max-w-[220px] font-normal ${isLight ? 'text-[#1d1d1f]' : 'text-neutral-300'}`}>
+                                                        {tx.client_name || '—'}
+                                                    </span>
+                                                </td>
+
+                                                {/* Method */}
+                                                <td className="h-[36px] py-0 px-3.5 align-middle">
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium leading-none ${
                                                         isLight
-                                                            ? 'bg-black/[0.04] text-[#6e6e73] border border-black/[0.06]'
-                                                            : 'bg-white/[0.06] text-neutral-300 border border-white/[0.08]'
-                                                    }`}>{tx.payment_method}</span>
+                                                            ? 'bg-black/[0.04] text-[#6e6e73]'
+                                                            : 'bg-white/[0.06] text-neutral-300'
+                                                    }`}>
+                                                        {tx.payment_method}
+                                                    </span>
                                                 </td>
-                                                <td className={`px-4 py-3.5 text-right font-mono font-bold ${
-                                                    tx.type === 'income'
-                                                        ? (isLight ? 'text-emerald-700' : 'text-emerald-400')
-                                                        : tx.type === 'expense'
-                                                        ? (isLight ? 'text-rose-700' : 'text-rose-400')
-                                                        : (isLight ? 'text-indigo-700' : 'text-indigo-400')
-                                                }`}>
-                                                    {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.currency)}
+
+                                                {/* Amount */}
+                                                <td className="h-[36px] py-0 px-3.5 align-middle text-right font-mono font-bold text-[13px] tabular-nums whitespace-nowrap min-w-[120px]">
+                                                    <span className={`leading-none ${
+                                                        tx.type === 'income'
+                                                            ? (isLight ? 'text-emerald-700' : 'text-emerald-400')
+                                                            : tx.type === 'expense'
+                                                            ? (isLight ? 'text-rose-700' : 'text-rose-400')
+                                                            : (isLight ? 'text-indigo-700' : 'text-indigo-400')
+                                                    }`}>
+                                                        {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.currency)}
+                                                    </span>
                                                 </td>
-                                                <td className="px-4 py-3.5 text-right">
-                                                    <div className="flex items-center justify-end gap-1.5">
+
+                                                {/* Actions */}
+                                                <td className="h-[36px] py-0 px-3.5 align-middle text-right w-[90px]">
+                                                    <div className="flex items-center justify-end gap-1 leading-none" onClick={(e) => e.stopPropagation()}>
                                                         <button
                                                             onClick={() => openEdit(tx)}
-                                                            className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                                                                isLight ? 'text-black/50 hover:text-black hover:bg-black/5' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                                                            className={`p-1 rounded-md transition-colors cursor-pointer ${
+                                                                isLight ? 'text-black/50 hover:text-black hover:bg-black/5' : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.08]'
                                                             }`}
                                                             title="Edit Mutation"
                                                         >
-                                                            <Edit3 className="w-3.5 h-3.5" />
+                                                            <Edit3 className="w-4 h-4" />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(tx.id)}
-                                                            className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                                                                isLight ? 'text-rose-600 hover:text-rose-700 hover:bg-rose-50' : 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+                                                            className={`p-1 rounded-md transition-colors cursor-pointer ${
+                                                                isLight ? 'text-rose-600 hover:text-rose-700 hover:bg-rose-50' : 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
                                                             }`}
                                                             title="Delete Mutation"
                                                         >
-                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                            <Trash2 className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 </td>
-                                            </motion.tr>
+                                            </tr>
                                         );
                                     })}
                                 </AnimatePresence>
@@ -1262,7 +1305,7 @@ function AdminFinanceTransactionsContent() {
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className={`flex items-center justify-between px-5 py-3.5 border-t transition-colors ${
+                        <div className={`flex items-center justify-between px-4 py-2 border-t transition-colors ${
                             isLight ? 'border-black/[0.06] text-[#6e6e73]' : 'border-white/[0.08] text-muted-foreground'
                         }`}>
                             <span className="text-xs font-medium">{total} total transactions</span>
@@ -1270,11 +1313,11 @@ function AdminFinanceTransactionsContent() {
                                 <button
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page <= 1}
-                                    className={`p-2 rounded-full border transition-all disabled:opacity-30 cursor-pointer ${
-                                        isLight ? 'bg-white hover:bg-black/[0.04] text-[#1d1d1f] border-black/[0.08]' : 'bg-secondary hover:bg-secondary/80 text-foreground border-border'
+                                    className={`p-1.5 rounded-lg border transition-all disabled:opacity-30 cursor-pointer shadow-none ${
+                                        isLight ? 'bg-white hover:bg-black/[0.04] text-[#1d1d1f] border-black/[0.08]' : 'bg-white/[0.04] hover:bg-white/[0.08] text-foreground border-white/[0.08]'
                                     }`}
                                 >
-                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                    <ChevronLeft className="w-4 h-4" />
                                 </button>
                                 <span className={`text-xs font-semibold ${isLight ? 'text-[#1d1d1f]' : 'text-foreground'}`}>
                                     Page {page} of {totalPages}
@@ -1282,17 +1325,282 @@ function AdminFinanceTransactionsContent() {
                                 <button
                                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                     disabled={page >= totalPages}
-                                    className={`p-2 rounded-full border transition-all disabled:opacity-30 cursor-pointer ${
-                                        isLight ? 'bg-white hover:bg-black/[0.04] text-[#1d1d1f] border-black/[0.08]' : 'bg-secondary hover:bg-secondary/80 text-foreground border-border'
+                                    className={`p-1.5 rounded-lg border transition-all disabled:opacity-30 cursor-pointer shadow-none ${
+                                        isLight ? 'bg-white hover:bg-black/[0.04] text-[#1d1d1f] border-black/[0.08]' : 'bg-white/[0.04] hover:bg-white/[0.08] text-foreground border-white/[0.08]'
                                     }`}
                                 >
-                                    <ChevronRight className="w-3.5 h-3.5" />
+                                    <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
                     )}
                 </div>
             )}
+
+            {/* Transaction Details Modal */}
+            <AnimatePresence>
+                {selectedTxForDetail && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md"
+                        onClick={() => setSelectedTxForDetail(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.96, opacity: 0, y: 10 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.96, opacity: 0, y: 10 }}
+                            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                            onClick={e => e.stopPropagation()}
+                            className={`rounded-3xl p-6 sm:p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar transition-all shadow-none border ${
+                                isLight
+                                    ? 'bg-white/95 backdrop-blur-2xl border-black/[0.1] text-[#1d1d1f]'
+                                    : 'bg-[#1c1c1e]/95 backdrop-blur-2xl border-white/[0.14] text-white'
+                            }`}
+                        >
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between pb-3.5 border-b transition-colors" style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)' }}>
+                                <div className="flex items-center gap-2.5">
+                                    <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${typeInfo(selectedTxForDetail.type).bg} ${typeInfo(selectedTxForDetail.type).color}`}>
+                                        {typeInfo(selectedTxForDetail.type).label}
+                                    </span>
+                                    <h2 className={`text-base sm:text-lg font-bold truncate max-w-[260px] ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
+                                        Transaction Details
+                                    </h2>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedTxForDetail(null)}
+                                    className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                                        isLight ? 'text-black/50 hover:text-black hover:bg-black/5' : 'text-muted-foreground hover:text-white hover:bg-white/[0.08]'
+                                    }`}
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Hero Amount Card */}
+                            <div className={`mt-4 p-4 rounded-2xl border transition-all ${
+                                isLight
+                                    ? 'bg-black/[0.02] border-black/[0.06]'
+                                    : 'bg-white/[0.04] border-white/[0.08]'
+                            }`}>
+                                <div className="flex items-center justify-between">
+                                    <span className={`text-[11px] font-semibold uppercase tracking-wider ${isLight ? 'text-[#86868b]' : 'text-[#86868b]'}`}>
+                                        {selectedTxForDetail.type === 'income' ? 'Income Mutation' : selectedTxForDetail.type === 'expense' ? 'Expense Mutation' : 'Distribution Split'}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                        isLight ? 'bg-black/[0.05] text-[#1d1d1f]' : 'bg-white/[0.08] text-white'
+                                    }`}>
+                                        {selectedTxForDetail.currency || 'BDT'}
+                                    </span>
+                                </div>
+                                <div className="mt-2 flex items-baseline gap-1">
+                                    <p className={`text-3xl font-extrabold font-mono tracking-tight ${
+                                        selectedTxForDetail.type === 'income'
+                                            ? (isLight ? 'text-emerald-700' : 'text-emerald-400')
+                                            : selectedTxForDetail.type === 'expense'
+                                            ? (isLight ? 'text-rose-700' : 'text-rose-400')
+                                            : (isLight ? 'text-indigo-700' : 'text-indigo-400')
+                                    }`}>
+                                        {selectedTxForDetail.type === 'income' ? '+' : '-'}{formatCurrency(selectedTxForDetail.amount, selectedTxForDetail.currency)}
+                                    </p>
+                                </div>
+                                <div className="mt-3 pt-3 border-t flex items-center justify-between text-xs" style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)' }}>
+                                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                                        <CreditCard className="w-4 h-4 text-muted-foreground shrink-0" />
+                                        <span>{selectedTxForDetail.payment_method}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-muted-foreground font-mono">
+                                        <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                                        <span>{selectedTxForDetail.date}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Apple Inspector Key-Value Attributes */}
+                            <div className="mt-4 space-y-1">
+                                <p className={`text-[11px] font-bold uppercase tracking-wider px-1 pb-1.5 ${isLight ? 'text-[#86868b]' : 'text-[#86868b]'}`}>
+                                    Transaction Attributes
+                                </p>
+                                <div className={`rounded-2xl divide-y border overflow-hidden text-[13px] ${
+                                    isLight ? 'bg-white border-black/[0.06] divide-black/[0.04]' : 'bg-white/[0.02] border-white/[0.06] divide-white/[0.04]'
+                                }`}>
+                                    {/* Description */}
+                                    <div className="flex items-start justify-between px-3.5 py-2.5 gap-4">
+                                        <span className={`text-[12px] font-medium shrink-0 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
+                                            Description
+                                        </span>
+                                        <span className={`text-right font-medium break-words max-w-[280px] ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
+                                            {selectedTxForDetail.description}
+                                        </span>
+                                    </div>
+
+                                    {/* Recipient / Category */}
+                                    {selectedTxForDetail.type === 'distribution' ? (
+                                        <div className="flex items-center justify-between px-3.5 py-2.5 gap-4">
+                                            <span className={`text-[12px] font-medium shrink-0 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
+                                                Recipient Entity
+                                            </span>
+                                            <span className="flex items-center gap-1.5 text-right font-medium text-indigo-500">
+                                                <Users className="w-4 h-4 shrink-0" />
+                                                <span>{selectedTxForDetail.recipient || 'N/A'}</span>
+                                                <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                    selectedTxForDetail.subcategory === 'Distributed'
+                                                        ? (isLight ? 'bg-emerald-50 text-emerald-700' : 'bg-emerald-500/10 text-emerald-400')
+                                                        : (isLight ? 'bg-amber-50 text-amber-700' : 'bg-amber-500/10 text-amber-400')
+                                                }`}>
+                                                    {selectedTxForDetail.subcategory || 'Pending'}
+                                                </span>
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-between px-3.5 py-2.5 gap-4">
+                                            <span className={`text-[12px] font-medium shrink-0 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
+                                                Category
+                                            </span>
+                                            <span className={`text-right font-medium ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
+                                                {selectedTxForDetail.category || '—'}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Client Name if any */}
+                                    {selectedTxForDetail.client_name && (
+                                        <div className="flex items-center justify-between px-3.5 py-2.5 gap-4">
+                                            <span className={`text-[12px] font-medium shrink-0 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
+                                                Client
+                                            </span>
+                                            <span className={`text-right font-medium ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>
+                                                {selectedTxForDetail.client_name}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Linked Income Split if any */}
+                                    {selectedTxForDetail.parent_id && (
+                                        <div className="flex items-center justify-between px-3.5 py-2.5 gap-4">
+                                            <span className={`text-[12px] font-medium shrink-0 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
+                                                Split Association
+                                            </span>
+                                            <span className={`text-right font-medium text-xs ${isLight ? 'text-[#0071e3]' : 'text-indigo-400'}`}>
+                                                Linked to Parent #{selectedTxForDetail.parent_id.slice(-8)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Created By */}
+                                    {selectedTxForDetail.created_by && (
+                                        <div className="flex items-center justify-between px-3.5 py-2.5 gap-4">
+                                            <span className={`text-[12px] font-medium shrink-0 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
+                                                Recorded By
+                                            </span>
+                                            <span className={`text-right font-mono text-xs ${isLight ? 'text-indigo-600' : 'text-indigo-400'}`}>
+                                                {selectedTxForDetail.created_by}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Exact Timestamp */}
+                                    <div className="flex items-center justify-between px-3.5 py-2.5 gap-4">
+                                        <span className={`text-[12px] font-medium shrink-0 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
+                                            Exact Timestamp
+                                        </span>
+                                        <span className={`text-right font-mono text-xs ${isLight ? 'text-[#1d1d1f]' : 'text-neutral-300'}`}>
+                                            {formatExactTimestamp(selectedTxForDetail.created_at, selectedTxForDetail.date)}
+                                        </span>
+                                    </div>
+
+                                    {/* Transaction ID */}
+                                    <div className="flex items-center justify-between px-3.5 py-2.5 gap-4">
+                                        <span className={`text-[12px] font-medium shrink-0 ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
+                                            Transaction ID
+                                        </span>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="font-mono text-xs text-muted-foreground truncate max-w-[160px]">
+                                                {selectedTxForDetail.id}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(selectedTxForDetail.id);
+                                                    setCopiedTxId(true);
+                                                    toast.success('Transaction ID copied to clipboard');
+                                                    setTimeout(() => setCopiedTxId(false), 2000);
+                                                }}
+                                                className={`p-1 rounded-md transition-colors cursor-pointer ${
+                                                    isLight ? 'hover:bg-black/5 text-[#86868b]' : 'hover:bg-white/[0.08] text-muted-foreground'
+                                                }`}
+                                                title="Copy ID"
+                                            >
+                                                {copiedTxId ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Notes if any */}
+                                    {selectedTxForDetail.notes && (
+                                        <div className="flex flex-col px-3.5 py-2.5 gap-1">
+                                            <span className={`text-[12px] font-medium ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
+                                                Notes & Remarks
+                                            </span>
+                                            <p className={`text-xs whitespace-pre-wrap ${isLight ? 'text-[#1d1d1f]' : 'text-neutral-200'}`}>
+                                                {selectedTxForDetail.notes}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Modal Actions */}
+                            <div className="mt-5 flex items-center justify-between gap-3 pt-3 border-t" style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const id = selectedTxForDetail.id;
+                                        setSelectedTxForDetail(null);
+                                        handleDelete(id);
+                                    }}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                                        isLight ? 'text-rose-600 hover:bg-rose-50' : 'text-rose-400 hover:bg-rose-500/10'
+                                    }`}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span>Delete</span>
+                                </button>
+
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const tx = selectedTxForDetail;
+                                            setSelectedTxForDetail(null);
+                                            openEdit(tx);
+                                        }}
+                                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                                            isLight
+                                                ? 'bg-white hover:bg-black/[0.04] text-[#1d1d1f] border-black/[0.1]'
+                                                : 'bg-white/[0.06] hover:bg-white/[0.1] text-white border-white/[0.12]'
+                                        }`}
+                                    >
+                                        <Edit3 className="w-4 h-4" />
+                                        <span>Edit Mutation</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedTxForDetail(null)}
+                                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                                            isLight ? 'bg-[#0071e3] hover:bg-[#0071e3]/90 text-white' : 'bg-[#0a84ff] hover:bg-[#0a84ff]/90 text-white'
+                                        }`}
+                                    >
+                                        Done
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Custom Category Maker Modal */}
             <AnimatePresence>
@@ -1435,7 +1743,7 @@ function AdminFinanceTransactionsContent() {
                 {showReportModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md" onClick={() => setShowReportModal(false)}>
                         <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
-                            className={`rounded-3xl p-6 sm:p-7 w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar transition-all ${
+                            className={`rounded-3xl p-6 sm:p-7 w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl max-h-[90vh] overflow-y-auto custom-scrollbar transition-all ${
                                 isLight
                                     ? 'bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_24px_64px_rgba(0,0,0,0.15)] text-[#1d1d1f]'
                                     : 'bg-[#1c1c1e]/95 backdrop-blur-2xl border border-white/[0.12] shadow-[0_24px_64px_rgba(0,0,0,0.6)] text-white'
@@ -1595,22 +1903,22 @@ function AdminFinanceTransactionsContent() {
                                         <div className={`rounded-2xl overflow-hidden max-h-[350px] overflow-y-auto custom-scrollbar border ${
                                             isLight ? 'border-black/[0.08] bg-white' : 'border-border/80 bg-card'
                                         }`}>
-                                            <table className="w-full text-left text-xs whitespace-nowrap">
-                                                <thead className={`uppercase font-bold sticky top-0 ${
-                                                    isLight ? 'bg-black/[0.03] text-[#6e6e73]' : 'bg-secondary/60 text-muted-foreground'
+                                            <table className="w-full text-left text-[13px] whitespace-nowrap">
+                                                <thead className={`uppercase text-[11px] font-semibold sticky top-0 border-b select-none ${
+                                                    isLight ? 'bg-black/[0.03] text-[#86868b] border-black/[0.06]' : 'bg-[#1c1c1e] text-[#86868b] border-white/[0.08]'
                                                 }`}>
-                                                    <tr>
-                                                        <th className="px-4 py-2.5">Date</th>
-                                                        <th className="px-4 py-2.5">Mutation Type</th>
-                                                        <th className="px-4 py-2.5">Item / Description</th>
-                                                        <th className="px-4 py-2.5">Subcategory</th>
-                                                        <th className="px-4 py-2.5 text-right">Impact</th>
+                                                    <tr className="h-[32px]">
+                                                        <th className="px-3 py-0 h-[32px] align-middle font-medium w-[130px]">Date</th>
+                                                        <th className="px-3 py-0 h-[32px] align-middle font-medium w-[160px]">Mutation Type</th>
+                                                        <th className="px-3 py-0 h-[32px] align-middle font-medium min-w-[220px]">Item / Description</th>
+                                                        <th className="px-3 py-0 h-[32px] align-middle font-medium min-w-[130px]">Subcategory</th>
+                                                        <th className="px-3 py-0 h-[32px] align-middle font-medium text-right min-w-[110px]">Impact</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className={`divide-y ${isLight ? 'divide-black/[0.04]' : 'divide-border'}`}>
+                                                <tbody className={`divide-y text-[13px] ${isLight ? 'divide-black/[0.04]' : 'divide-white/[0.06]'}`}>
                                                     {reportData.ledger.length === 0 ? (
-                                                        <tr>
-                                                            <td colSpan={5} className={`px-4 py-8 text-center text-xs ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
+                                                        <tr className="h-[64px]">
+                                                            <td colSpan={5} className={`px-4 text-center text-[13px] ${isLight ? 'text-[#86868b]' : 'text-muted-foreground'}`}>
                                                                 No corporate ledger activities found for this timeline period.
                                                             </td>
                                                         </tr>
@@ -1618,10 +1926,14 @@ function AdminFinanceTransactionsContent() {
                                                         reportData.ledger.map((item: any) => {
                                                             const isFunding = item.type === 'distribution';
                                                             return (
-                                                                <tr key={item.id} className={`transition-colors ${isLight ? 'hover:bg-black/[0.02]' : 'hover:bg-muted/20'}`}>
-                                                                    <td className={`px-4 py-2.5 ${isLight ? 'text-[#6e6e73]' : 'text-muted-foreground'}`}>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="font-mono">
+                                                                <tr
+                                                                    key={item.id}
+                                                                    onClick={() => setSelectedTxForDetail(item)}
+                                                                    className={`h-[32px] transition-colors cursor-pointer ${isLight ? 'hover:bg-black/[0.03]' : 'hover:bg-white/[0.04]'}`}
+                                                                >
+                                                                    <td className="h-[32px] py-0 px-3 align-middle font-mono text-[13px]">
+                                                                        <div className="flex items-center gap-1.5 leading-none">
+                                                                            <span className={isLight ? 'text-[#6e6e73]' : 'text-muted-foreground'}>
                                                                                 {expandedTimestamps[item.id]
                                                                                     ? formatExactTimestamp(item.created_at, item.date)
                                                                                     : item.date
@@ -1633,16 +1945,16 @@ function AdminFinanceTransactionsContent() {
                                                                                     toggleTimestamp(item.id);
                                                                                 }}
                                                                                 title="Toggle exact timestamp"
-                                                                                className={`p-1 rounded-md transition-colors flex items-center justify-center shrink-0 cursor-pointer ${
-                                                                                    isLight ? 'hover:bg-black/5 text-black/40 hover:text-indigo-600' : 'hover:bg-secondary text-muted-foreground/50 hover:text-indigo-400'
+                                                                                className={`p-0.5 rounded transition-colors flex items-center justify-center shrink-0 cursor-pointer ${
+                                                                                    isLight ? 'hover:bg-black/5 text-black/30 hover:text-indigo-600' : 'hover:bg-secondary text-muted-foreground/40 hover:text-indigo-400'
                                                                                 }`}
                                                                             >
-                                                                                <HelpCircle className="w-3.5 h-3.5" />
+                                                                                <HelpCircle className="w-4 h-4" />
                                                                             </button>
                                                                         </div>
                                                                     </td>
-                                                                    <td className="px-4 py-2.5">
-                                                                        <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] uppercase ${
+                                                                    <td className="h-[32px] py-0 px-3 align-middle">
+                                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase leading-none ${
                                                                             isFunding
                                                                                 ? (isLight ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-indigo-500/10 text-indigo-400')
                                                                                 : (isLight ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-rose-500/10 text-rose-400')
@@ -1650,9 +1962,13 @@ function AdminFinanceTransactionsContent() {
                                                                             {isFunding ? 'Funding Split Inflow' : 'Operational Expense'}
                                                                         </span>
                                                                     </td>
-                                                                    <td className={`px-4 py-2.5 font-semibold max-w-[250px] truncate ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`}>{item.description}</td>
-                                                                    <td className={`px-4 py-2.5 ${isLight ? 'text-[#6e6e73]' : 'text-muted-foreground'}`}>{item.subcategory || 'General'}</td>
-                                                                    <td className={`px-4 py-2.5 text-right font-mono font-bold ${
+                                                                    <td className={`h-[34px] py-0 px-3 align-middle font-medium max-w-[320px] xl:max-w-[500px] 2xl:max-w-none truncate leading-none ${isLight ? 'text-[#1d1d1f]' : 'text-white'}`} title={item.description}>
+                                                                        {item.description}
+                                                                    </td>
+                                                                    <td className={`h-[32px] py-0 px-3 align-middle text-[13px] leading-none ${isLight ? 'text-[#6e6e73]' : 'text-muted-foreground'}`}>
+                                                                        {item.subcategory || 'General'}
+                                                                    </td>
+                                                                    <td className={`h-[32px] py-0 px-3 align-middle text-right font-mono font-bold text-[13px] leading-none ${
                                                                         isFunding ? (isLight ? 'text-emerald-700' : 'text-emerald-400') : (isLight ? 'text-rose-700' : 'text-rose-400')
                                                                     }`}>
                                                                         {isFunding ? '+' : '-'}{formatCurrency(item.amount, item.currency)}

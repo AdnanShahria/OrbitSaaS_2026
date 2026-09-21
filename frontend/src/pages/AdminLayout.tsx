@@ -186,6 +186,10 @@ function AdminLayoutContent() {
                 setSidebarOpen(true);
                 searchInputRef.current?.focus();
             }
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+                e.preventDefault();
+                setSidebarOpen(prev => !prev);
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
@@ -631,7 +635,7 @@ function AdminLayoutContent() {
 
                 {/* Top Desktop Bar (Hidden when sidebar is open on Desktop) */}
                 {!sidebarOpen && (
-                    <div className={`hidden lg:flex sticky top-0 left-0 w-full z-30 backdrop-blur-xl border-b px-4 py-3 items-center justify-between shadow-sm transition-colors ${
+                    <div className={`hidden lg:flex sticky top-0 left-0 w-full z-30 backdrop-blur-xl border-b px-4 sm:px-6 lg:px-8 xl:px-10 py-3 items-center justify-between shadow-sm transition-colors ${
                         isLight ? 'bg-white/80 border-black/[0.08]' : 'bg-card/95 border-border'
                     }`}>
                         <div className="flex items-center gap-3">
@@ -641,7 +645,7 @@ function AdminLayoutContent() {
                                 className={`p-2 -ml-2 rounded-xl transition-colors flex items-center justify-center cursor-pointer ${
                                     isLight ? 'bg-black/[0.04] hover:bg-black/[0.08] text-[#1d1d1f]' : 'bg-secondary/30 hover:bg-secondary/80 text-foreground'
                                 }`}
-                                title="Open sidebar"
+                                title="Open sidebar (⌘B)"
                             >
                                 <PanelLeft className="w-4 h-4" />
                             </button>
@@ -675,8 +679,12 @@ function AdminLayoutContent() {
                 </div>
 
                 {/* Actual Page Content */}
-                <div className={`p-4 sm:p-5 lg:p-8 max-w-[1200px] mx-auto w-full relative z-0 flex-1 transition-opacity duration-300 ${sidebarOpen ? 'max-lg:opacity-50 max-lg:pointer-events-none' : 'opacity-100'}`}>
-                   <Outlet />
+                <div className={`w-full relative z-0 flex-1 transition-all duration-300 ${
+                    sidebarOpen 
+                        ? 'p-4 sm:p-5 lg:p-8 max-w-[1400px] 2xl:max-w-[1600px] mx-auto max-lg:opacity-50 max-lg:pointer-events-none' 
+                        : 'p-4 sm:p-6 lg:p-8 xl:px-10 max-w-none'
+                }`}>
+                   <Outlet context={{ sidebarOpen }} />
                 </div>
             </main>
         </div>

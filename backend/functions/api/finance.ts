@@ -206,6 +206,11 @@ async function handleDashboard(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const months = parseInt(url.searchParams.get('months') || '12');
 
+    // Optional date range filter (custom range from dashboard picker)
+    const fromParam = url.searchParams.get('from');  // e.g. '2026-06-01'
+    const toParam   = url.searchParams.get('to');    // e.g. '2026-06-30'
+    const hasRange  = !!(fromParam && toParam);
+
     // Current month key
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -223,46 +228,66 @@ async function handleDashboard(request: Request, env: Env): Promise<Response> {
     const distributionRes = await db.execute(`SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'distribution'`);
     const totalDistribution = Number(distributionRes.rows[0]?.total ?? 0);
 
-    // This month income
+    // ── Period income/expense/distribution ──
+    // If a custom from/to range is given, use it; otherwise default to current month
+    let periodFrom: string, periodTo: string;
+    let prevPeriodFrom: string, prevPeriodTo: string;
+
+    if (hasRange) {
+        periodFrom = fromParam!;
+        periodTo   = toParam!;
+        // Comparison period = same duration immediately before
+        const fromDate  = new Date(fromParam!);
+        const toDate    = new Date(toParam!);
+        const daysDiff  = Math.round((toDate.getTime() - fromDate.getTime()) / 86400000);
+        const prevTo    = new Date(fromDate.getTime() - 86400000); // day before fromParam
+        const prevFrom  = new Date(prevTo.getTime() - daysDiff * 86400000);
+        prevPeriodFrom  = prevFrom.toISOString().split('T')[0];
+        prevPeriodTo    = prevTo.toISOString().split('T')[0];
+    } else {
+        // Default: this calendar month
+        periodFrom = `${currentMonth}-01`;
+        periodTo   = `${currentMonth}-31`;
+        const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonth     = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        prevPeriodFrom = `${lastMonth}-01`;
+        prevPeriodTo   = `${lastMonth}-31`;
+    }
+
     const monthIncomeRes = await db.execute({
-        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'income' AND strftime('%Y-%m', date) = ?`,
-        args: [currentMonth],
+        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'income' AND date >= ? AND date <= ?`,
+        args: [periodFrom, periodTo],
     });
     const monthIncome = Number(monthIncomeRes.rows[0]?.total ?? 0);
 
-    // This month expenses
     const monthExpenseRes = await db.execute({
-        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'expense' AND strftime('%Y-%m', date) = ?`,
-        args: [currentMonth],
+        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'expense' AND date >= ? AND date <= ?`,
+        args: [periodFrom, periodTo],
     });
     const monthExpense = Number(monthExpenseRes.rows[0]?.total ?? 0);
 
-    // This month distributions
     const monthDistributionRes = await db.execute({
-        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'distribution' AND strftime('%Y-%m', date) = ?`,
-        args: [currentMonth],
+        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'distribution' AND date >= ? AND date <= ?`,
+        args: [periodFrom, periodTo],
     });
     const monthDistribution = Number(monthDistributionRes.rows[0]?.total ?? 0);
 
-    // Last month for comparison
-    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
-
+    // Comparison period (previous month or equivalent prior range)
     const lastMonthIncomeRes = await db.execute({
-        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'income' AND strftime('%Y-%m', date) = ?`,
-        args: [lastMonth],
+        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'income' AND date >= ? AND date <= ?`,
+        args: [prevPeriodFrom, prevPeriodTo],
     });
     const lastMonthIncome = Number(lastMonthIncomeRes.rows[0]?.total ?? 0);
 
     const lastMonthExpenseRes = await db.execute({
-        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'expense' AND strftime('%Y-%m', date) = ?`,
-        args: [lastMonth],
+        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'expense' AND date >= ? AND date <= ?`,
+        args: [prevPeriodFrom, prevPeriodTo],
     });
     const lastMonthExpense = Number(lastMonthExpenseRes.rows[0]?.total ?? 0);
 
     const lastMonthDistributionRes = await db.execute({
-        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'distribution' AND strftime('%Y-%m', date) = ?`,
-        args: [lastMonth],
+        sql: `SELECT COALESCE(SUM(amount), 0) as total FROM finance_transactions WHERE type = 'distribution' AND date >= ? AND date <= ?`,
+        args: [prevPeriodFrom, prevPeriodTo],
     });
     const lastMonthDistribution = Number(lastMonthDistributionRes.rows[0]?.total ?? 0);
 
@@ -289,14 +314,17 @@ async function handleDashboard(request: Request, env: Env): Promise<Response> {
         net: Number(r.income ?? 0) - Number(r.expense ?? 0) - Number(r.distribution ?? 0),
     }));
 
-    // Category breakdown (expenses)
-    const categoryRes = await db.execute(`
-        SELECT category, SUM(amount) as total
-        FROM finance_transactions
-        WHERE type = 'expense'
-        GROUP BY category
-        ORDER BY total DESC
-    `);
+    // Category breakdown (expenses in period)
+    const categoryRes = await db.execute({
+        sql: `
+            SELECT category, SUM(amount) as total
+            FROM finance_transactions
+            WHERE type = 'expense' AND date >= ? AND date <= ?
+            GROUP BY category
+            ORDER BY total DESC
+        `,
+        args: [periodFrom, periodTo],
+    });
     const categoryBreakdown = categoryRes.rows.map(r => ({
         category: r.category as string,
         total: Number(r.total ?? 0),

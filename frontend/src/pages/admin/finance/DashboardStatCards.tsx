@@ -12,6 +12,7 @@ interface StatCardsProps {
     // All-time totals for company fund & distributions
     netBalance: number;
     totalDistribution: number;
+    periodLabel?: string;
 }
 
 function formatCurrency(amount: number) {
@@ -77,7 +78,7 @@ const StatCard = ({ title, subtitle, value, change, icon: Icon, accentColor, lig
                                 {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                                 {Math.abs(change).toFixed(1)}%
                             </span>
-                            <span className={`text-[11px] ${isLight ? 'text-[#86868b]' : 'text-[#636366]'}`}>vs last month</span>
+                            <span className={`text-[11px] ${isLight ? 'text-[#86868b]' : 'text-[#636366]'}`}>vs prev period</span>
                         </div>
                     )}
                 </div>
@@ -101,18 +102,20 @@ export default function DashboardStatCards({
     monthIncome,
     monthExpense,
     monthDistribution,
+    monthNet,
     incomeChange,
     expenseChange,
     netBalance,
     totalDistribution,
+    periodLabel = 'This Month',
 }: StatCardsProps) {
     const { isLight } = useFinanceTheme();
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-                title="This Month Income"
-                subtitle="Revenue this month"
+                title={`${periodLabel} Income`}
+                subtitle="Revenue in selected period"
                 value={monthIncome}
                 change={incomeChange}
                 icon={TrendingUp}
@@ -123,7 +126,7 @@ export default function DashboardStatCards({
             />
             <StatCard
                 title="Expense (Funding)"
-                subtitle="This month spending"
+                subtitle={`${periodLabel} spending`}
                 value={monthExpense}
                 change={expenseChange}
                 icon={TrendingDown}
@@ -134,8 +137,8 @@ export default function DashboardStatCards({
             />
             <StatCard
                 title="Distributions Shared"
-                subtitle="All-time partner payouts"
-                value={totalDistribution}
+                subtitle={periodLabel === 'All Time' ? 'All-time partner payouts' : `In period: ${formatCurrency(monthDistribution)} · Total: ${formatCurrency(totalDistribution)}`}
+                value={periodLabel === 'All Time' ? totalDistribution : monthDistribution}
                 change={null}
                 icon={Share2}
                 accentColor={isLight ? '#5856d6' : '#5e5ce6'}
@@ -145,7 +148,7 @@ export default function DashboardStatCards({
             />
             <StatCard
                 title="Company Fund"
-                subtitle="Net retained balance"
+                subtitle={monthNet !== 0 ? `Period Net: ${monthNet >= 0 ? '+' : ''}${formatCurrency(monthNet)}` : 'Net retained treasury balance'}
                 value={netBalance}
                 change={null}
                 icon={DollarSign}
