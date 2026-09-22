@@ -266,23 +266,33 @@ export function ZoomableLightbox({
         touchStartPosRef.current = null;
     };
 
-    // Mouse wheel zoom on desktop
-    const handleWheel = (e: React.WheelEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const delta = -e.deltaY * 0.0025;
-        setScale((prev) => {
-            const next = Math.min(4, Math.max(1, +(prev + delta).toFixed(2)));
-            if (next === 1) setTranslate({ x: 0, y: 0 });
-            else setTranslate((t) => clampTranslate(t.x, t.y, next));
-            return next;
-        });
-    };
+    const currentMedia = media && media.length > 0 ? media[currentIndex] : null;
+    const isVideo = currentMedia?.type === 'video';
 
-    if (!isOpen || media.length === 0) return null;
+    // Native non-passive wheel event listener on desktop to allow e.preventDefault() without console warnings
+    useEffect(() => {
+        const container = imageContainerRef.current;
+        if (!container || !isOpen || isVideo) return;
 
-    const currentMedia = media[currentIndex];
-    const isVideo = currentMedia.type === 'video';
+        const handleNativeWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const delta = -e.deltaY * 0.0025;
+            setScale((prev) => {
+                const next = Math.min(4, Math.max(1, +(prev + delta).toFixed(2)));
+                if (next === 1) setTranslate({ x: 0, y: 0 });
+                else setTranslate((t) => clampTranslate(t.x, t.y, next));
+                return next;
+            });
+        };
+
+        container.addEventListener('wheel', handleNativeWheel, { passive: false });
+        return () => {
+            container.removeEventListener('wheel', handleNativeWheel);
+        };
+    }, [isOpen, isVideo]);
+
+    if (!isOpen || media.length === 0 || !currentMedia) return null;
     const ytId = isVideo ? extractYouTubeId(currentMedia.url) : null;
 
     return (
@@ -357,14 +367,13 @@ export function ZoomableLightbox({
                     {/* ── Main Stage (Image or Video) ── */}
                     <div
                         ref={imageContainerRef}
-                        className="relative w-full h-full flex items-center justify-center p-2 sm:p-6 overflow-hidden"
+                        className="relative w-full h-full flex items-center justify-center p-2 sm:p-6 overflow-hidden touch-none"
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
                         onMouseDown={handleMouseDown}
                         onMouseMove={handleMouseMove}
                         onMouseUp={handleMouseUp}
-                        onWheel={!isVideo ? handleWheel : undefined}
                     >
                         {isVideo ? (
                             <div className="w-full max-w-5xl aspect-video relative z-30" onClick={(e) => e.stopPropagation()}>

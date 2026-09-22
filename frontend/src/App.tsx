@@ -67,6 +67,7 @@ const OrchestrationContext = createContext<OrchestrationContextValue>({
 export const useOrchestration = () => useContext(OrchestrationContext);
 
 function OrchestrationProvider({ children }: { children: React.ReactNode }) {
+  const { loading } = useContent();
   const [phase, setPhase] = useState(0);
   const hasBeenReady = useRef(false);
 
