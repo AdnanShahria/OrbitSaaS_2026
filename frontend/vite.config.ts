@@ -105,6 +105,10 @@ export default defineConfig(async ({ mode }) => {
           ],
         },
         workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+          navigateFallbackDenylist: [/^\/api/, /^\/project/, /^\/assets/],
           maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6 MiB (accommodates high-res 5.14 MB OrbitLogo)
           importScripts: ['/sw-push.js'],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],

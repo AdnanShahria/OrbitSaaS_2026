@@ -16,17 +16,27 @@ import { CustomCursor } from './components/orbit/CustomCursor';
 import { CustomScrollbar } from './components/ui/CustomScrollbar';
 
 // Helper to handle dynamic chunk import failures gracefully by forcing a browser reload
-const lazyWithRetry = (importFunc: () => Promise<any>) => {
+const lazyWithRetry = <T extends React.ComponentType<any>>(
+  importFunc: () => Promise<{ default: T } | any>
+) => {
   return lazy(async () => {
+    const pageKey = 'chunk_reload_' + window.location.pathname;
     try {
-      return await importFunc();
-    } catch (error) {
-      console.error("Chunk load failed, reloading...", error);
-      const hasReloaded = sessionStorage.getItem('chunk-reload-occurred');
-      if (!hasReloaded) {
-        sessionStorage.setItem('chunk-reload-occurred', 'true');
+      const comp = await importFunc();
+      sessionStorage.removeItem(pageKey);
+      return comp;
+    } catch (error: any) {
+      console.error("[ChunkLoad] Failed to load module chunk, attempting reload:", error);
+      const hasReloaded = sessionStorage.getItem(pageKey);
+      const lastGlobalReload = Number(sessionStorage.getItem('chunk_reload_timestamp') || 0);
+      const now = Date.now();
+
+      // Avoid infinite loops: only reload once per route and at most once every 10 seconds
+      if (!hasReloaded && now - lastGlobalReload > 10000) {
+        sessionStorage.setItem(pageKey, 'true');
+        sessionStorage.setItem('chunk_reload_timestamp', String(now));
         window.location.reload();
-        return new Promise(() => {}); // Keep in loading state
+        return new Promise(() => {}); // Keep in loading state while browser reloads
       }
       throw error;
     }
@@ -44,23 +54,20 @@ const lazyWithRetry = (importFunc: () => Promise<any>) => {
 
 interface OrchestrationContextValue {
   phase: number;
-  advanceTo: (p: number) => void;
-  isReady: boolean; // true once content data has arrived at least once
+  advanceTo: (phase: number) => void;
+  isReady: boolean;
 }
 
 const OrchestrationContext = createContext<OrchestrationContextValue>({
   phase: 0,
-  advanceTo: () => { },
+  advanceTo: () => {},
   isReady: false,
 });
 
-export function useOrchestration() {
-  return useContext(OrchestrationContext);
-}
+export const useOrchestration = () => useContext(OrchestrationContext);
 
 function OrchestrationProvider({ children }: { children: React.ReactNode }) {
   const [phase, setPhase] = useState(0);
-  const { loading } = useContent();
   const hasBeenReady = useRef(false);
 
   // Mark ready once content has loaded at least once (fallback translations are always available)
@@ -106,27 +113,27 @@ function OrchestrationProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Lazy load public sections
-const StatsSection = lazy(() => import('./components/orbit/StatsSection').then(m => ({ default: m.StatsSection })));
-const ServicesSection = lazy(() => import('./components/orbit/ServicesSection').then(m => ({ default: m.ServicesSection })));
-// const ProcessSection = lazy(() => import('./components/orbit/ProcessSection').then(m => ({ default: m.ProcessSection })));
-const TechStackSection = lazy(() => import('./components/orbit/TechStackSection').then(m => ({ default: m.TechStackSection })));
-const WhyUsSection = lazy(() => import('./components/orbit/WhyUsSection').then(m => ({ default: m.WhyUsSection })));
-const ProjectsSection = lazy(() => import('./components/orbit/ProjectsSection').then(m => ({ default: m.ProjectsSection })));
-const AchievementsSection = lazy(() => import('./components/orbit/AchievementsSection').then(m => ({ default: m.AchievementsSection })));
-const LeadershipSection = lazy(() => import('./components/orbit/LeadershipSection').then(m => ({ default: m.LeadershipSection })));
-const ReviewsSection = lazy(() => import('./components/orbit/ReviewsSection').then(m => ({ default: m.ReviewsSection })));
-const ContactSection = lazy(() => import('./components/orbit/ContactSection').then(m => ({ default: m.ContactSection })));
-const OrbitFooter = lazy(() => import('./components/orbit/OrbitFooter').then(m => ({ default: m.OrbitFooter })));
-const MobileFooter = lazy(() => import('./components/orbit/MobileFooter').then(m => ({ default: m.MobileFooter })));
-const Chatbot = lazy(() => import('./components/orbit/chatbot').then(m => ({ default: m.Chatbot })));
-const LeadMagnetPopup = lazy(() => import('./components/orbit/LeadMagnetPopup').then(m => ({ default: m.LeadMagnetPopup })));
+// Lazy load public sections with version auto-reload recovery
+const StatsSection = lazyWithRetry(() => import('./components/orbit/StatsSection').then(m => ({ default: m.StatsSection })));
+const ServicesSection = lazyWithRetry(() => import('./components/orbit/ServicesSection').then(m => ({ default: m.ServicesSection })));
+// const ProcessSection = lazyWithRetry(() => import('./components/orbit/ProcessSection').then(m => ({ default: m.ProcessSection })));
+const TechStackSection = lazyWithRetry(() => import('./components/orbit/TechStackSection').then(m => ({ default: m.TechStackSection })));
+const WhyUsSection = lazyWithRetry(() => import('./components/orbit/WhyUsSection').then(m => ({ default: m.WhyUsSection })));
+const ProjectsSection = lazyWithRetry(() => import('./components/orbit/ProjectsSection').then(m => ({ default: m.ProjectsSection })));
+const AchievementsSection = lazyWithRetry(() => import('./components/orbit/AchievementsSection').then(m => ({ default: m.AchievementsSection })));
+const LeadershipSection = lazyWithRetry(() => import('./components/orbit/LeadershipSection').then(m => ({ default: m.LeadershipSection })));
+const ReviewsSection = lazyWithRetry(() => import('./components/orbit/ReviewsSection').then(m => ({ default: m.ReviewsSection })));
+const ContactSection = lazyWithRetry(() => import('./components/orbit/ContactSection').then(m => ({ default: m.ContactSection })));
+const OrbitFooter = lazyWithRetry(() => import('./components/orbit/OrbitFooter').then(m => ({ default: m.OrbitFooter })));
+const MobileFooter = lazyWithRetry(() => import('./components/orbit/MobileFooter').then(m => ({ default: m.MobileFooter })));
+const Chatbot = lazyWithRetry(() => import('./components/orbit/chatbot').then(m => ({ default: m.Chatbot })));
+const LeadMagnetPopup = lazyWithRetry(() => import('./components/orbit/LeadMagnetPopup').then(m => ({ default: m.LeadMagnetPopup })));
 
-// Lazy load public pages
-const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
-const TermsOfService = lazy(() => import('./pages/TermsOfService'));
-const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
-const AchievementDetail = lazy(() => import('./pages/AchievementDetail'));
+// Lazy load public pages with version auto-reload recovery
+const PrivacyPolicy = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazyWithRetry(() => import('./pages/TermsOfService'));
+const ProjectDetail = lazyWithRetry(() => import('./pages/ProjectDetail'));
+const AchievementDetail = lazyWithRetry(() => import('./pages/AchievementDetail'));
 
 // Lazy load admin pages
 const AdminLogin = lazyWithRetry(() => import('./pages/AdminLogin'));
