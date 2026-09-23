@@ -72,6 +72,13 @@ export function ReviewsSection() {
     const reviews = (Array.isArray(reviewsData) ? reviewsData : (reviewsData.items || [])).filter((r: any) => !r.hidden);
     const showSocials = reviewsData.showSocials !== false;
 
+    // Contact & WhatsApp config for direct outreach
+    const contactData = (content[lang] as any)?.contact || (content.en as any)?.contact || {};
+    const footerData = (content[lang] as any)?.footer || (content.en as any)?.footer || {};
+    const heroData = (content[lang] as any)?.hero || (content.en as any)?.hero || {};
+    const whatsappNumber = footerData.phone || contactData.whatsapp || heroData.whatsappNumber || '+8801853452264';
+    const whatsappLink = `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}`;
+
     // Handle bulk reviews gracefully
     const hasBulk = reviews.length > INITIAL_COUNT;
     const displayedReviews = (hasBulk && !showAll) ? reviews.slice(0, INITIAL_COUNT) : reviews;
@@ -392,7 +399,10 @@ export function ReviewsSection() {
                                     {/* Direct CTA Action */}
                                     <div className="pt-1">
                                         <a
-                                            href="#contact"
+                                            href={whatsappLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            aria-label={isBn ? 'হোয়াটসঅ্যাপে প্রজেক্ট আলোচনা করুন' : 'Discuss Project on WhatsApp'}
                                             className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 font-bold text-xs transition-all duration-200 shadow-[0_3px_15px_rgba(16,185,129,0.25)] hover:shadow-[0_4px_20px_rgba(16,185,129,0.4)] flex items-center justify-center gap-1.5 group/btn cursor-pointer"
                                         >
                                             <span>{isBn ? 'প্রজেক্ট আলোচনা করুন' : 'Discuss Your Project'}</span>
