@@ -11,8 +11,8 @@ const MAX_MESSAGE_LENGTH = 2000;
 const MAX_ENHANCE_LENGTH = 2000;
 
 // ─── Model Configuration ───
-// 1st Model: Moonshot AI Kimi K3 on NVIDIA NIM
-export const PRIMARY_AI_MODEL = 'moonshotai/kimi-k3';
+// 1st Model (Main): Groq with OpenAI GPT-OSS 120B (High reasoning open model, ultra fast)
+export const PRIMARY_AI_MODEL = 'openai/gpt-oss-120b';
 
 interface AiModelCandidate {
     provider: 'nvidia' | 'groq';
@@ -24,50 +24,59 @@ interface AiModelCandidate {
 }
 
 const AI_MODEL_CANDIDATES: AiModelCandidate[] = [
-    // 1st Model: NVIDIA NIM with Moonshot AI Kimi K3 (https://build.nvidia.com/moonshotai/kimi-k3)
-    {
-        provider: 'nvidia',
-        model: 'moonshotai/kimi-k3',
-        url: NVIDIA_API_URL,
-        source: 'Orbit AI (NVIDIA NIM)',
-        timeoutMs: 15000,
-        getApiKey: (env) => env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY,
-    },
-    // Fallback 1: Groq with OpenAI GPT-OSS 120B (High reasoning open model)
+    // 1st Model (Main): Groq with OpenAI GPT-OSS 120B (High reasoning, ultra-fast ~600ms)
     {
         provider: 'groq',
         model: 'openai/gpt-oss-120b',
         url: GROQ_API_URL,
         source: 'Orbit AI (Groq)',
-        timeoutMs: 12000,
+        timeoutMs: 8000,
         getApiKey: (env) => env.GROQ_API_KEY,
     },
-    // Fallback 2: NVIDIA NIM with OpenAI GPT-OSS 20B
-    {
-        provider: 'nvidia',
-        model: 'openai/gpt-oss-20b',
-        url: NVIDIA_API_URL,
-        source: 'Orbit AI (NVIDIA NIM)',
-        timeoutMs: 12000,
-        getApiKey: (env) => env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY,
-    },
-    // Fallback 3: Groq with OpenAI GPT-OSS 20B
+    // Fallback 1: Groq with OpenAI GPT-OSS 20B (Sub-300ms ultra-fast failover)
     {
         provider: 'groq',
         model: 'openai/gpt-oss-20b',
         url: GROQ_API_URL,
         source: 'Orbit AI (Groq)',
-        timeoutMs: 12000,
+        timeoutMs: 6000,
         getApiKey: (env) => env.GROQ_API_KEY,
     },
-    // Fallback 4: Groq with Qwen 3.6 27B
+    // Fallback 2: Groq with Qwen 3.8 27B
+    {
+        provider: 'groq',
+        model: 'qwen/qwen3.8-27b',
+        url: GROQ_API_URL,
+        source: 'Orbit AI (Groq)',
+        timeoutMs: 8000,
+        getApiKey: (env) => env.GROQ_API_KEY,
+    },
+    // Fallback 3: Groq with Qwen 3.6 27B
     {
         provider: 'groq',
         model: 'qwen/qwen3.6-27b',
         url: GROQ_API_URL,
         source: 'Orbit AI (Groq)',
-        timeoutMs: 12000,
+        timeoutMs: 8000,
         getApiKey: (env) => env.GROQ_API_KEY,
+    },
+    // Fallback 4: NVIDIA NIM with Moonshot AI Kimi K3 (https://build.nvidia.com/moonshotai/kimi-k3)
+    {
+        provider: 'nvidia',
+        model: 'moonshotai/kimi-k3',
+        url: NVIDIA_API_URL,
+        source: 'Orbit AI (NVIDIA NIM)',
+        timeoutMs: 10000,
+        getApiKey: (env) => env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY,
+    },
+    // Fallback 5: NVIDIA NIM with OpenAI GPT-OSS 20B
+    {
+        provider: 'nvidia',
+        model: 'openai/gpt-oss-20b',
+        url: NVIDIA_API_URL,
+        source: 'Orbit AI (NVIDIA NIM)',
+        timeoutMs: 8000,
+        getApiKey: (env) => env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY,
     },
 ];
 

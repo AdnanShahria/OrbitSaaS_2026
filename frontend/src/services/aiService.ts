@@ -6,8 +6,8 @@ export interface ChatMessage {
 
 /**
  * Sends chat messages to the Orbit AI backend API endpoint (/api/ai?action=chat).
- * The backend manages NVIDIA NIM (Moonshot AI Kimi K3) as primary model
- * with automated multi-model fallback to Groq.
+ * The backend uses Groq as the primary ultra-fast provider
+ * with automated multi-model fallbacks to other Groq and NVIDIA NIM models.
  */
 export const sendToAi = async (messages: ChatMessage[]) => {
     const API_BASE = import.meta.env.VITE_API_URL || '';
