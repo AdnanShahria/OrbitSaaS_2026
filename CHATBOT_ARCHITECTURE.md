@@ -52,10 +52,12 @@ flowchart TB
         ContentAPI["/api/content\n(CMS & Gist Cache Invalidation)"]
     end
 
-    subgraph LLM ["AI Engine (Groq High-Speed API)"]
-        Groq1["Primary: openai/gpt-oss-120b"]
-        Groq2["Fallback 1: openai/gpt-oss-20b"]
-        Groq3["Fallback 2: qwen/qwen3.6-27b"]
+    subgraph LLM ["AI Engine (NVIDIA NIM Primary + Groq Fallback)"]
+        Nvidia1["Primary: NVIDIA NIM (moonshotai/kimi-k3)"]
+        Groq1["Fallback 1: Groq (openai/gpt-oss-120b)"]
+        Nvidia2["Fallback 2: NVIDIA NIM (openai/gpt-oss-20b)"]
+        Groq2["Fallback 3: Groq (openai/gpt-oss-20b)"]
+        Groq3["Fallback 4: Groq (qwen/qwen3.6-27b)"]
     end
 
     subgraph Database ["Database Layer (Turso / LibSQL SQLite)"]
@@ -74,9 +76,11 @@ flowchart TB
     ChatContext -- "GET Knowledge Context" --> AIContext
     ChatContext -- "POST Lead / Transcript" --> LeadsAPI
 
-    AIChat --> Groq1
-    Groq1 -- "On 429/500 Failover" --> Groq2
-    Groq2 -- "On 429/500 Failover" --> Groq3
+    AIChat --> Nvidia1
+    Nvidia1 -- "On Failover" --> Groq1
+    Groq1 -- "On Failover" --> Nvidia2
+    Nvidia2 -- "On Failover" --> Groq2
+    Groq2 -- "On Failover" --> Groq3
 
     AIContext --> Database
     LeadsAPI --> T_Leads
@@ -196,29 +200,43 @@ sequenceDiagram
 
 ### 4.1 Multi-Model AI Engine & Failover
 Implemented in `backend/functions/api/ai.ts`:
-- **Provider**: Groq Cloud API (`https://api.groq.com/openai/v1/chat/completions`)
-- **Primary Model**: `openai/gpt-oss-120b` (fast, high-reasoning open model)
-- **Fallback Models**: `openai/gpt-oss-20b`, `qwen/qwen3.6-27b`
+- **1st Model (Primary)**: Moonshot AI Kimi K3 on **NVIDIA NIM** (`moonshotai/kimi-k3` via `https://integrate.api.nvidia.com/v1/chat/completions`)
+- **Fallback Models**:
+  1. `openai/gpt-oss-120b` on Groq (ultra-fast, high-reasoning open model)
+  2. `openai/gpt-oss-20b` on NVIDIA NIM
+  3. `openai/gpt-oss-20b` on Groq
+  4. `qwen/qwen3.6-27b` on Groq
 - **Failover Logic**:
-  If the primary model returns a `429 (Rate Limit)`, `500 (Internal Error)`, or times out (`AbortSignal.timeout(15000)`), the edge worker catches the exception, logs a warning, and automatically attempts the next fallback model in line before throwing an error.
+  If the primary model returns a `429 (Rate Limit)`, `500 (Internal Error)`, empty content, or times out (`AbortSignal.timeout(15000)`), the edge worker catches the exception, logs a warning, and automatically attempts the next fallback model in the candidate chain before throwing an error.
 
 ```typescript
-// Multi-model execution loop
-const modelsToTry = [primaryModel, ...FALLBACK_AI_MODELS.filter(m => m !== primaryModel)];
-for (const model of modelsToTry) {
+// Multi-candidate execution loop with NVIDIA NIM primary & Groq fallback
+for (const candidate of candidateList) {
+    const apiKey = candidate.getApiKey(env);
+    if (!apiKey) continue;
+
     try {
-        const res = await fetch(GROQ_API_URL, {
+        const res = await fetch(candidate.url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+                'Authorization': `Bearer ${apiKey}`,
             },
-            body: JSON.stringify({ model, messages, temperature: 0.6, max_tokens: 1200 }),
-            signal: AbortSignal.timeout(15000),
+            body: JSON.stringify({
+                model: candidate.model,
+                messages,
+                temperature: options.temperature,
+                max_tokens: options.max_tokens,
+            }),
+            signal: AbortSignal.timeout(candidate.timeoutMs),
         });
+
         if (res.ok) {
             const data = await res.json();
-            return { content: data.choices[0].message.content, source: 'Orbit AI' };
+            const content = data.choices?.[0]?.message?.content?.trim();
+            if (content) {
+                return { content, source: candidate.source, model: candidate.model };
+            }
         }
     } catch (err) {
         // Continue to fallback model
@@ -369,6 +387,7 @@ npm install @libsql/client
 ### Step 2: Set Environment Variables
 In your backend (`.dev.vars` or Cloudflare Environment Variables):
 ```env
+NVIDIA_API_KEY=nvapi-your_nvidia_nim_api_key_here
 GROQ_API_KEY=gsk_your_groq_api_key_here
 TURSO_DATABASE_URL=libsql://your-db-name.turso.io
 TURSO_AUTH_TOKEN=your_turso_auth_token_here

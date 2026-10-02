@@ -4,7 +4,12 @@ export interface ChatMessage {
     content: string;
 }
 
-export const sendToGroq = async (messages: ChatMessage[]) => {
+/**
+ * Sends chat messages to the Orbit AI backend API endpoint (/api/ai?action=chat).
+ * The backend manages NVIDIA NIM (Moonshot AI Kimi K3) as primary model
+ * with automated multi-model fallback to Groq.
+ */
+export const sendToAi = async (messages: ChatMessage[]) => {
     const API_BASE = import.meta.env.VITE_API_URL || '';
 
     try {
@@ -23,12 +28,12 @@ export const sendToGroq = async (messages: ChatMessage[]) => {
         }
 
         const data = await response.json();
-        
-        
-        
         return data.content || 'Sorry, I could not generate a response.';
     } catch (error) {
         console.error('Error calling Chat API:', error);
         throw error;
     }
 };
+
+// Backwards-compatible alias for existing consumers
+export const sendToGroq = sendToAi;

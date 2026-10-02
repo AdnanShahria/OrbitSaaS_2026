@@ -3,16 +3,75 @@ import { getCorsHeaders, handleOptions, jsonResponse } from '../_lib/cors';
 import { isAuthorized } from '../_lib/auth';
 import type { Env } from '../_lib/types';
 
+const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const SITE_BASE_URL = 'https://orbitsaas.cloud';
 const MAX_MESSAGES = 50;
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_ENHANCE_LENGTH = 2000;
 
-const PRIMARY_AI_MODEL = 'openai/gpt-oss-120b';
-const FALLBACK_AI_MODELS = ['openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
+// ─── Model Configuration ───
+// 1st Model: Moonshot AI Kimi K3 on NVIDIA NIM
+export const PRIMARY_AI_MODEL = 'moonshotai/kimi-k3';
 
-// ─── AI Helper: Groq API with Multi-Model Fallback ───
+interface AiModelCandidate {
+    provider: 'nvidia' | 'groq';
+    model: string;
+    url: string;
+    source: string;
+    timeoutMs: number;
+    getApiKey: (env: Env) => string | undefined;
+}
+
+const AI_MODEL_CANDIDATES: AiModelCandidate[] = [
+    // 1st Model: NVIDIA NIM with Moonshot AI Kimi K3 (https://build.nvidia.com/moonshotai/kimi-k3)
+    {
+        provider: 'nvidia',
+        model: 'moonshotai/kimi-k3',
+        url: NVIDIA_API_URL,
+        source: 'Orbit AI (NVIDIA NIM)',
+        timeoutMs: 15000,
+        getApiKey: (env) => env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY,
+    },
+    // Fallback 1: Groq with OpenAI GPT-OSS 120B (High reasoning open model)
+    {
+        provider: 'groq',
+        model: 'openai/gpt-oss-120b',
+        url: GROQ_API_URL,
+        source: 'Orbit AI (Groq)',
+        timeoutMs: 12000,
+        getApiKey: (env) => env.GROQ_API_KEY,
+    },
+    // Fallback 2: NVIDIA NIM with OpenAI GPT-OSS 20B
+    {
+        provider: 'nvidia',
+        model: 'openai/gpt-oss-20b',
+        url: NVIDIA_API_URL,
+        source: 'Orbit AI (NVIDIA NIM)',
+        timeoutMs: 12000,
+        getApiKey: (env) => env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY,
+    },
+    // Fallback 3: Groq with OpenAI GPT-OSS 20B
+    {
+        provider: 'groq',
+        model: 'openai/gpt-oss-20b',
+        url: GROQ_API_URL,
+        source: 'Orbit AI (Groq)',
+        timeoutMs: 12000,
+        getApiKey: (env) => env.GROQ_API_KEY,
+    },
+    // Fallback 4: Groq with Qwen 3.6 27B
+    {
+        provider: 'groq',
+        model: 'qwen/qwen3.6-27b',
+        url: GROQ_API_URL,
+        source: 'Orbit AI (Groq)',
+        timeoutMs: 12000,
+        getApiKey: (env) => env.GROQ_API_KEY,
+    },
+];
+
+// ─── AI Helper: NVIDIA NIM & Groq API with Multi-Model Fallback ───
 async function executeAiRequest(
     messages: unknown[],
     env: Env,
@@ -21,43 +80,65 @@ async function executeAiRequest(
         temperature: number;
         max_tokens: number;
     }
-): Promise<{ content: string; source: string }> {
-    if (!env.GROQ_API_KEY) throw new Error('AI configuration missing');
+): Promise<{ content: string; source: string; model: string }> {
+    const hasNvidiaKey = Boolean(env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY);
+    const hasGroqKey = Boolean(env.GROQ_API_KEY);
 
-    const primaryModel = options.model || PRIMARY_AI_MODEL;
-    const modelsToTry = [primaryModel, ...FALLBACK_AI_MODELS.filter(m => m !== primaryModel)];
+    if (!hasNvidiaKey && !hasGroqKey) {
+        throw new Error('AI configuration missing: no NVIDIA or Groq API key configured');
+    }
+
+    let candidateList = [...AI_MODEL_CANDIDATES];
+    if (options.model) {
+        const found = candidateList.find(c => c.model === options.model);
+        if (found) {
+            candidateList = [found, ...candidateList.filter(c => c !== found)];
+        }
+    }
+
     let lastError = '';
 
-    for (const model of modelsToTry) {
+    for (const candidate of candidateList) {
+        const apiKey = candidate.getApiKey(env);
+        if (!apiKey) {
+            continue;
+        }
+
         try {
-            const res = await fetch(GROQ_API_URL, {
+            const res = await fetch(candidate.url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+                    'Authorization': `Bearer ${apiKey}`,
                 },
                 body: JSON.stringify({
-                    model,
+                    model: candidate.model,
                     messages,
                     temperature: options.temperature,
                     max_tokens: options.max_tokens,
                 }),
-                signal: AbortSignal.timeout(15000),
+                signal: AbortSignal.timeout(candidate.timeoutMs),
             });
 
             if (res.ok) {
                 const data = await res.json() as any;
-                const content = data.choices?.[0]?.message?.content || '';
+                const message = data.choices?.[0]?.message;
+                const content = typeof message?.content === 'string' ? message.content.trim() : '';
+
                 if (content) {
-                    return { content, source: 'Orbit AI' };
+                    return { content, source: candidate.source, model: candidate.model };
                 }
+
+                const finishReason = data.choices?.[0]?.finish_reason || 'unknown';
+                console.warn(`[AI] Candidate ${candidate.provider}/${candidate.model} returned empty content (finish_reason: ${finishReason}). Attempting fallback...`);
+                lastError = `Empty content from ${candidate.model}`;
             } else {
                 const errorText = await res.text().catch(() => 'Unknown error');
-                console.warn(`[AI] Model ${model} returned error ${res.status}: ${errorText}. Attempting fallback...`);
-                lastError = errorText;
+                console.warn(`[AI] Candidate ${candidate.provider}/${candidate.model} returned error ${res.status}: ${errorText}. Attempting fallback...`);
+                lastError = `HTTP ${res.status}: ${errorText}`;
             }
         } catch (err: any) {
-            console.warn(`[AI] Model ${model} request error:`, err.message || err);
+            console.warn(`[AI] Candidate ${candidate.provider}/${candidate.model} request error:`, err.message || err);
             lastError = err.message || String(err);
         }
     }
@@ -86,12 +167,11 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
 
     try {
         const result = await executeAiRequest(messages, env, {
-            model: PRIMARY_AI_MODEL,
             temperature: 0.6,
-            max_tokens: 500,
+            max_tokens: 1000,
         });
 
-        return jsonResponse({ success: true, content: result.content, source: result.source }, request);
+        return jsonResponse({ success: true, content: result.content, source: result.source, model: result.model }, request);
     } catch (e: any) {
         console.error('[Chat] AI error:', e);
         return jsonResponse({ error: 'Failed to generate response. Please try again.' }, request, 500);
@@ -155,9 +235,8 @@ async function generateGist(knowledgeBase: string, env: Env): Promise<string | n
             ], 
             env, 
             {
-                model: PRIMARY_AI_MODEL,
                 temperature: 0.2,
-                max_tokens: 400,
+                max_tokens: 500,
             }
         );
         return content.trim() || null;
@@ -275,7 +354,6 @@ async function handleEnhance(request: Request, env: Env): Promise<Response> {
             ],
             env,
             {
-                model: PRIMARY_AI_MODEL,
                 temperature: 0.4,
                 max_tokens: 1024,
             }

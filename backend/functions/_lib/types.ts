@@ -15,7 +15,9 @@ export interface Env {
   ADMIN_EMAIL?: string;
 
   // AI
-  GROQ_API_KEY: string;
+  NVIDIA_API_KEY?: string;
+  NVIDIA_NIM_API_KEY?: string;
+  GROQ_API_KEY?: string;
 
   // Image upload
   VITE_IMGBB_API_KEY: string;
