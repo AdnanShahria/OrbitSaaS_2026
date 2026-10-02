@@ -18,16 +18,41 @@ export function formatMessage(content: string): React.ReactNode {
   // 1. Quick normalizations
   const normalized = content.replace(/\r\n/g, '\n');
 
-  // 2. Extract links (markdown & raw)
+  // 2. Protect fenced code blocks first so links and markdown inside are never modified
+  const codeBlocks: string[] = [];
+  let processed = normalized.replace(/```[\s\S]*?```/g, (match) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(match);
+    return `__CODE_BLOCK_${idx}__`;
+  });
+
+  // 3. Protect inline code (`...`) so URLs inside code are not converted to link buttons
+  const inlineCodes: string[] = [];
+  processed = processed.replace(/`([^`]+)`/g, (_match, code) => {
+    const idx = inlineCodes.length;
+    inlineCodes.push(code);
+    return `__INLINE_CODE_${idx}__`;
+  });
+
+  // 4. Extract links (markdown, angle-bracketed, and raw)
   const linkPlaceholders: LinkData[] = [];
-  let processed = normalized.replace(/\[([^\]]*?)]\(([^)]+)\)/g, (_match, text, url) => {
+
+  // Match markdown links [text](url)
+  processed = processed.replace(/\[([^\]]*?)]\(([^)]+)\)/g, (_match, text, url) => {
     const idx = linkPlaceholders.length;
     linkPlaceholders.push({ url: url.trim(), text: text.replace(/\*\*/g, '').trim() });
     return `__LINK_${idx}__`;
   });
 
+  // Match bracketed URLs <https://...> (strip angle brackets cleanly)
+  processed = processed.replace(/<((?:https?:\/\/)[^\s>]+)>/g, (_match, url) => {
+    const idx = linkPlaceholders.length;
+    linkPlaceholders.push({ url: url.trim(), text: '' });
+    return `__LINK_${idx}__`;
+  });
+
+  // Match remaining standalone raw URLs
   processed = processed.replace(/(https?:\/\/[^\s)<>]+)/g, (url) => {
-    if (processed.includes(`](${url})`)) return url;
     const idx = linkPlaceholders.length;
     linkPlaceholders.push({ url: url.trim(), text: '' });
     return `__LINK_${idx}__`;
@@ -36,19 +61,38 @@ export function formatMessage(content: string): React.ReactNode {
   // Fast inline parser (bold, italic, inline code, link)
   const renderInline = (text: string, keyPrefix: string, customFont = 'font-poppins'): React.ReactNode => {
     if (!text) return null;
-    const parts = text.split(/(`[^`]+`|\*\*.*?\*\*|__LINK_\d+__|\*[^*]+\*)/g);
+    const parts = text.split(/(__INLINE_CODE_\d+__|\*\*.*?\*\*|__LINK_\d+__|\*[^*]+\*)/g);
 
     return parts.map((part, i) => {
       if (!part) return null;
 
-      // Inline Code: `code`
+      // Inline Code placeholder: __INLINE_CODE_X__
+      if (part.startsWith('__INLINE_CODE_') && part.endsWith('__')) {
+        const m = part.match(/^__INLINE_CODE_(\d+)__$/);
+        if (m) {
+          const rawCode = inlineCodes[parseInt(m[1], 10)] || '';
+          // Ensure any accidental link token inside code is safely restored to raw text
+          const safeCode = rawCode.replace(/__LINK_(\d+)__/g, (_, lIdx) => linkPlaceholders[parseInt(lIdx, 10)]?.url || '');
+          return (
+            <code
+              key={`${keyPrefix}-c${i}`}
+              className="px-1.5 py-0.5 mx-0.5 rounded bg-white/10 text-emerald-300 font-mono text-[10.5px] border border-white/10 break-all"
+            >
+              {safeCode}
+            </code>
+          );
+        }
+      }
+
+      // Direct fallback for raw backticks if any remained
       if (part.charCodeAt(0) === 96 && part.charCodeAt(part.length - 1) === 96 && part.length > 2) {
+        const safeCode = part.slice(1, -1).replace(/__LINK_(\d+)__/g, (_, lIdx) => linkPlaceholders[parseInt(lIdx, 10)]?.url || '');
         return (
           <code
             key={`${keyPrefix}-c${i}`}
-            className="px-1.5 py-0.5 mx-0.5 rounded bg-white/10 text-emerald-300 font-mono text-[10.5px] border border-white/10"
+            className="px-1.5 py-0.5 mx-0.5 rounded bg-white/10 text-emerald-300 font-mono text-[10.5px] border border-white/10 break-all"
           >
-            {part.slice(1, -1)}
+            {safeCode}
           </code>
         );
       }
@@ -57,7 +101,7 @@ export function formatMessage(content: string): React.ReactNode {
       if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
         return (
           <strong key={`${keyPrefix}-b${i}`} className={`font-semibold text-white ${customFont}`}>
-            {part.slice(2, -2)}
+            {renderInline(part.slice(2, -2), `${keyPrefix}-b${i}`, customFont)}
           </strong>
         );
       }
@@ -84,7 +128,7 @@ export function formatMessage(content: string): React.ReactNode {
                 target="_blank"
                 rel="noopener noreferrer"
                 title={link.url}
-                className="inline-flex mt-0.5 mb-0.5 mx-1 items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-indigo-200 text-[11px] font-medium font-poppins rounded-md border border-indigo-500/30 hover:border-indigo-400/50 shadow-sm transition-all group align-middle"
+                className="inline-flex my-0.5 mx-1 items-center gap-1.5 px-2.5 py-1 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 hover:text-indigo-100 text-[11px] font-medium font-poppins rounded-md border border-indigo-500/35 hover:border-indigo-400/60 shadow-sm transition-all group align-middle whitespace-nowrap"
               >
                 <span className="truncate max-w-[170px] md:max-w-[200px]">{link.text || 'View Details'}</span>
                 <svg
@@ -101,11 +145,17 @@ export function formatMessage(content: string): React.ReactNode {
         }
       }
 
+      // If a stray __LINK_X__ is embedded in text
+      if (part.includes('__LINK_')) {
+        const subParts = part.split(/(__LINK_\d+__)/g);
+        return subParts.map((sp, spIdx) => renderInline(sp, `${keyPrefix}-sp${spIdx}`, customFont));
+      }
+
       return <span key={`${keyPrefix}-t${i}`} className={customFont}>{part}</span>;
     });
   };
 
-  // 3. Block-Level Tokenization
+  // 5. Block-Level Tokenization
   const rawLines = processed.split('\n');
   const blocks: React.ReactNode[] = [];
   let lineIdx = 0;
@@ -121,7 +171,32 @@ export function formatMessage(content: string): React.ReactNode {
       continue;
     }
 
-    // Fenced Code Block (```lang ... ```)
+    // Protected Fenced Code Block placeholder (__CODE_BLOCK_X__)
+    if (trimmed.startsWith('__CODE_BLOCK_') && trimmed.endsWith('__')) {
+      const cbMatch = trimmed.match(/^__CODE_BLOCK_(\d+)__$/);
+      if (cbMatch) {
+        const rawCodeBlock = codeBlocks[parseInt(cbMatch[1], 10)] || '';
+        const lines = rawCodeBlock.split('\n');
+        const lang = lines[0].replace(/^```/, '').trim();
+        const codeLines = lines.slice(1, -1);
+        blocks.push(
+          <div key={`code-${lineIdx}`} className="my-2 rounded-lg border border-white/10 bg-[#0a0a14] overflow-hidden">
+            {lang && (
+              <div className="px-2.5 py-1 bg-white/[0.04] border-b border-white/10 text-[9.5px] uppercase font-mono tracking-wider text-muted-foreground flex items-center justify-between">
+                <span>{lang}</span>
+              </div>
+            )}
+            <pre className="p-2.5 text-[11px] font-mono text-emerald-300 overflow-x-auto leading-relaxed">
+              <code>{codeLines.join('\n')}</code>
+            </pre>
+          </div>
+        );
+        lineIdx++;
+        continue;
+      }
+    }
+
+    // Direct Fenced Code Block (fallback)
     if (trimmed.startsWith('```')) {
       const lang = trimmed.slice(3).trim();
       const codeLines: string[] = [];
@@ -148,7 +223,6 @@ export function formatMessage(content: string): React.ReactNode {
     }
 
     // Markdown Table Detection (| Header 1 | Header 2 |)
-    // NOTE: Only horizontal overflow-x-auto, NEVER nested vertical overflow-y-auto to prevent scroll traps/lag!
     if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.length > 2) {
       const tableLines: string[] = [];
       while (lineIdx < rawLines.length && rawLines[lineIdx].trim().startsWith('|') && rawLines[lineIdx].trim().endsWith('|')) {
@@ -166,7 +240,10 @@ export function formatMessage(content: string): React.ReactNode {
         const bodyStartIndex = hasSeparator ? 2 : 1;
 
         const bodyRows = tableLines.slice(bodyStartIndex).map(r =>
-          r.slice(1, -1).split('|').map(c => c.trim())
+          r.slice(1, -1).split('|').map(c => {
+            // Strip any accidental dangling angle brackets around link tokens: < __LINK_0__ >
+            return c.trim().replace(/^<\s*(__LINK_\d+__)\s*>$/, '$1');
+          })
         );
 
         blocks.push(
@@ -191,7 +268,7 @@ export function formatMessage(content: string): React.ReactNode {
                 {bodyRows.map((row, rIdx) => (
                   <tr key={`tr-${rIdx}`} className="even:bg-emerald-950/20 hover:bg-emerald-500/15 transition-colors">
                     {row.map((cell, cIdx) => (
-                      <td key={`td-${rIdx}-${cIdx}`} className="py-2 px-2.5 text-foreground/90 text-[11px] md:text-[11.5px] leading-snug">
+                      <td key={`td-${rIdx}-${cIdx}`} className="py-2 px-2.5 text-foreground/90 text-[11px] md:text-[11.5px] leading-snug align-middle">
                         {renderInline(cell, `td-${rIdx}-${cIdx}`)}
                       </td>
                     ))}
@@ -264,24 +341,28 @@ export function formatMessage(content: string): React.ReactNode {
       continue;
     }
 
-    // Numbered Steps / Process items (1. Step Title : description)
+    // Numbered Steps / Process items (1. Step Title : description or 1. Normal instruction)
     const stepMatch = trimmed.match(/^(?:\*\*)?(\d+)[.)]\s*(.+)$/);
     if (stepMatch) {
       const num = stepMatch[1];
       const rest = stepMatch[2].replace(/\*\*/g, '').trim();
       const sepMatch = rest.match(/^(.+?)\s*(?::\s|(?:\s[–—]\s))\s*(.+)$/);
 
-      const title = sepMatch ? sepMatch[1].trim() : rest;
-      const desc = sepMatch ? sepMatch[2].trim() : '';
+      // Only treat as title + desc if title is concise (<= 45 chars) and doesn't contain code/URLs
+      const isTrueTitle = sepMatch && sepMatch[1].trim().length <= 45 && !sepMatch[1].includes('`') && !sepMatch[1].includes('__INLINE_CODE_');
+      const title = isTrueTitle ? sepMatch[1].trim() : rest;
+      const desc = isTrueTitle ? sepMatch[2].trim() : '';
 
       blocks.push(
-        <div key={`step-${lineIdx}`} className="flex gap-2 my-1 items-start font-poppins">
+        <div key={`step-${lineIdx}`} className="flex gap-2 my-1.5 items-start font-poppins">
           <div className="shrink-0 w-4 h-4 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-[9.5px] font-bold text-indigo-300 mt-0.5">
             {num}
           </div>
           <div className="flex-1 text-[12px] md:text-[12.5px] leading-relaxed">
-            <span className="font-semibold text-white">{renderInline(title, `st-${lineIdx}`)}</span>
-            {desc && <span className="text-muted-foreground ml-1.5">{renderInline(desc, `sd-${lineIdx}`)}</span>}
+            <span className={isTrueTitle ? "font-semibold text-white" : "text-foreground/90"}>
+              {renderInline(title, `st-${lineIdx}`)}
+            </span>
+            {desc && <span className="text-foreground/80 ml-1.5">{renderInline(desc, `sd-${lineIdx}`)}</span>}
           </div>
         </div>
       );
