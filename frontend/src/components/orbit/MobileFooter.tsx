@@ -124,7 +124,7 @@ export function MobileFooter() {
             <Link to="/" className="flex items-center gap-2.5 mb-2 group">
               <img
                 src={orbitLogo}
-                alt="Orbit"
+                alt="ORBIT SaaS — Custom Web Development & AI Agency"
                 className="w-8 h-8 object-contain rounded-lg"
               />
               <span className="text-lg font-black text-zinc-900 tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>

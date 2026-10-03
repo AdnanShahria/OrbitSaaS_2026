@@ -128,7 +128,7 @@ export function OrbitFooter() {
                 <div className="relative">
                   <img
                     src={orbitLogo}
-                    alt="Orbit"
+                    alt="ORBIT SaaS — Custom Web Development & AI Agency"
                     className="w-10 h-10 object-contain transition-transform duration-500 group-hover:scale-110 rounded-lg"
                   />
                   <div className="absolute inset-0 bg-emerald-500/10 rounded-lg blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />

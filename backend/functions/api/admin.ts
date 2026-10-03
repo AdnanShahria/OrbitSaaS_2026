@@ -612,7 +612,15 @@ export const onRequest: PagesFunction<Env> = async (context) => {
                 }
                 return await handleAuditLog(request, env);
             }
-            default: return jsonResponse({ error: 'Unknown action. Use ?action=login-send|login-verify|cache|seed|audit' }, request, 400);
+            case 'ping-sitemap': {
+                if (!(await isAuthorized(request, env.JWT_SECRET))) {
+                    return jsonResponse({ error: 'Unauthorized' }, request, 401);
+                }
+                const { notifySitemapUpdate } = await import('../_lib/sitemap-notifier');
+                await notifySitemapUpdate(env);
+                return jsonResponse({ success: true, message: 'Sitemaps refreshed and search engines notified successfully.' }, request);
+            }
+            default: return jsonResponse({ error: 'Unknown action. Use ?action=login-send|login-verify|cache|seed|audit|ping-sitemap' }, request, 400);
         }
     } catch (error) {
         console.error('Admin API error:', error);

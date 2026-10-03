@@ -200,7 +200,7 @@ export function Navbar() {
                   <div className="absolute inset-0 bg-primary/20 rounded-lg blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                   <img
                     src={orbitLogo}
-                    alt="Orbit"
+                    alt="ORBIT SaaS — Custom Web Development & AI Agency"
                     className="h-7 sm:h-8 w-auto object-contain relative z-10 transition-transform duration-700 group-hover:scale-110 group-hover:rotate-[5deg] rounded-lg"
                   />
                   {/* Premium Shimmer Effect */}

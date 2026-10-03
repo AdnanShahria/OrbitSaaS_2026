@@ -2,6 +2,7 @@ import { getDb } from '../_lib/db';
 import { getCorsHeaders, handleOptions, jsonResponse } from '../_lib/cors';
 import { isAuthorized, getAdminIdentity } from '../_lib/auth';
 import { ensureAuditTable, logAudit, getRequestMeta } from '../_lib/audit';
+import { notifySitemapUpdate } from '../_lib/sitemap-notifier';
 import type { Env } from '../_lib/types';
 
 // Simple hash for ETag generation
@@ -260,7 +261,12 @@ export const onRequest: PagesFunction<Env> = async (context) => {
                         changes_summary: `Restored ${bulkItems.length} content sections across ${affectedLangs.join(', ').toUpperCase()}`,
                         ...meta,
                     });
-                } catch { /* audit is non-critical */ }
+                // Auto-update sitemap and notify search engines
+                try {
+                    context.waitUntil(notifySitemapUpdate(env, ['/']));
+                } catch {
+                    notifySitemapUpdate(env, ['/']).catch(() => {});
+                }
 
                 return jsonResponse({ success: true, restoredCount: bulkItems.length }, request);
             }
@@ -331,6 +337,23 @@ export const onRequest: PagesFunction<Env> = async (context) => {
                     ...meta,
                 });
             } catch { /* audit is non-critical */ }
+
+            // Auto-update sitemap and notify search engines on every edition
+            try {
+                const urls: string[] = ['/'];
+                if (section === 'projects' && data && typeof data === 'object' && Array.isArray((data as any).items)) {
+                    (data as any).items.forEach((p: any) => {
+                        if (p?.id) urls.push(`/project/${p.id}`);
+                    });
+                } else if (section === 'achievements' && data && typeof data === 'object' && Array.isArray((data as any).items)) {
+                    (data as any).items.forEach((a: any) => {
+                        if (a?.id) urls.push(`/achievement/${a.id}`);
+                    });
+                }
+                context.waitUntil(notifySitemapUpdate(env, urls));
+            } catch {
+                notifySitemapUpdate(env, ['/']).catch(() => {});
+            }
 
             return jsonResponse({ success: true }, request);
         }

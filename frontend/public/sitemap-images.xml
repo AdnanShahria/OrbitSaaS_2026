@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://orbitsaas.cloud/</loc>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/og-banner-v2.png</image:loc>
+      <image:title>ORBIT SaaS Banner</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/favicon.png</image:loc>
+      <image:title>ORBIT SaaS Logo</image:title>
+    </image:image>
+  </url>
+</urlset>
