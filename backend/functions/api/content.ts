@@ -261,6 +261,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
                         changes_summary: `Restored ${bulkItems.length} content sections across ${affectedLangs.join(', ').toUpperCase()}`,
                         ...meta,
                     });
+                } catch { /* audit is non-critical */ }
+
                 // Auto-update sitemap and notify search engines
                 try {
                     context.waitUntil(notifySitemapUpdate(env, ['/']));

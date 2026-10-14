@@ -116,10 +116,12 @@ async function handleLoginOtpSend(request: Request, env: Env): Promise<Response>
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT NOT NULL,
       code TEXT NOT NULL,
+      attempts INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       expires_at TEXT NOT NULL
     )
     `);
+    try { await db.execute('ALTER TABLE login_otps ADD COLUMN attempts INTEGER DEFAULT 0'); } catch { /* exists */ }
 
     // Clean up expired OTPs
     await db.execute(`DELETE FROM login_otps WHERE datetime('now') > expires_at`);
@@ -127,7 +129,7 @@ async function handleLoginOtpSend(request: Request, env: Env): Promise<Response>
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     
     await db.execute({
-        sql: `INSERT INTO login_otps (email, code, expires_at) VALUES (?, ?, datetime('now', '+10 minutes'))`,
+        sql: `INSERT INTO login_otps (email, code, attempts, expires_at) VALUES (?, ?, 0, datetime('now', '+10 minutes'))`,
         args: [email, otp],
     });
 
@@ -156,17 +158,39 @@ async function handleLoginOtpVerify(request: Request, env: Env): Promise<Respons
     // Delete expired OTPs
     await db.execute(`DELETE FROM login_otps WHERE datetime('now') > expires_at`);
 
-    const result = await db.execute({
-        sql: `SELECT id FROM login_otps WHERE email = ? AND code = ?`,
-        args: [email, code],
+    const activeOtp = await db.execute({
+        sql: `SELECT id, code, attempts FROM login_otps WHERE email = ? ORDER BY id DESC LIMIT 1`,
+        args: [email],
     });
 
-    if (result.rows.length === 0) {
+    if (activeOtp.rows.length === 0) {
         return jsonResponse({ error: 'Invalid or expired OTP' }, request, 401);
     }
 
+    const otpRecord = activeOtp.rows[0];
+    const currentAttempts = Number(otpRecord.attempts ?? 0);
+
+    if (currentAttempts >= 5) {
+        await db.execute({ sql: `DELETE FROM login_otps WHERE email = ?`, args: [email] });
+        return jsonResponse({ error: 'Too many failed attempts. This OTP has been invalidated. Please request a new code.' }, request, 429);
+    }
+
+    if (otpRecord.code !== code) {
+        const newAttempts = currentAttempts + 1;
+        if (newAttempts >= 5) {
+            await db.execute({ sql: `DELETE FROM login_otps WHERE email = ?`, args: [email] });
+            return jsonResponse({ error: 'Too many failed attempts. This OTP has been invalidated. Please request a new code.' }, request, 429);
+        } else {
+            await db.execute({
+                sql: `UPDATE login_otps SET attempts = ? WHERE id = ?`,
+                args: [newAttempts, otpRecord.id],
+            });
+            return jsonResponse({ error: `Invalid OTP code. ${5 - newAttempts} attempt(s) remaining.` }, request, 401);
+        }
+    }
+
     // Delete used OTP
-    const otpId = result.rows[0].id;
+    const otpId = otpRecord.id;
     await db.execute({
         sql: `DELETE FROM login_otps WHERE id = ?`,
         args: [otpId],
@@ -491,10 +515,27 @@ async function handleSeed(request: Request, env: Env): Promise<Response> {
     const adminPassword = env.ADMIN_PASSWORD;
     if (!adminPassword) return jsonResponse({ error: 'ADMIN_PASSWORD not configured' }, request, 500);
     
-    // Use Web Crypto SHA-256 for zero-dependency Workers compatibility
+    // Use Web Crypto PBKDF2 (100,000 iterations) for secure password hashing in Workers
     const enc = new TextEncoder();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode(adminPassword));
-    const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    const salt = enc.encode('orbit_saas_admin_seed_salt_2026');
+    const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        enc.encode(adminPassword),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveBits']
+    );
+    const derivedBits = await crypto.subtle.deriveBits(
+        {
+            name: 'PBKDF2',
+            salt,
+            iterations: 100000,
+            hash: 'SHA-256',
+        },
+        keyMaterial,
+        256
+    );
+    const hash = Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, '0')).join('');
 
     await db.execute({
         sql: 'INSERT OR IGNORE INTO admin_users (email, password_hash) VALUES (?, ?)',

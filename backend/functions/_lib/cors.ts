@@ -11,7 +11,7 @@ const ALLOWED_ORIGINS = [
 /**
  * Check if the origin is allowed:
  * - Exact match in ALLOWED_ORIGINS
- * - Any Cloudflare Pages preview/deployment URL (*.pages.dev)
+ * - OrbitSaaS Cloudflare Pages preview & production builds (*.orbitsaas*.pages.dev)
  * - Any subdomain of orbitsaas.cloud (*.orbitsaas.cloud)
  * - Localhost and 127.0.0.1 on any port (http/https)
  * - Local private network IPs (192.168.x.x, 10.x.x.x, 172.16.x.x - 172.31.x.x)
@@ -20,8 +20,8 @@ function isOriginAllowed(origin: string): boolean {
     if (!origin) return false;
     if (ALLOWED_ORIGINS.includes(origin)) return true;
 
-    // Cloudflare Pages preview & production builds (*.pages.dev)
-    if (/^https:\/\/([a-zA-Z0-9-]+\.)*pages\.dev$/.test(origin)) return true;
+    // Cloudflare Pages preview & production builds for OrbitSaaS (*.orbitsaas*.pages.dev)
+    if (/^https:\/\/([a-zA-Z0-9-]+\.)*orbitsaas(-[a-zA-Z0-9]+)?\.pages\.dev$/.test(origin)) return true;
 
     // Subdomains of orbitsaas.cloud (*.orbitsaas.cloud)
     if (/^https:\/\/([a-zA-Z0-9-]+\.)*orbitsaas\.cloud$/.test(origin)) return true;

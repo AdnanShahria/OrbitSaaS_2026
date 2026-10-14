@@ -41,7 +41,7 @@ function stripHtml(html: string): string {
 }
 
 function escapeHtml(str: string): string {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 /* ── Known bot user-agents ── */
@@ -97,20 +97,20 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 <meta charset="UTF-8">
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeHtml(desc)}">
-<link rel="canonical" href="${canonicalUrl}">
+<link rel="canonical" href="${escapeHtml(canonicalUrl)}">
 <link rel="icon" type="image/png" href="${SITE_URL}/favicon.png">
 <meta property="og:type" content="article">
 <meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(desc)}">
-<meta property="og:image" content="${ogImageUrl}">
+<meta property="og:image" content="${escapeHtml(ogImageUrl)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:url" content="${canonicalUrl}">
+<meta property="og:url" content="${escapeHtml(canonicalUrl)}">
 <meta property="og:site_name" content="ORBIT SaaS">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${escapeHtml(title)}">
 <meta name="twitter:description" content="${escapeHtml(desc)}">
-<meta name="twitter:image" content="${ogImageUrl}">
+<meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">
 </head>
 <body><p>${escapeHtml(title)}</p></body>
 </html>`;

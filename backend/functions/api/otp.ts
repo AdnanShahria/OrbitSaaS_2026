@@ -68,11 +68,15 @@ async function handleSend(request: Request, env: Env): Promise<Response> {
     await db.execute(`
     CREATE TABLE IF NOT EXISTS otps (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_email TEXT,
       code TEXT NOT NULL,
+      attempts INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       expires_at TEXT NOT NULL
     )
   `);
+    try { await db.execute('ALTER TABLE otps ADD COLUMN admin_email TEXT'); } catch { /* exists */ }
+    try { await db.execute('ALTER TABLE otps ADD COLUMN attempts INTEGER DEFAULT 0'); } catch { /* exists */ }
 
     // Clean up expired OTPs
     await db.execute(`DELETE FROM otps WHERE datetime('now') > expires_at`);
@@ -80,8 +84,8 @@ async function handleSend(request: Request, env: Env): Promise<Response> {
     const otp = generateOtp();
     // Set expiry to 10 minutes from now
     await db.execute({
-        sql: `INSERT INTO otps (code, expires_at) VALUES (?, datetime('now', '+10 minutes'))`,
-        args: [otp],
+        sql: `INSERT INTO otps (admin_email, code, attempts, expires_at) VALUES (?, ?, 0, datetime('now', '+10 minutes'))`,
+        args: [adminEmail, otp],
     });
 
     // Send email without blocking to the requesting admin
@@ -110,18 +114,40 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
     // Delete expired OTPs first
     await db.execute(`DELETE FROM otps WHERE datetime('now') > expires_at`);
 
-    // Find valid OTP
-    const result = await db.execute({
-        sql: `SELECT id FROM otps WHERE code = ?`,
-        args: [code],
+    // Find valid OTP for this specific admin
+    const activeRes = await db.execute({
+        sql: `SELECT id, code, attempts FROM otps WHERE admin_email = ? ORDER BY id DESC LIMIT 1`,
+        args: [adminEmail],
     });
 
-    if (result.rows.length === 0) {
+    if (activeRes.rows.length === 0) {
         return jsonResponse({ error: 'Invalid or expired OTP' }, request, 400);
     }
 
+    const otpRecord = activeRes.rows[0];
+    const currentAttempts = Number(otpRecord.attempts ?? 0);
+
+    if (currentAttempts >= 5) {
+        await db.execute({ sql: `DELETE FROM otps WHERE id = ?`, args: [otpRecord.id] });
+        return jsonResponse({ error: 'Too many failed attempts. This OTP has been invalidated. Please request a new code.' }, request, 429);
+    }
+
+    if (otpRecord.code !== code) {
+        const newAttempts = currentAttempts + 1;
+        if (newAttempts >= 5) {
+            await db.execute({ sql: `DELETE FROM otps WHERE id = ?`, args: [otpRecord.id] });
+            return jsonResponse({ error: 'Too many failed attempts. This OTP has been invalidated. Please request a new code.' }, request, 429);
+        } else {
+            await db.execute({
+                sql: `UPDATE otps SET attempts = ? WHERE id = ?`,
+                args: [newAttempts, otpRecord.id],
+            });
+            return jsonResponse({ error: `Invalid OTP code. ${5 - newAttempts} attempt(s) remaining.` }, request, 400);
+        }
+    }
+
     // Delete the verified OTP
-    const otpId = result.rows[0].id;
+    const otpId = otpRecord.id;
     await db.execute({
         sql: `DELETE FROM otps WHERE id = ?`,
         args: [otpId],

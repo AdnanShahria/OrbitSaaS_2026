@@ -31,8 +31,17 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             return jsonResponse({ error: 'File must be an image' }, request, 400);
         }
 
+        const ext = (file.name.split('.').pop() || 'webp').toLowerCase();
+        if (file.type === 'image/svg+xml' || ext === 'svg') {
+            return jsonResponse({ error: 'SVG uploads are not permitted for security reasons.' }, request, 400);
+        }
+
+        const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
+        if (!ALLOWED_TYPES.includes(file.type.toLowerCase())) {
+            return jsonResponse({ error: 'Invalid or unsupported image type' }, request, 400);
+        }
+
         // Generate a unique filename: folder/timestamp-random.ext
-        const ext = file.name.split('.').pop() || 'webp';
         const uniqueId = Math.random().toString(36).substring(2, 9);
         const objectKey = `${folder.replace(/^\/+|\/+$/g, '')}/${Date.now()}-${uniqueId}.${ext}`;
 

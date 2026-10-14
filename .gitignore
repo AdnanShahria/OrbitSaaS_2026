@@ -52,3 +52,6 @@ garbage/
 # Auto-generated root functions folder during build
 /functions
 
+# Spec Kit agent folder (may contain auth tokens / credentials)
+.agents/
+

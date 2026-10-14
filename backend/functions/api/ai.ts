@@ -166,16 +166,27 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
 
     // Input validation: limit message count and individual message length
     if (messages.length > MAX_MESSAGES) return jsonResponse({ error: `Too many messages (max ${MAX_MESSAGES})` }, request, 400);
+    
+    // Filter out invalid messages or malicious injection
+    const sanitizedMessages: Array<{ role: string; content: string }> = [];
     for (const msg of messages) {
         const m = msg as any;
-        if (m?.role === 'system' || m?.role === 'assistant') continue; // system/assistant messages can be long (AI-generated)
-        if (typeof m?.content === 'string' && m.content.length > MAX_MESSAGE_LENGTH) {
+        if (!m || typeof m !== 'object') continue;
+        const role = typeof m.role === 'string' ? m.role.toLowerCase() : '';
+        if (!['user', 'assistant', 'system'].includes(role)) continue;
+        const content = typeof m.content === 'string' ? m.content : '';
+        if (role !== 'system' && role !== 'assistant' && content.length > MAX_MESSAGE_LENGTH) {
             return jsonResponse({ error: `Message too long (max ${MAX_MESSAGE_LENGTH} characters)` }, request, 400);
         }
+        sanitizedMessages.push({ role, content });
+    }
+
+    if (sanitizedMessages.length === 0 || !sanitizedMessages.some(m => m.role === 'user')) {
+        return jsonResponse({ error: 'At least one user message is required' }, request, 400);
     }
 
     try {
-        const result = await executeAiRequest(messages, env, {
+        const result = await executeAiRequest(sanitizedMessages, env, {
             temperature: 0.6,
             max_tokens: 1000,
         });
@@ -261,6 +272,9 @@ async function handleContext(request: Request, env: Env): Promise<Response> {
     const forceRefresh = url.searchParams.get('refresh') === 'true';
 
     if (forceRefresh) {
+        if (!(await isAuthorized(request, env.JWT_SECRET))) {
+            return jsonResponse({ error: 'Unauthorized: admin token required to refresh context' }, request, 401);
+        }
         try { await db.execute({ sql: 'DELETE FROM kb_gist WHERE lang = ?', args: [lang] }); } catch { /* skip */ }
     }
 

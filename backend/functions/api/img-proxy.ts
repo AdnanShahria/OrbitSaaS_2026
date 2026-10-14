@@ -2,11 +2,14 @@ import { getCorsHeaders, handleOptions, jsonResponse } from '../_lib/cors';
 import type { Env } from '../_lib/types';
 
 // Allowed external image domains
-const ALLOWED_DOMAINS = ['i.ibb.co', 'i.imgbb.com', 'image.ibb.co', 'orbitsaas.cloud', 'localhost', '127.0.0.1'];
+const ALLOWED_DOMAINS = ['i.ibb.co', 'i.imgbb.com', 'image.ibb.co', 'orbitsaas.cloud'];
 
 function isAllowedUrl(url: string): boolean {
     try {
         const parsed = new URL(url);
+        if (parsed.protocol !== 'https:') {
+            return false;
+        }
         return ALLOWED_DOMAINS.some(d => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`));
     } catch {
         return false;
@@ -37,6 +40,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         }
 
         const contentType = upstream.headers.get('content-type') || 'image/jpeg';
+        const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
+        if (!ALLOWED_MIME.includes(contentType.toLowerCase().split(';')[0].trim())) {
+            return jsonResponse({ error: 'Disallowed upstream content type' }, request, 400);
+        }
         const contentLength = upstream.headers.get('content-length');
 
         const headers: Record<string, string> = {

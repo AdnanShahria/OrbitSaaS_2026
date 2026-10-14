@@ -7,9 +7,7 @@ import { sendMail } from '../_lib/mail';
 
 const ALLOWED_MAILS = [
     'adnanshahria2019@gmail.com',
-    'abdurrafiu7@gmail.com',
     'nisarfeni2015@gmail.com',
-    'artalha100@gmail.com'
 ];
 
 // Generate a random 6-digit OTP
@@ -75,10 +73,12 @@ async function handleSend(request: Request, env: Env): Promise<Response> {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT NOT NULL,
       code TEXT NOT NULL,
+      attempts INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       expires_at TEXT NOT NULL
     )
   `);
+    try { await db.execute('ALTER TABLE finance_otps ADD COLUMN attempts INTEGER DEFAULT 0'); } catch { /* exists */ }
 
     // Clean up expired OTPs
     await db.execute(`DELETE FROM finance_otps WHERE datetime('now') > expires_at`);
@@ -86,7 +86,7 @@ async function handleSend(request: Request, env: Env): Promise<Response> {
     const otp = generateOtp();
     // Set expiry to 10 minutes from now
     await db.execute({
-        sql: `INSERT INTO finance_otps (email, code, expires_at) VALUES (?, ?, datetime('now', '+10 minutes'))`,
+        sql: `INSERT INTO finance_otps (email, code, attempts, expires_at) VALUES (?, ?, 0, datetime('now', '+10 minutes'))`,
         args: [email, otp],
     });
 
@@ -106,8 +106,8 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
 
     if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, request, 405);
 
-    const body = await request.json() as { code?: string };
-    const { code } = body;
+    const body = await request.json() as { code?: string; email?: string };
+    const { code, email } = body;
 
     if (!code || typeof code !== 'string') {
         return jsonResponse({ error: 'OTP code is required' }, request, 400);
@@ -118,17 +118,46 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
     // Delete expired OTPs first
     await db.execute(`DELETE FROM finance_otps WHERE datetime('now') > expires_at`);
 
-    // Find valid OTP
-    const result = await db.execute({
-        sql: `SELECT id, email FROM finance_otps WHERE code = ?`,
-        args: [code],
-    });
+    // Find active OTP
+    let otpRecord: any = null;
+    if (email) {
+        const res = await db.execute({
+            sql: `SELECT id, email, code, attempts FROM finance_otps WHERE email = ? ORDER BY id DESC LIMIT 1`,
+            args: [email],
+        });
+        otpRecord = res.rows[0];
+    } else {
+        const res = await db.execute({
+            sql: `SELECT id, email, code, attempts FROM finance_otps ORDER BY id DESC LIMIT 1`,
+            args: [],
+        });
+        otpRecord = res.rows[0];
+    }
 
-    if (result.rows.length === 0) {
+    if (!otpRecord) {
         return jsonResponse({ error: 'Invalid or expired OTP' }, request, 400);
     }
 
-    const otpRecord = result.rows[0];
+    const currentAttempts = Number(otpRecord.attempts ?? 0);
+    if (currentAttempts >= 5) {
+        await db.execute({ sql: `DELETE FROM finance_otps WHERE id = ?`, args: [otpRecord.id] });
+        return jsonResponse({ error: 'Too many failed attempts. This OTP has been invalidated. Please request a new code.' }, request, 429);
+    }
+
+    if (otpRecord.code !== code) {
+        const newAttempts = currentAttempts + 1;
+        if (newAttempts >= 5) {
+            await db.execute({ sql: `DELETE FROM finance_otps WHERE id = ?`, args: [otpRecord.id] });
+            return jsonResponse({ error: 'Too many failed attempts. This OTP has been invalidated. Please request a new code.' }, request, 429);
+        } else {
+            await db.execute({
+                sql: `UPDATE finance_otps SET attempts = ? WHERE id = ?`,
+                args: [newAttempts, otpRecord.id],
+            });
+            return jsonResponse({ error: `Invalid OTP code. ${5 - newAttempts} attempt(s) remaining.` }, request, 400);
+        }
+    }
+
     const otpId = otpRecord.id;
     const verifiedEmail = otpRecord.email as string;
 
