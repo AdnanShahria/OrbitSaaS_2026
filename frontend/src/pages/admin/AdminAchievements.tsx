@@ -5,6 +5,7 @@ import { Plus, Trash2, ChevronUp, ChevronDown, Upload, X, Link2, Layers, Setting
 import { RichTextEditor } from '@/components/admin/RichTextEditor';
 import { uploadImage } from '@/lib/imageUpload';
 import { getImageUrl } from '@/lib/imageUrl';
+import { generateSharePoster } from '@/lib/sharePosterGenerator';
 import DOMPurify from 'dompurify';
 
 // --- Multi Image Upload ---
@@ -131,6 +132,7 @@ interface UnifiedAchievement {
     id: string;
     order: number;
     images: string[];
+    shareImage?: string;
     link: string;
     category: string;
     date: string;
@@ -145,7 +147,7 @@ interface UnifiedAchievement {
 }
 
 const DEFAULT_ACHIEVEMENT: UnifiedAchievement = {
-    id: '', order: 0, images: [], link: '', category: '', date: '',
+    id: '', order: 0, images: [], shareImage: '', link: '', category: '', date: '',
     featured: false, hidden: false, videoPreview: '', tags: [],
     seo: { title: '', description: '', keywords: [] },
     en: { title: '', description: '' }, bn: { title: '', description: '' }
@@ -200,7 +202,30 @@ function AchievementEditor({ item, update }: { item: UnifiedAchievement; update:
                 </button>
                 {imagesExpanded && (
                     <div className="p-4 pt-0 border-t border-border/50">
-                        <MultiImageUpload images={item.images} onChange={imgs => update({ ...item, images: imgs })} title="" />
+                        <MultiImageUpload
+                            images={item.images}
+                            onChange={async (imgs) => {
+                                const coverChanged = imgs[0] && imgs[0] !== item.images[0];
+                                update({ ...item, images: imgs });
+
+                                if (imgs[0] && (coverChanged || !item.shareImage)) {
+                                    try {
+                                        const toastId = toast.loading('Generating branded social share poster...');
+                                        const posterFile = await generateSharePoster(imgs[0], {
+                                            type: 'achievement',
+                                            title: item.en?.title || item.bn?.title || item.category || 'Achievement',
+                                        });
+                                        const uploaded = await uploadImage(posterFile, 'achievements', true);
+                                        const shareUrl = typeof uploaded === 'object' ? (uploaded as any).primary : uploaded;
+                                        update({ ...item, images: imgs, shareImage: shareUrl });
+                                        toast.success('Branded share poster generated!', { id: toastId });
+                                    } catch (err) {
+                                        console.warn('Achievement share poster warning:', err);
+                                    }
+                                }
+                            }}
+                            title=""
+                        />
                     </div>
                 )}
             </div>
@@ -303,6 +328,7 @@ export default function AdminAchievements() {
                 id: item.id || '',
                 order: item.order ?? i,
                 images: item.images || (item.image ? [item.image] : []),
+                shareImage: item.shareImage || item.image || (item.images && item.images[0]) || '',
                 link: item.link || '',
                 category: item.category || '',
                 date: item.date || '',
@@ -326,6 +352,7 @@ export default function AdminAchievements() {
                 title: item.en.title,
                 desc: item.en.description,
                 image: item.images[0] || '',
+                shareImage: item.shareImage || item.images[0] || '',
                 images: item.images,
                 category: item.category,
                 date: item.date,
@@ -427,6 +454,7 @@ export default function AdminAchievements() {
                                 ...DEFAULT_ACHIEVEMENT,
                                 ...item,
                                 images: item.images || (item.image ? [item.image] : []),
+                                shareImage: item.shareImage || item.image || (item.images && item.images[0]) || '',
                                 en: item.en || { title: item.title || '', description: item.desc || '' },
                                 bn: item.bn || { title: '', description: '' },
                                 seo: item.seo || { title: '', description: '', keywords: [] },

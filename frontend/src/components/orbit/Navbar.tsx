@@ -48,6 +48,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const isProjectPage = location.pathname.startsWith('/project/');
@@ -126,13 +127,22 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [activeSection]);
 
-  // Sync with Chatbot state to hide navbar on mobile
+  // Sync with Chatbot & Lightbox state to hide navbar
   useEffect(() => {
     const handleChatbotState = (e: any) => {
       setIsChatbotOpen(e.detail?.isOpen ?? false);
     };
+    const handleLightboxState = (e: any) => {
+      const open = e.detail?.isOpen ?? false;
+      setIsLightboxOpen(open);
+      if (open) setMobileOpen(false);
+    };
     window.addEventListener('orbit-chatbot-state-change', handleChatbotState);
-    return () => window.removeEventListener('orbit-chatbot-state-change', handleChatbotState);
+    window.addEventListener('orbit-lightbox-state-change', handleLightboxState);
+    return () => {
+      window.removeEventListener('orbit-chatbot-state-change', handleChatbotState);
+      window.removeEventListener('orbit-lightbox-state-change', handleLightboxState);
+    };
   }, []);
 
   // Sections that use Light Mode (All sections on main landing page except hero, plus detail pages)
@@ -155,8 +165,14 @@ export function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-500 ease-out flex justify-center ${isChatbotOpen ? 'md:translate-y-0 opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto' : 'translate-y-0 opacity-100'
-          }`}
+        data-orbit-navbar="true"
+        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-500 ease-out flex justify-center ${
+          isLightboxOpen
+            ? '-translate-y-full opacity-0 pointer-events-none'
+            : isChatbotOpen
+            ? 'md:translate-y-0 opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto'
+            : 'translate-y-0 opacity-100'
+        }`}
       >
         {/* Cinematic Glass Shell with Left-to-Right clip-path sweep */}
         <motion.div

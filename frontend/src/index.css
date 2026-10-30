@@ -1371,4 +1371,16 @@ html.low-perf .gentle-animation {
   border-color: rgba(34, 197, 94, 0.75);
 }
 
+/* ── Hide Navbar when Image Zoom / Lightbox is Active ── */
+body[data-orbit-lightbox="open"] nav,
+body[data-orbit-lightbox="open"] [data-orbit-navbar],
+body[data-orbit-lightbox="open"] [data-orbit-navbar-wrapper] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-100%) !important;
+  visibility: hidden !important;
+  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease !important;
+}
+
+
 

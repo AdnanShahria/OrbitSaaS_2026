@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { getImageUrl, getFallbackUrl } from '@/lib/imageUrl';
@@ -56,17 +57,23 @@ export function ZoomableLightbox({
         setTranslate({ x: 0, y: 0 });
     }, [currentIndex, isOpen]);
 
-    // Body scroll lock
+    // Body scroll lock and navbar hiding sync
     useEffect(() => {
+        window.dispatchEvent(new CustomEvent('orbit-lightbox-state-change', { detail: { isOpen } }));
         if (isOpen) {
             const origBody = document.body.style.overflow;
             const origHtml = document.documentElement.style.overflow;
             document.body.style.overflow = 'hidden';
             document.documentElement.style.overflow = 'hidden';
+            document.body.setAttribute('data-orbit-lightbox', 'open');
             return () => {
                 document.body.style.overflow = origBody;
                 document.documentElement.style.overflow = origHtml;
+                document.body.removeAttribute('data-orbit-lightbox');
+                window.dispatchEvent(new CustomEvent('orbit-lightbox-state-change', { detail: { isOpen: false } }));
             };
+        } else {
+            document.body.removeAttribute('data-orbit-lightbox');
         }
     }, [isOpen]);
 
@@ -295,7 +302,7 @@ export function ZoomableLightbox({
     if (!isOpen || media.length === 0 || !currentMedia) return null;
     const ytId = isVideo ? extractYouTubeId(currentMedia.url) : null;
 
-    return (
+    const content = (
         <AnimatePresence>
             {isOpen && (
                 <motion.div
@@ -531,4 +538,7 @@ export function ZoomableLightbox({
             )}
         </AnimatePresence>
     );
+
+    if (typeof document === 'undefined') return content;
+    return createPortal(content, document.body);
 }

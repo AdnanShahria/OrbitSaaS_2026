@@ -13,6 +13,7 @@ import { Upload, Trash2, User, Mail, Instagram, Facebook, Twitter, Linkedin, Git
 import { uploadImage } from '@/lib/imageUpload';
 import { useContent } from '@/contexts/ContentContext';
 import { getImageUrl } from '@/lib/imageUrl';
+import { generateSharePoster } from '@/lib/sharePosterGenerator';
 
 // ─── Custom SVG Icons ───
 
@@ -54,6 +55,7 @@ interface LocalizedMember {
 interface UnifiedMember {
     id?: string;
     image: string;
+    shareImage?: string;
     badge?: string;
     order: number;
     hidden?: boolean;
@@ -74,6 +76,7 @@ const makeDefaultSocials = (): SocialsMap => {
 const DEFAULT_MEMBER: UnifiedMember = {
     id: '',
     image: '',
+    shareImage: '',
     badge: '',
     order: 0,
     hidden: false,
@@ -81,8 +84,6 @@ const DEFAULT_MEMBER: UnifiedMember = {
     bn: { name: '', role: '', subDetail: '', bio: '' },
     socials: makeDefaultSocials(),
 };
-
-const MAX_ENABLED_CONTACTS = 4;
 
 // ─── Social platform icons/labels map ───
 
@@ -105,21 +106,37 @@ const SOCIAL_CONFIG: { key: SocialPlatform; label: string; icon: any }[] = [
 
 function MemberImageUpload({
     image,
+    member,
     onChange,
 }: {
     image: any;
-    onChange: (url: any) => void;
+    member?: UnifiedMember;
+    onChange: (url: any, shareUrl?: any) => void;
 }) {
     const [uploading, setUploading] = useState(false);
 
     const handleFile = async (file: File) => {
         if (!file.type.startsWith('image/')) return;
         setUploading(true);
-        const toastId = toast.loading('Uploading image...');
+        const toastId = toast.loading('Uploading photo & generating branded share card...');
         try {
             const url = await uploadImage(file, 'team');
-            onChange(url);
-            toast.success('Image uploaded!', { id: toastId });
+            let shareUrl: any = '';
+
+            try {
+                const posterFile = await generateSharePoster(file, {
+                    type: 'leadership',
+                    name: member?.en?.name || member?.bn?.name || 'Leader',
+                    role: member?.en?.role || member?.bn?.role || 'ORBIT SaaS',
+                    subDetail: member?.en?.subDetail || member?.bn?.subDetail || '',
+                });
+                shareUrl = await uploadImage(posterFile, 'team', true);
+            } catch (pErr) {
+                console.warn('Share card generation warning:', pErr);
+            }
+
+            onChange(url, shareUrl);
+            toast.success('Photo uploaded & social share card generated!', { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error('Upload failed', { id: toastId });
@@ -180,23 +197,17 @@ function SocialToggleRow({
     socials,
     onToggle,
     onUrlChange,
-    enabledCount,
 }: {
     platform: typeof SOCIAL_CONFIG[number];
     socials: SocialsMap;
     onToggle: (key: SocialPlatform, enabled: boolean) => void;
     onUrlChange: (key: SocialPlatform, url: string) => void;
-    enabledCount: number;
 }) {
     const entry = socials[platform.key] || { enabled: false, url: '' };
     const Icon = platform.icon;
     const isCustomSvg = platform.key === 'google' || platform.key === 'whatsapp';
 
     const handleToggle = () => {
-        if (!entry.enabled && enabledCount >= MAX_ENABLED_CONTACTS) {
-            toast.error(`Maximum ${MAX_ENABLED_CONTACTS} contacts allowed per member. Disable another contact first.`);
-            return;
-        }
         onToggle(platform.key, !entry.enabled);
     };
 
@@ -320,7 +331,12 @@ function MemberEditor({
 
                 <MemberImageUpload
                     image={item.image}
-                    onChange={(url) => update({ ...item, image: url })}
+                    member={item}
+                    onChange={(url, shareUrl) => update({
+                        ...item,
+                        image: url,
+                        ...(shareUrl ? { shareImage: shareUrl } : {})
+                    })}
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -361,14 +377,14 @@ function MemberEditor({
                     onChange={(v) => update({ ...item, hidden: v })}
                 />
 
-                {/* Social Links Section — 10 platforms with max 4 enforcement */}
+                {/* Social Links Section — 12 platforms */}
                 <div className="space-y-4 pt-4 border-t border-border/30">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             🔗 Contact Links (Global)
                         </h4>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${enabledCount >= MAX_ENABLED_CONTACTS ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                            {enabledCount}/{MAX_ENABLED_CONTACTS} active
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                            {enabledCount} active
                         </span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -379,7 +395,6 @@ function MemberEditor({
                                 socials={item.socials || {}}
                                 onToggle={handleSocialToggle}
                                 onUrlChange={handleSocialUrl}
-                                enabledCount={enabledCount}
                             />
                         ))}
                     </div>
@@ -497,6 +512,7 @@ export default function AdminLeadership() {
             merged.push({
                 id: en.id || bn.id || fallbackSlug,
                 image: en.image || bn.image || '',
+                shareImage: en.shareImage || bn.shareImage || '',
                 badge: en.badge || bn.badge || '',
                 order: en.order ?? bn.order ?? i + 1,
                 hidden: en.hidden ?? bn.hidden ?? false,
@@ -531,6 +547,7 @@ export default function AdminLeadership() {
                     bio: m.en.bio,
                     badge: m.badge,
                     image: m.image,
+                    shareImage: m.shareImage || '',
                     order: m.order,
                     hidden: m.hidden,
                     socials: m.socials,
@@ -547,6 +564,7 @@ export default function AdminLeadership() {
                     bio: m.bn.bio,
                     badge: m.badge,
                     image: m.image,
+                    shareImage: m.shareImage || '',
                     order: m.order,
                     hidden: m.hidden,
                     socials: m.socials,
@@ -724,6 +742,7 @@ export default function AdminLeadership() {
                             badge: m.badge,
                             bio: m.en.bio,
                             image: m.image,
+                            shareImage: m.shareImage || '',
                             order: m.order,
                             hidden: m.hidden,
                             socials: m.socials,
@@ -741,6 +760,7 @@ export default function AdminLeadership() {
                             badge: m.badge,
                             bio: m.bn.bio,
                             image: m.image,
+                            shareImage: m.shareImage || '',
                             order: m.order,
                             hidden: m.hidden,
                             socials: m.socials,
@@ -776,6 +796,7 @@ export default function AdminLeadership() {
                         merged.push({
                             id: en.id || bn.id || fallbackSlug,
                             image: en.image || bn.image || '',
+                            shareImage: en.shareImage || bn.shareImage || '',
                             badge: en.badge || bn.badge || '',
                             order: en.order ?? bn.order ?? i + 1,
                             hidden: en.hidden ?? bn.hidden ?? false,

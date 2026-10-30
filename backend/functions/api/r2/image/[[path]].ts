@@ -39,6 +39,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
         object.writeHttpMetadata(headers);
         headers.set('etag', object.httpEtag);
+        headers.set('X-Robots-Tag', 'all, index, follow');
         
         // Ensure browser caching is effective
         if (!headers.has('cache-control')) {

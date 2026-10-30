@@ -7,6 +7,7 @@ import { RichTextEditor } from '@/components/admin/RichTextEditor';
 import { useContent } from '@/contexts/ContentContext';
 import { uploadImage } from '@/lib/imageUpload';
 import { getImageUrl, type ImageUrl } from '@/lib/imageUrl';
+import { generateSharePoster } from '@/lib/sharePosterGenerator';
 
 // --- Shared Helper Components ---
 
@@ -213,6 +214,7 @@ interface UnifiedProject {
     id: string; // Slug for URL (e.g. 'lifesolver')
     order: number; // Display order on homepage
     images: string[];
+    shareImage?: string; // Branded social share poster with top-right logo
     hoverImages: number[]; // Indices into images[] to show on hover
     link: string;
     categories: string[];
@@ -237,6 +239,7 @@ const DEFAULT_PROJECT: UnifiedProject = {
     id: '',
     order: 0,
     images: [],
+    shareImage: '',
     hoverImages: [],
     link: '',
     categories: ['SaaS'],
@@ -389,10 +392,30 @@ function ProjectEditor({ item, update, categories: availableCategories, onSave }
                     <div className="p-4 pt-0 border-t border-border/50 space-y-4">
                         <MultiImageUpload
                             images={item.images}
-                            onChange={imgs => {
+                            onChange={async (imgs) => {
                                 // Clean up hoverImages: remove any indices that are out of bounds
                                 const validHover = (item.hoverImages || []).filter(idx => idx < imgs.length);
+                                const coverChanged = imgs[0] && imgs[0] !== item.images[0];
+                                
+                                // Update images immediately for responsive UI
                                 update({ ...item, images: imgs, hoverImages: validHover });
+
+                                // If cover image changed or shareImage is missing, generate branded share poster
+                                if (imgs[0] && (coverChanged || !item.shareImage)) {
+                                    try {
+                                        const toastId = toast.loading('Generating branded social share poster...');
+                                        const posterFile = await generateSharePoster(imgs[0], {
+                                            type: 'project',
+                                            title: item.en?.title || item.bn?.title || item.id,
+                                        });
+                                        const uploaded = await uploadImage(posterFile, 'projects', true);
+                                        const shareUrl = typeof uploaded === 'object' ? (uploaded as any).primary : uploaded;
+                                        update({ ...item, images: imgs, hoverImages: validHover, shareImage: shareUrl });
+                                        toast.success('Branded share poster generated!', { id: toastId });
+                                    } catch (err) {
+                                        console.warn('Share poster generation warning:', err);
+                                    }
+                                }
                             }}
                             title=""
                         />
@@ -1091,6 +1114,7 @@ export default function AdminProjects() {
                 id: enItem.id || bnItem.id || '',
                 order: enItem.order ?? bnItem.order ?? i,
                 images: sharedImages,
+                shareImage: enItem.shareImage || bnItem.shareImage || '',
                 hoverImages: enItem.hoverImages || bnItem.hoverImages || [],
                 link: enItem.link || bnItem.link || '',
                 categories: sharedCategories,
@@ -1134,6 +1158,7 @@ export default function AdminProjects() {
                 id: p.id,
                 order: p.order,
                 images: p.images,
+                shareImage: p.shareImage || p.images[0] || '',
                 hoverImages: p.hoverImages || [],
                 image: p.images[0] || '',
                 link: p.link,
@@ -1153,6 +1178,7 @@ export default function AdminProjects() {
                 id: p.id,
                 order: p.order,
                 images: p.images,
+                shareImage: p.shareImage || p.images[0] || '',
                 hoverImages: p.hoverImages || [],
                 image: p.images[0] || '',
                 link: p.link,
@@ -1453,6 +1479,7 @@ export default function AdminProjects() {
                                 id: p.id,
                                 order: p.order,
                                 images: p.images,
+                                shareImage: p.shareImage || p.images[0] || '',
                                 hoverImages: p.hoverImages,
                                 link: p.link,
                                 categories: p.categories,
@@ -1475,6 +1502,7 @@ export default function AdminProjects() {
                                 id: p.id,
                                 order: p.order,
                                 images: p.images,
+                                shareImage: p.shareImage || p.images[0] || '',
                                 hoverImages: p.hoverImages,
                                 link: p.link,
                                 categories: p.categories,
@@ -1516,6 +1544,7 @@ export default function AdminProjects() {
                                 id: en.id || bn.id || '',
                                 order: en.order ?? bn.order ?? i,
                                 images: en.images || bn.images || [],
+                                shareImage: en.shareImage || bn.shareImage || '',
                                 hoverImages: en.hoverImages || bn.hoverImages || [],
                                 link: en.link || bn.link || '',
                                 categories: Array.isArray(importCats) ? importCats : [importCats],

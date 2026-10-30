@@ -402,15 +402,26 @@ function NavbarVisibilityWrapper() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
   const { phase } = useOrchestration();
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  useEffect(() => {
+    const handleLightboxState = (e: any) => {
+      setIsLightboxOpen(e.detail?.isOpen ?? false);
+    };
+    window.addEventListener('orbit-lightbox-state-change', handleLightboxState);
+    return () => window.removeEventListener('orbit-lightbox-state-change', handleLightboxState);
+  }, []);
 
   // Don't render navbar until orchestration phase 3 (after title + subtitle)
   if (isAdmin || phase < 3) return null;
 
   return (
     <motion.div
+      data-orbit-navbar-wrapper="true"
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
+      animate={{ opacity: isLightboxOpen ? 0 : 1 }}
+      style={{ pointerEvents: isLightboxOpen ? 'none' : 'auto' }}
+      transition={{ duration: 0.3 }}
     >
       <Navbar />
     </motion.div>

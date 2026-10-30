@@ -4,104 +4,432 @@
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://orbitsaas.cloud/</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/?lang=bn</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/privacy</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/terms</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/lifesolver</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130534052-75b9w9w.webp</image:loc>
+      <image:title>LifeSolver : Ai Life Command Centre</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130536163-iciym8v.webp</image:loc>
+      <image:title>LifeSolver : Ai Life Command Centre</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130537573-fmu875c.webp</image:loc>
+      <image:title>LifeSolver : Ai Life Command Centre</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130538729-izsgkqh.webp</image:loc>
+      <image:title>LifeSolver : Ai Life Command Centre</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130540046-m6uw0ra.webp</image:loc>
+      <image:title>LifeSolver : Ai Life Command Centre</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/unimind</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130561911-glqaamn.webp</image:loc>
+      <image:title>UniMind — The AI-Powered Academic Operating System for University Students</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130562951-vxm622n.webp</image:loc>
+      <image:title>UniMind — The AI-Powered Academic Operating System for University Students</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130564138-agbyxs0.webp</image:loc>
+      <image:title>UniMind — The AI-Powered Academic Operating System for University Students</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130565241-oowp9pp.webp</image:loc>
+      <image:title>UniMind — The AI-Powered Academic Operating System for University Students</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130566191-oega0ro.webp</image:loc>
+      <image:title>UniMind — The AI-Powered Academic Operating System for University Students</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/amarballot</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130572783-x0g5hlg.webp</image:loc>
+      <image:title>Amar Ballot – RealTime Election Data &amp; News Hub</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130574079-eioqx80.webp</image:loc>
+      <image:title>Amar Ballot – RealTime Election Data &amp; News Hub</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130575188-zkuz77n.webp</image:loc>
+      <image:title>Amar Ballot – RealTime Election Data &amp; News Hub</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130576284-1uj9eox.webp</image:loc>
+      <image:title>Amar Ballot – RealTime Election Data &amp; News Hub</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130578490-p4v0kxi.webp</image:loc>
+      <image:title>Amar Ballot – RealTime Election Data &amp; News Hub</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/e-commerce</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130584844-oyevm6b.webp</image:loc>
+      <image:title>PlayPen House — Premium Baby Playpens &amp; Accessories</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130585975-9aebkdy.webp</image:loc>
+      <image:title>PlayPen House — Premium Baby Playpens &amp; Accessories</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130586850-ok3ysgq.webp</image:loc>
+      <image:title>PlayPen House — Premium Baby Playpens &amp; Accessories</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130587643-970y059.webp</image:loc>
+      <image:title>PlayPen House — Premium Baby Playpens &amp; Accessories</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130588612-ada5z9d.webp</image:loc>
+      <image:title>PlayPen House — Premium Baby Playpens &amp; Accessories</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/demo</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130596127-sqcziin.webp</image:loc>
+      <image:title>SaaS Platform Demo Project</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130597200-byrwmpe.webp</image:loc>
+      <image:title>SaaS Platform Demo Project</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130598399-h5x6hjt.webp</image:loc>
+      <image:title>SaaS Platform Demo Project</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130599389-alcs8bk.webp</image:loc>
+      <image:title>SaaS Platform Demo Project</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130600419-c5of77g.webp</image:loc>
+      <image:title>SaaS Platform Demo Project</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/ecohaat</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130602581-ue09why.webp</image:loc>
+      <image:title>Eco Haat : Market Place for Eco_Friendly Products</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130603739-i7k4sr8.webp</image:loc>
+      <image:title>Eco Haat : Market Place for Eco_Friendly Products</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130605050-uw8ty6t.webp</image:loc>
+      <image:title>Eco Haat : Market Place for Eco_Friendly Products</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130606356-ljkd48y.webp</image:loc>
+      <image:title>Eco Haat : Market Place for Eco_Friendly Products</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130607424-i2elbwn.webp</image:loc>
+      <image:title>Eco Haat : Market Place for Eco_Friendly Products</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/book-summery-1</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130619488-n2sbfbd.webp</image:loc>
+      <image:title>Focus On What Matters ( by Darius Foroux ) _ ( Book Summery )</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130620529-d0lwyb6.webp</image:loc>
+      <image:title>Focus On What Matters ( by Darius Foroux ) _ ( Book Summery )</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130621582-y4uz5l5.webp</image:loc>
+      <image:title>Focus On What Matters ( by Darius Foroux ) _ ( Book Summery )</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130622606-pgdxbty.webp</image:loc>
+      <image:title>Focus On What Matters ( by Darius Foroux ) _ ( Book Summery )</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130623585-d773g3b.webp</image:loc>
+      <image:title>Focus On What Matters ( by Darius Foroux ) _ ( Book Summery )</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/tsme</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130630183-f65n8vk.webp</image:loc>
+      <image:title>Teacher &amp; Student Management EcoSystem for Coaching Businesses</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130631270-77a2jkc.webp</image:loc>
+      <image:title>Teacher &amp; Student Management EcoSystem for Coaching Businesses</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130632269-chwzqk5.webp</image:loc>
+      <image:title>Teacher &amp; Student Management EcoSystem for Coaching Businesses</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130633553-wvs1ssw.webp</image:loc>
+      <image:title>Teacher &amp; Student Management EcoSystem for Coaching Businesses</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130634537-9jc7040.webp</image:loc>
+      <image:title>Teacher &amp; Student Management EcoSystem for Coaching Businesses</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/freemium-resume</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130660297-pn6b10n.webp</image:loc>
+      <image:title>Craft Unmatched Resumes with FreeMium : AI-Powered Resume Builder</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130661480-a0lfvko.webp</image:loc>
+      <image:title>Craft Unmatched Resumes with FreeMium : AI-Powered Resume Builder</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130662634-n70clt3.webp</image:loc>
+      <image:title>Craft Unmatched Resumes with FreeMium : AI-Powered Resume Builder</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130663741-982sx64.webp</image:loc>
+      <image:title>Craft Unmatched Resumes with FreeMium : AI-Powered Resume Builder</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/trackstudy-a-digital-ai-powered-study-managemnt-dashboard</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130664789-uqa5q19.webp</image:loc>
+      <image:title>TrackStudy : A Digital Ai Powered Study Managemnt Dashboard</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130665576-888qmxz.webp</image:loc>
+      <image:title>TrackStudy : A Digital Ai Powered Study Managemnt Dashboard</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130666584-mnaz67e.webp</image:loc>
+      <image:title>TrackStudy : A Digital Ai Powered Study Managemnt Dashboard</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130667371-kv71615.webp</image:loc>
+      <image:title>TrackStudy : A Digital Ai Powered Study Managemnt Dashboard</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130668164-sfxxgro.webp</image:loc>
+      <image:title>TrackStudy : A Digital Ai Powered Study Managemnt Dashboard</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/project/ruetpay</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130558675-utkvl6f.webp</image:loc>
+      <image:title>RuetPay (Android Application)</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130670804-wk756vq.webp</image:loc>
+      <image:title>RuetPay (Android Application)</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130626672-9821dsq.webp</image:loc>
+      <image:title>RuetPay (Android Application)</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130582950-dlvit6t.webp</image:loc>
+      <image:title>RuetPay (Android Application)</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/projects/1787130671730-s4xacls.webp</image:loc>
+      <image:title>RuetPay (Android Application)</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/achievement/achievement-1781534683524</loc>
     <lastmod>12 June - 2026</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/achievements/1787130676853-urxvz5o.webp</image:loc>
+      <image:title>Runner-up at Infinity AI Build Fest Hackathon by CloudCamp-BD at BRAC University | Team Orbit SaaS</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/achievements/1787130677923-wedvwg0.webp</image:loc>
+      <image:title>Runner-up at Infinity AI Build Fest Hackathon by CloudCamp-BD at BRAC University | Team Orbit SaaS</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/achievements/1787130679162-owwcxki.webp</image:loc>
+      <image:title>Runner-up at Infinity AI Build Fest Hackathon by CloudCamp-BD at BRAC University | Team Orbit SaaS</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/achievements/1787130680289-lox0tyw.webp</image:loc>
+      <image:title>Runner-up at Infinity AI Build Fest Hackathon by CloudCamp-BD at BRAC University | Team Orbit SaaS</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://orbitsaas.cloud/achievement/achievement-1781697170335</loc>
     <lastmod>January - 2026</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/achievements/1787130681347-elpebj7.webp</image:loc>
+      <image:title>Securing Pre-Seed Funding for the Eco-Hut Project at the 7th UIHP! 🚀</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/achievements/1787130682436-iqhlths.webp</image:loc>
+      <image:title>Securing Pre-Seed Funding for the Eco-Hut Project at the 7th UIHP! 🚀</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/achievements/1787130683448-pcu465x.webp</image:loc>
+      <image:title>Securing Pre-Seed Funding for the Eco-Hut Project at the 7th UIHP! 🚀</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/achievements/1787130684834-ok48ewp.webp</image:loc>
+      <image:title>Securing Pre-Seed Funding for the Eco-Hut Project at the 7th UIHP! 🚀</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://orbitsaas.cloud/?member=muhammad-nisar-uddin</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/leadership/1787130685898-7e26r1o.webp</image:loc>
+      <image:title>Muhammad Nisar Uddin - Founder &amp; CEO</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://orbitsaas.cloud/?member=mohammed-adnan-shahria</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/team/1789586211937-6gu4n9a.webp</image:loc>
+      <image:title>Mohammed Adnan Shahria - Co-Founder &amp; CTO</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://orbitsaas.cloud/?member=abdur-rafiu</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/leadership/1787130688068-nkrh5df.webp</image:loc>
+      <image:title>Abdur Rafiu - Business Development Lead</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://orbitsaas.cloud/?member=md-tanzim-mahmud</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/team/1793356802899-px5rvf6.webp</image:loc>
+      <image:title> Tanzim Mahmud - Full Stack Developer &amp; UI/UX Designer</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://orbitsaas.cloud/?member=abdur-rahman-talha</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/leadership/1787130689134-1dwlq2a.webp</image:loc>
+      <image:title>Abdur Rahman Talha - Business Strategist</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://orbitsaas.cloud/?member=ribbie-mohammad-omar</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/leadership/1787130690196-th5eb9a.webp</image:loc>
+      <image:title>Ribbie Mohammad Omar - Business Analyst &amp; Advisor</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://orbitsaas.cloud/?member=md-sabbir-hosen</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/leadership/1787130691394-njba8u5.webp</image:loc>
+      <image:title>Md. Sabbir Hosen - Creative Director &amp; Social Media Manager</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://orbitsaas.cloud/?member=shagor-islam</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://orbitsaas.cloud/api/r2/image/team/1793353362341-mm6ddui.webp</image:loc>
+      <image:title>Md Shagor Islam - Market Expansion Lead</image:title>
+    </image:image>
   </url>
 </urlset>

@@ -4,6 +4,49 @@ import type { Env } from '../_lib/types';
 const SITE_URL = 'https://orbitsaas.cloud';
 const FALLBACK_OG = `${SITE_URL}/og-banner-v2.png`;
 
+function cleanSlug(raw: string, fallbackTitle?: string): string {
+    if (raw && typeof raw === 'string' && raw.trim()) {
+        const trimmed = raw.trim();
+        if (!/^\d+$/.test(trimmed)) {
+            return trimmed.toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+        }
+    }
+    if (fallbackTitle && typeof fallbackTitle === 'string') {
+        const slug = fallbackTitle
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)+/g, '');
+        if (slug) return slug;
+    }
+    return (raw || '').toLowerCase();
+}
+
+function extractImageUrl(raw: any): string {
+    if (!raw) return '';
+    if (typeof raw === 'string') {
+        const trimmed = raw.trim();
+        if (!trimmed) return '';
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                return extractImageUrl(parsed);
+            } catch {
+                // not json
+            }
+        }
+        if (trimmed.includes('|||')) {
+            const first = trimmed.split('|||')[0].trim();
+            return first.startsWith('http') ? first : `${SITE_URL}${first.startsWith('/') ? '' : '/'}${first}`;
+        }
+        return trimmed.startsWith('http') ? trimmed : `${SITE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+    }
+    if (typeof raw === 'object' && raw !== null) {
+        const primary = raw.primary || raw.url || raw.src || raw.fallback;
+        return extractImageUrl(primary);
+    }
+    return '';
+}
+
 async function getProjectBySlug(slug: string, env: Env) {
     const db = getDb(env);
     try {
@@ -24,13 +67,22 @@ async function getProjectBySlug(slug: string, env: Env) {
             }
         }
         const items: any[] = content.projects?.items || [];
-        const project = items.find((item: any) => item.id === slug);
-        if (project) return project;
-        const idx = parseInt(slug, 10);
+        const normSlug = (slug || '').toLowerCase().trim();
+
+        // 1. Direct match on id or slug
+        const directMatch = items.find((item: any) => 
+            (item.id && String(item.id).toLowerCase() === normSlug) ||
+            (item.slug && String(item.slug).toLowerCase() === normSlug) ||
+            cleanSlug(item.id, item.title) === normSlug
+        );
+        if (directMatch) return directMatch;
+
+        // 2. Numeric index fallback
+        const idx = parseInt(normSlug, 10);
         if (!isNaN(idx) && idx >= 0 && idx < items.length) return items[idx];
         return null;
     } catch (e) {
-        console.error('OG: DB fetch error', e);
+        console.error('OG project: DB fetch error', e);
         return null;
     }
 }
@@ -41,15 +93,20 @@ function stripHtml(html: string): string {
 }
 
 function escapeHtml(str: string): string {
-    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    return (str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
-/* ── Known bot user-agents ── */
+/* ── Known bot user-agents (Social Share Crawlers & Search Engines) ── */
 const BOT_UA = /bot|crawler|spider|crawling|facebookexternalhit|whatsapp|telegram|twitterbot|linkedinbot|slackbot|discordbot|googlebot|bingbot|yandex|baidu|duckduck|sogou|exabot|ia_archiver|embedly|quora|outbrain|pinterest|vkshare|tumblr|skype|nuzzel|w3c_validator|preview/i;
 
 /**
  * Catch-all handler for /project/* routes.
- * - For bots → serve OG meta HTML
+ * - For bots → serve OG meta HTML with project poster
  * - For browsers → serve the SPA (index.html via ASSETS binding)
  */
 export const onRequest: PagesFunction<Env> = async (context) => {
@@ -61,19 +118,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const slug = pathParts.join('/');
 
     if (!slug) {
-        // No slug — serve the SPA
         return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
-    }
-
-    // Check for OG image mode (called by the meta tags)
-    const mode = url.searchParams.get('mode');
-    if (mode === 'image') {
-        // Redirect to project cover image for OG
-        const project = await getProjectBySlug(slug, env);
-        const coverUrl = project?.images?.[0] || project?.image || '';
-        if (!coverUrl) return Response.redirect(FALLBACK_OG, 302);
-        const absoluteUrl = coverUrl.startsWith('http') ? coverUrl : `https://${coverUrl}`;
-        return Response.redirect(absoluteUrl, 302);
     }
 
     const ua = request.headers.get('user-agent') || '';
@@ -84,12 +129,30 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
     }
 
-    // Bots: serve minimal HTML with OG meta tags
+    // Bots: serve dynamic HTML with high-quality OG tags & Schema.org JSON-LD
     const project = await getProjectBySlug(slug, env);
-    const title = project?.seo?.title || (project ? `${project.title} | Orbit SaaS` : 'Project | Orbit SaaS');
-    const desc = project?.seo?.description || stripHtml(project?.desc || '').substring(0, 160);
-    const ogImageUrl = project?.images?.[0] || project?.image || FALLBACK_OG;
+    const title = project?.seo?.title || (project ? `${project.title} | ORBIT SaaS` : 'Project Showcase | ORBIT SaaS');
+    const desc = project?.seo?.description || stripHtml(project?.desc || project?.tagline || 'Explore high-impact digital solutions and custom web development by ORBIT SaaS.').substring(0, 160);
+    
+    // Prioritize shareImage (poster with top-right logo), then cover image, then fallback
+    const rawImage = project?.shareImage || project?.sharePoster || project?.ogImage || project?.image || project?.images?.[0];
+    const ogImageUrl = extractImageUrl(rawImage) || FALLBACK_OG;
     const canonicalUrl = `${SITE_URL}/project/${slug}`;
+
+    const jsonLd = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'CreativeWork',
+        'name': title,
+        'headline': title,
+        'description': desc,
+        'image': [ogImageUrl],
+        'url': canonicalUrl,
+        'creator': {
+            '@type': 'Organization',
+            'name': 'ORBIT SaaS',
+            'url': SITE_URL
+        }
+    });
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -99,20 +162,33 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 <meta name="description" content="${escapeHtml(desc)}">
 <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
 <link rel="icon" type="image/png" href="${SITE_URL}/favicon.png">
-<meta property="og:type" content="article">
+
+<!-- Open Graph / Facebook / WhatsApp -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ORBIT SaaS">
 <meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(desc)}">
 <meta property="og:image" content="${escapeHtml(ogImageUrl)}">
+<meta property="og:image:secure_url" content="${escapeHtml(ogImageUrl)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
-<meta property="og:site_name" content="ORBIT SaaS">
+
+<!-- Twitter / X -->
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@orbitsaas">
 <meta name="twitter:title" content="${escapeHtml(title)}">
 <meta name="twitter:description" content="${escapeHtml(desc)}">
 <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">
+
+<!-- Structured Data -->
+<script type="application/ld+json">${jsonLd}</script>
 </head>
-<body><p>${escapeHtml(title)}</p></body>
+<body>
+<h1>${escapeHtml(title)}</h1>
+<p>${escapeHtml(desc)}</p>
+<img src="${escapeHtml(ogImageUrl)}" alt="${escapeHtml(title)}" />
+</body>
 </html>`;
 
     return new Response(html, {
@@ -120,6 +196,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         headers: {
             'Content-Type': 'text/html; charset=utf-8',
             'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+            'X-Robots-Tag': 'all, index, follow',
         },
     });
 };
