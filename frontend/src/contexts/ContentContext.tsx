@@ -53,16 +53,20 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
                 queryKey: ['content', 'en'],
                 queryFn: () => fetchContentData('en'),
                 // Pre-seed with translation fallbacks so page renders immediately
-                // without waiting for the API. Data will update silently when API responds.
+                // without waiting for the API. Initial fetch runs once in background.
                 initialData: translations.en,
-                staleTime: 0,        // Immediately stale → always refetches in background
+                initialDataUpdatedAt: 0,
+                staleTime: 5 * 60 * 1000,        // 5 min cache - prevents spamming backend on tab focus
+                refetchOnWindowFocus: false,     // Never refetch just because user switched tabs
                 gcTime: 300_000,
             },
             {
                 queryKey: ['content', 'bn'],
                 queryFn: () => fetchContentData('bn'),
                 initialData: translations.bn,
-                staleTime: 0,
+                initialDataUpdatedAt: 0,
+                staleTime: 5 * 60 * 1000,
+                refetchOnWindowFocus: false,
                 gcTime: 300_000,
             },
         ],

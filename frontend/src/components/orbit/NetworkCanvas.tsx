@@ -5,11 +5,16 @@ import { useDevicePerformance } from '@/hooks/use-performance';
 export function NetworkCanvas({ className = "" }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const prefersReducedMotion = useReducedMotion();
-  const { isLowEnd, maxDpr } = useDevicePerformance();
+  const { isLowEnd, canRunComplexCanvas, maxDpr } = useDevicePerformance();
+
+  // Low-powered devices skip the canvas loop entirely to preserve RAM, GPU fill-rate, and CPU
+  if (isLowEnd || !canRunComplexCanvas || prefersReducedMotion) {
+    return null;
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || prefersReducedMotion) return;
+    if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -18,6 +23,16 @@ export function NetworkCanvas({ className = "" }: { className?: string }) {
     let particles: Particle[] = [];
     let logicalWidth = 0;
     let logicalHeight = 0;
+    let isVisible = true;
+
+    // Pause canvas completely when scrolled out of view to eliminate wasted background cycles
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry.isIntersecting;
+      },
+      { threshold: 0.05 }
+    );
+    observer.observe(canvas);
 
     const resize = () => {
       const parent = canvas.parentElement;
@@ -38,12 +53,11 @@ export function NetworkCanvas({ className = "" }: { className?: string }) {
       vx: number;
       vy: number;
       radius: number;
-      colorType: number; // 0: Emerald Green, 1: Mint/Teal, 2: Cyan
+      colorType: number;
 
       constructor(width: number, height: number) {
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        // Calm, elegant floating
         this.vx = (Math.random() - 0.5) * 0.22;
         this.vy = (Math.random() - 0.5) * 0.22;
         this.radius = Math.random() * 1.8 + 1.1;
@@ -59,51 +73,52 @@ export function NetworkCanvas({ className = "" }: { className?: string }) {
         if (this.y < 0 || this.y > height) this.vy *= -1;
       }
 
-      draw(ctx: CanvasRenderingContext2D) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      draw(c: CanvasRenderingContext2D) {
+        c.save();
+        c.beginPath();
+        c.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         if (this.colorType === 0) {
-          ctx.fillStyle = 'rgba(52, 211, 153, 0.88)';
-          ctx.shadowColor = 'rgba(16, 185, 129, 0.65)';
-          ctx.shadowBlur = 6;
+          c.fillStyle = 'rgba(52, 211, 153, 0.88)';
+          c.shadowColor = 'rgba(16, 185, 129, 0.65)';
+          c.shadowBlur = 6;
         } else if (this.colorType === 1) {
-          ctx.fillStyle = 'rgba(45, 212, 191, 0.85)';
-          ctx.shadowColor = 'rgba(20, 184, 166, 0.55)';
-          ctx.shadowBlur = 5;
+          c.fillStyle = 'rgba(45, 212, 191, 0.85)';
+          c.shadowColor = 'rgba(20, 184, 166, 0.55)';
+          c.shadowBlur = 5;
         } else {
-          ctx.fillStyle = 'rgba(6, 182, 212, 0.82)';
-          ctx.shadowColor = 'rgba(6, 182, 212, 0.55)';
-          ctx.shadowBlur = 5;
+          c.fillStyle = 'rgba(6, 182, 212, 0.82)';
+          c.shadowColor = 'rgba(6, 182, 212, 0.55)';
+          c.shadowBlur = 5;
         }
-        ctx.fill();
-        ctx.restore();
+        c.fill();
+        c.restore();
       }
     }
 
     const init = () => {
       resize();
       particles = [];
-      // Adjust density based on container size
-      const particleCount = Math.floor((logicalWidth * logicalHeight) / 14000);
+      const particleCount = Math.floor((logicalWidth * logicalHeight) / 16000);
       const isMobile = logicalWidth < 768;
-      // Cap particles to ensure buttery 60fps performance on all devices
-      const maxParticles = Math.min(particleCount, isLowEnd ? 20 : (isMobile ? 32 : 75));
+      const maxParticles = Math.min(particleCount, isMobile ? 24 : 50);
       for (let i = 0; i < maxParticles; i++) {
         particles.push(new Particle(logicalWidth, logicalHeight));
       }
     };
 
     const animate = () => {
+      if (!isVisible) {
+        animationFrameId = requestAnimationFrame(animate);
+        return;
+      }
+
       ctx.clearRect(0, 0, logicalWidth, logicalHeight);
       
-      // Update particles
       for (let i = 0; i < particles.length; i++) {
         particles[i].update(logicalWidth, logicalHeight);
       }
 
-      // Draw connections first (behind nodes)
-      const maxDistance = logicalWidth < 768 ? 105 : 125;
+      const maxDistance = logicalWidth < 768 ? 95 : 120;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -115,16 +130,14 @@ export function NetworkCanvas({ className = "" }: { className?: string }) {
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
             
-            const opacity = (1 - distance / maxDistance) * 0.35;
-            // Greeny mesh lines
+            const opacity = (1 - distance / maxDistance) * 0.3;
             ctx.strokeStyle = `rgba(16, 185, 129, ${opacity})`; 
-            ctx.lineWidth = distance < 55 ? 1.1 : 0.8;
+            ctx.lineWidth = distance < 50 ? 1 : 0.7;
             ctx.stroke();
           }
         }
       }
 
-      // Draw nodes on top
       for (let i = 0; i < particles.length; i++) {
         particles[i].draw(ctx);
       }
@@ -135,13 +148,14 @@ export function NetworkCanvas({ className = "" }: { className?: string }) {
     init();
     animate();
 
-    window.addEventListener('resize', init);
+    window.addEventListener('resize', init, { passive: true });
 
     return () => {
       window.removeEventListener('resize', init);
+      observer.disconnect();
       cancelAnimationFrame(animationFrameId);
     };
-  }, [prefersReducedMotion, isLowEnd, maxDpr]);
+  }, [maxDpr]);
 
   return (
     <canvas 

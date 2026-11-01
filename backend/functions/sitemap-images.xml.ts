@@ -227,6 +227,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             status: 200,
             headers: {
                 'Content-Type': 'application/xml; charset=utf-8',
+                'Last-Modified': new Date().toUTCString(),
                 'Cache-Control': 'public, max-age=1800, s-maxage=1800, stale-while-revalidate=86400',
                 'X-Robots-Tag': 'all, index, follow',
                 'X-Content-Type-Options': 'nosniff'

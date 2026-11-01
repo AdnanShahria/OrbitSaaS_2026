@@ -632,174 +632,25 @@ const ServiceVisual = ({ index, isCompactMobile }: { index: number; isCompactMob
   );
 };
 
-/* ─────────────────────── Agent Skills Canvas Background ─────────────────────── */
-const CardCanvasBackground = ({ index }: { index: number }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Skip entirely on mobile — hover-only effect, saves 6 RAF loops + 180 particles
-  const [isMobile] = useState(() => 
-    typeof window !== 'undefined' && (window.matchMedia('(hover: none) and (pointer: coarse)').matches || window.innerWidth < 768)
-  );
-
-  useEffect(() => {
-    if (isMobile) return; // No canvas work on mobile
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: true });
-    if (!ctx) return;
-    
-    let w = 0;
-    let h = 0;
-    let raf: number;
-    let mouseX = -1000;
-    let mouseY = -1000;
-    let isVisible = true;
-
-    const resize = () => {
-      w = canvas.offsetWidth;
-      h = canvas.offsetHeight;
-      canvas.width = w * window.devicePixelRatio;
-      canvas.height = h * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    };
-    resize();
-
-    // Pause when off-screen
-    const observer = new IntersectionObserver(
-      ([entry]) => { isVisible = entry.isIntersecting; },
-      { threshold: 0.1 }
-    );
-    observer.observe(canvas);
-
-    // Determine color based on index to differentiate cards slightly
-    const colors = [
-      '139, 92, 246', // Violet
-      '20, 184, 166', // Teal
-      '16, 185, 129', // Emerald
-      '244, 63, 94',  // Rose
-      '59, 130, 246', // Blue
-      '245, 158, 11'  // Amber
-    ];
-    const themeColor = colors[index % colors.length];
-
-    const particles = Array.from({ length: 30 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: (Math.random() - 0.5) * 0.5,
-      s: Math.random() * 1.5 + 0.5,
-      c: themeColor
-    }));
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      mouseX = e.clientX - rect.left;
-      mouseY = e.clientY - rect.top;
-    };
-    
-    const handleMouseLeave = () => {
-      mouseX = -1000;
-      mouseY = -1000;
-    };
-
-    const parent = canvas.parentElement;
-    if (parent) {
-      parent.addEventListener('mousemove', handleMouseMove);
-      parent.addEventListener('mouseleave', handleMouseLeave);
-    }
-
-    const render = () => {
-      if (!isVisible) {
-        raf = requestAnimationFrame(render);
-        return;
-      }
-
-      ctx.clearRect(0, 0, w, h);
-      
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        
-        if (p.x < 0 || p.x > w) p.vx *= -1;
-        if (p.y < 0 || p.y > h) p.vy *= -1;
-
-        let drawX = p.x;
-        let drawY = p.y;
-        
-        // Agent skill interaction: mild repel/attract to mouse
-        if (mouseX !== -1000) {
-          const dx = mouseX - p.x;
-          const dy = mouseY - p.y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < 120) {
-            const angle = Math.atan2(dy, dx);
-            const force = (120 - dist) / 120;
-            drawX -= Math.cos(angle) * force * 15;
-            drawY -= Math.sin(angle) * force * 15;
-          }
-        }
-
-        ctx.beginPath();
-        ctx.arc(drawX, drawY, p.s, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${p.c}, 0.6)`;
-        ctx.fill();
-
-        // Connect nearby particles to form neural/agent web
-        for (let j = i + 1; j < particles.length; j++) {
-          const p2 = particles[j];
-          let d2X = p2.x;
-          let d2Y = p2.y;
-          
-          if (mouseX !== -1000) {
-            const dx2 = mouseX - p2.x;
-            const dy2 = mouseY - p2.y;
-            const dist2 = Math.sqrt(dx2*dx2 + dy2*dy2);
-            if (dist2 < 120) {
-              const angle2 = Math.atan2(dy2, dx2);
-              const force2 = (120 - dist2) / 120;
-              d2X -= Math.cos(angle2) * force2 * 15;
-              d2Y -= Math.sin(angle2) * force2 * 15;
-            }
-          }
-
-          const cdx = drawX - d2X;
-          const cdy = drawY - d2Y;
-          const cdist = Math.sqrt(cdx*cdx + cdy*cdy);
-          if (cdist < 80) {
-            ctx.beginPath();
-            ctx.moveTo(drawX, drawY);
-            ctx.lineTo(d2X, d2Y);
-            ctx.strokeStyle = `rgba(${p.c}, ${0.2 * (1 - cdist/80)})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
-        }
-      }
-      raf = requestAnimationFrame(render);
-    };
-    render();
-
-    window.addEventListener('resize', resize);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', resize);
-      observer.disconnect();
-      if (parent) {
-        parent.removeEventListener('mousemove', handleMouseMove);
-        parent.removeEventListener('mouseleave', handleMouseLeave);
-      }
-    };
-  }, [index, isMobile]);
-
-  if (isMobile) return null; // Don't even render the canvas element on mobile
-
+/* ─────────────────────── Lightweight CSS Bento Aura Background ─────────────────────── */
+const CardAuraBackground = ({ index }: { index: number }) => {
+  const theme = SERVICE_THEMES[index % SERVICE_THEMES.length];
   return (
-    <canvas 
-      ref={canvasRef} 
-      className="absolute inset-0 w-full h-full pointer-events-none rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-0" 
-    />
+    <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl lg:rounded-[1.6rem] select-none z-0">
+      {/* Ambient corner aura */}
+      <div 
+        className="absolute -top-12 -right-12 w-32 h-32 rounded-full blur-2xl opacity-0 group-hover:opacity-30 transition-opacity duration-500 pointer-events-none"
+        style={{ background: theme.accent }}
+      />
+      {/* Subtle micro dot grid */}
+      <div
+        className="absolute inset-0 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-500"
+        style={{
+          backgroundImage: `radial-gradient(${theme.accent} 1.5px, transparent 1.5px)`,
+          backgroundSize: '16px 16px',
+        }}
+      />
+    </div>
   );
 };
 
@@ -832,7 +683,7 @@ function MobileServiceMarqueeCard({
         <div className={`flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md border shadow-2xs mt-0.5 ${theme.bg} ${theme.border} ${theme.icon}`}>
           <Icon size={13} className="sm:w-3.5 sm:h-3.5" strokeWidth={2.2} />
         </div>
-        <h4 
+        <h3 
           className={`text-[13px] sm:text-[14px] leading-snug font-bold bg-clip-text text-transparent bg-gradient-to-r ${theme.text}`}
           style={{ 
             fontFamily: 'var(--font-display)',
@@ -841,7 +692,7 @@ function MobileServiceMarqueeCard({
           }}
         >
           {item.title}
-        </h4>
+        </h3>
       </div>
 
       {/* Body: Full Description + Compact Visual */}
@@ -908,15 +759,15 @@ function BentoCard({
       transition={{ delay: index * 0.08, duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className={`group relative overflow-hidden rounded-2xl lg:rounded-[1.6rem] bg-white/95 backdrop-blur-2xl border-2 border-[#d8d3c7] ${SERVICE_THEMES[index % SERVICE_THEMES.length].hoverBg} p-4 sm:p-4.5 md:p-4.5 lg:p-5 md:min-h-[170px] lg:min-h-[185px] flex flex-col justify-between cursor-default shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_16px_45px_-12px_rgba(0,0,0,0.08)]`}
+      className={`group relative overflow-hidden rounded-2xl lg:rounded-[1.6rem] bg-white/95 backdrop-blur-2xl border-2 border-[#d8d3c7] ${SERVICE_THEMES[index % SERVICE_THEMES.length].hoverBg} p-4 sm:p-4.5 md:p-5 md:min-h-[180px] lg:min-h-[195px] flex flex-col justify-between cursor-default shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_16px_45px_-12px_rgba(0,0,0,0.08)]`}
       style={{ 
         transition: 'transform 0.15s ease-out, border-color 0.4s, box-shadow 0.4s', 
         willChange: 'transform',
         '--card-glow': SERVICE_THEMES[index % SERVICE_THEMES.length].glow
       } as any}
     >
-      {/* HTML Canvas Agent Skills Background */}
-      <CardCanvasBackground index={index} />
+      {/* Lightweight CSS Bento Aura Background */}
+      <CardAuraBackground index={index} />
 
       {/* Shine overlay — follows cursor */}
       <div className="card-shine absolute inset-0 pointer-events-none z-20 rounded-2xl lg:rounded-[1.6rem]" style={{ transition: 'background 0.15s ease-out' }} />

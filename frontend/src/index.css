@@ -1129,6 +1129,17 @@ html.low-perf .gentle-animation {
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
+/* ─── Apple Liquid Glass Subtitle Tags (Dark Hero only) ─── */
+#hero .word-card-white,
+#home .word-card-white {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 8px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 .word-card-green {
   display: inline-block;
   padding: 0 0.4rem;
@@ -1143,6 +1154,16 @@ html.low-perf .gentle-animation {
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
+#hero .word-card-green,
+#home .word-card-green {
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.26);
+  color: #6ee7b7 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 8px rgba(52, 211, 153, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 .word-card-gold {
   display: inline-block;
   padding: 0 0.4rem;
@@ -1155,6 +1176,41 @@ html.low-perf .gentle-animation {
   font-size: 0.9em;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 4px rgba(245, 158, 11, 0.05);
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+#hero .word-card-gold,
+#home .word-card-gold {
+  background: rgba(129, 140, 248, 0.12);
+  border: 1px solid rgba(129, 140, 248, 0.26);
+  color: #c7d2fe !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 8px rgba(99, 102, 241, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Explicit high-contrast tags for light sections (Services, Why Us, etc.) */
+#services .word-card-white,
+main .word-card-white {
+  background: rgba(241, 245, 249, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  color: #0f172a !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+#services .word-card-green,
+main .word-card-green {
+  background: rgba(220, 252, 231, 0.85);
+  border: 1px solid rgba(134, 239, 172, 0.7);
+  color: #14532d !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+#services .word-card-gold,
+main .word-card-gold {
+  background: rgba(254, 243, 199, 0.85);
+  border: 1px solid rgba(252, 211, 77, 0.7);
+  color: #78350f !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .word-card-white:hover,
@@ -1381,6 +1437,67 @@ body[data-orbit-lightbox="open"] [data-orbit-navbar-wrapper] {
   visibility: hidden !important;
   transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease !important;
 }
+
+/* ══════════════════════════════════════════════════════════
+   INTELLIGENT LOW-POWER DEVICE OPTIMIZATIONS
+   Adaptive performance adjustments for low RAM, low CPU mobile
+   phones, budget Chromebooks, and older dual-core laptops
+   ══════════════════════════════════════════════════════════ */
+
+/* Low-end tier GPU & CPU optimizations */
+html[data-perf-tier="low"],
+html.low-perf-device {
+  text-rendering: optimizeSpeed;
+}
+
+html[data-perf-tier="low"] .hero-blob,
+html.low-perf-device .hero-blob {
+  animation: none !important;
+  filter: blur(35px) !important;
+  will-change: auto !important;
+  transform: none !important;
+  opacity: 0.12 !important;
+}
+
+@media (max-width: 768px) {
+  .hero-blob {
+    animation: none !important;
+    filter: blur(35px) !important;
+    will-change: auto !important;
+    transform: none !important;
+    opacity: 0.12 !important;
+  }
+}
+
+html[data-perf-tier="low"] .floating-particle,
+html.low-perf-device .floating-particle {
+  display: none !important;
+  animation: none !important;
+}
+
+@media (max-width: 768px) {
+  .floating-particle {
+    display: none !important;
+    animation: none !important;
+  }
+}
+
+/* 3. Reduce expensive backdrop-filter calculations on low-spec hardware */
+html[data-perf-tier="low"] [class*="backdrop-blur"],
+html.low-perf-device [class*="backdrop-blur"] {
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+/* 4. Ensure non-composited property transitions are avoided */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 
 
 

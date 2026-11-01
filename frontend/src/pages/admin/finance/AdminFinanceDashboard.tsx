@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,8 +6,8 @@ import { Plus, Wallet, ArrowRight, Layers, Clock, RefreshCw, ChevronDown, Calend
 import { useNavigate } from 'react-router-dom';
 
 import DashboardStatCards from './DashboardStatCards';
-import CorporateCharts from './CorporateCharts';
-import ExpensePieChart from './ExpensePieChart';
+const CorporateCharts = lazy(() => import('./CorporateCharts'));
+const ExpensePieChart = lazy(() => import('./ExpensePieChart'));
 import RecentMutations from './RecentMutations';
 import SavingsGoalsWidget from './SavingsGoalsWidget';
 import { FinanceThemeProvider, useFinanceTheme } from './FinanceThemeContext';
@@ -660,15 +660,19 @@ function FinanceDashboardContent() {
                         />
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                            <CorporateCharts monthlyData={currentStats.monthlyData} />
-                            <ExpensePieChart
-                                categoryBreakdown={currentStats.categoryBreakdown}
-                                totalExpense={currentStats.monthExpense}
-                                allTimeBreakdown={currentStats.allTimeCategoryBreakdown}
-                                allTimeExpense={currentStats.totalExpense}
-                                periodLabel={periodLabel}
-                                onSelectAllTime={() => setPeriodMode('all_time')}
-                            />
+                            <Suspense fallback={<div className="h-64 rounded-2xl border border-white/10 flex items-center justify-center text-xs text-muted-foreground">Loading charts...</div>}>
+                                <CorporateCharts monthlyData={currentStats.monthlyData} />
+                            </Suspense>
+                            <Suspense fallback={<div className="h-64 rounded-2xl border border-white/10 flex items-center justify-center text-xs text-muted-foreground">Loading breakdown...</div>}>
+                                <ExpensePieChart
+                                    categoryBreakdown={currentStats.categoryBreakdown}
+                                    totalExpense={currentStats.monthExpense}
+                                    allTimeBreakdown={currentStats.allTimeCategoryBreakdown}
+                                    allTimeExpense={currentStats.totalExpense}
+                                    periodLabel={periodLabel}
+                                    onSelectAllTime={() => setPeriodMode('all_time')}
+                                />
+                            </Suspense>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

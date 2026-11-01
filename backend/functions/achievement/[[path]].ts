@@ -134,8 +134,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const title = item ? `${item.title} | ORBIT SaaS Achievements` : 'Achievement | ORBIT SaaS';
     const desc = stripHtml(item?.desc || item?.description || item?.tagline || 'Team ORBIT SaaS hackathon victory, milestone, and recognition in technology and innovation.').substring(0, 160);
     
-    // Prioritize shareImage (poster with top-right logo), then thumbnail/image, then fallback
-    const rawImage = item?.shareImage || item?.sharePoster || item?.ogImage || item?.image || item?.thumbnail || item?.images?.[0];
+    // Prioritize seoCover / shareImage (poster with top-right logo), then thumbnail/image, then fallback
+    const rawImage = item?.seoCover || item?.shareImage || item?.sharePoster || item?.ogImage || item?.image || item?.thumbnail || item?.images?.[0];
     const ogImageUrl = extractImageUrl(rawImage) || FALLBACK_OG;
     const canonicalUrl = `${SITE_URL}/achievement/${slug}`;
 
@@ -161,6 +161,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 <meta name="description" content="${escapeHtml(desc)}">
 <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
 <link rel="icon" type="image/png" href="${SITE_URL}/favicon.png">
+<meta name="robots" content="index, follow, max-image-preview:large">
 
 <!-- Open Graph / Facebook / WhatsApp -->
 <meta property="og:type" content="article">
@@ -169,8 +170,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 <meta property="og:description" content="${escapeHtml(desc)}">
 <meta property="og:image" content="${escapeHtml(ogImageUrl)}">
 <meta property="og:image:secure_url" content="${escapeHtml(ogImageUrl)}">
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${escapeHtml(title)}">
 <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
 
 <!-- Twitter / X -->

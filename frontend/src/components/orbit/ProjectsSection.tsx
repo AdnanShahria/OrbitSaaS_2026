@@ -101,6 +101,8 @@ function CinematicCard({ item, i, routeId }: { item: ProjectItem; i: number; rou
                             <ImageWithSkeleton
                                 src={currentImage}
                                 alt={item.title}
+                                width={640}
+                                height={360}
                                 showSkeleton={activeIndex === -1}
                                 className="w-full h-full object-cover no-browser-trigger"
                             />

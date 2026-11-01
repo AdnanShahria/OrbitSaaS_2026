@@ -71,7 +71,7 @@ export function ContactSection() {
   const activeSocials = socials.filter((s: any) => s.enabled && s.url);
  
   const whatsappNumber = footerData.phone || t?.whatsapp || '+8801853452264';
-  const emailAddress = footerData.email || t?.email || 'contact@orbitsaas.com';
+  const emailAddress = footerData.email || t?.email || 'contact@orbitsaas.cloud';
   const whatsappLink = `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}`;
 
   return (

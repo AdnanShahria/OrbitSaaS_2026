@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, createContext, useContext, useCallback, useRef } from 'react';
+import { lazy, Suspense, useEffect, useState, createContext, useContext, useCallback, useRef, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ContentProvider } from './contexts/ContentContext';
@@ -43,6 +43,37 @@ const lazyWithRetry = <T extends React.ComponentType<any>>(
   });
 };
 
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class SectionErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("[SectionErrorBoundary] Caught section render error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || null;
+    }
+    return this.props.children;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════
    APP ORCHESTRATION — Coordinates sequential reveal:
    Phase 0: Nothing visible (preloader)
@@ -74,6 +105,15 @@ function OrchestrationProvider({ children }: { children: React.ReactNode }) {
   // Mark ready once content has loaded at least once (fallback translations are always available)
   if (!loading) hasBeenReady.current = true;
   const isReady = hasBeenReady.current || !loading;
+
+  // Failsafe: Never allow the app to be stuck on a blank/black screen
+  // If network queries are slow or lagging, advance to phase 1 within 60ms using local translations
+  useEffect(() => {
+    const fallbackTimer = setTimeout(() => {
+      setPhase(prev => (prev === 0 ? 1 : prev));
+    }, 60);
+    return () => clearTimeout(fallbackTimer);
+  }, []);
 
   // Kick off phase 1 once content is ready
   useEffect(() => {
@@ -217,11 +257,7 @@ function VisitorGateway({ children }: { children: React.ReactNode }) {
     const handleEnter = async () => {
       try {
         if ('Notification' in window && 'serviceWorker' in navigator && localStorage.getItem('orbit_push_subscribed') !== 'true') {
-          let permission = Notification.permission;
-          if (permission === 'default') {
-            permission = await Notification.requestPermission();
-          }
-
+          const permission = Notification.permission;
           if (permission === 'granted') {
             (async () => {
               try {
@@ -273,6 +309,12 @@ function PublicSite() {
   const location = useLocation();
 
   useEffect(() => {
+    // Skip visitor logging during local development to avoid unnecessary API requests
+    if (import.meta.env.DEV) return;
+
+    // Only log once per session to avoid duplicate calls on re-renders or navigation
+    if (sessionStorage.getItem('orbit_visitor_session_logged')) return;
+
     let sessionId = localStorage.getItem('orbit_visitor_session_id');
     if (!sessionId) {
       sessionId = typeof crypto !== 'undefined' && crypto.randomUUID
@@ -285,7 +327,11 @@ function PublicSite() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId })
-    }).catch(err => console.error("Visitor logging failed", err));
+    })
+      .then(() => {
+        sessionStorage.setItem('orbit_visitor_session_logged', 'true');
+      })
+      .catch(err => console.error("Visitor logging failed", err));
   }, []);
 
   useEffect(() => {
@@ -324,27 +370,22 @@ function PublicSite() {
     }
 
     if (targetId) {
-      // Use polling to wait until the Suspense component actually renders its children
+      // Use polling to wait until the target section mounts and renders
       let attempts = 0;
       const interval = setInterval(() => {
         const el = document.getElementById(targetId);
-        // Ensure the element has actually rendered the lazy-loaded content
-        if (el && el.children.length > 0 && el.offsetHeight > 50) {
-          // Check if all previous sections have loaded by looking for empty sibling divs
-          const previousEmptySections = Array.from(document.querySelectorAll('div.section-wrapper:empty'));
-          if (previousEmptySections.length === 0 || attempts > 20) {
-            const navOffset = 70;
-            const elementPosition = el.getBoundingClientRect().top;
-            const offsetPosition = elementPosition + window.pageYOffset - navOffset;
-            window.scrollTo({
-              top: Math.max(0, offsetPosition),
-              behavior: 'smooth'
-            });
-            clearInterval(interval);
-          }
+        if (el && el.offsetHeight > 50) {
+          const navOffset = 70;
+          const elementPosition = el.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - navOffset;
+          window.scrollTo({
+            top: Math.max(0, offsetPosition),
+            behavior: attempts === 0 ? 'auto' : 'smooth'
+          });
+          clearInterval(interval);
         }
         attempts++;
-        if (attempts > 100) clearInterval(interval); // Give up after 10 seconds
+        if (attempts > 60) clearInterval(interval); // Give up after 6 seconds
       }, 100);
 
       return () => clearInterval(interval);
@@ -360,19 +401,15 @@ function PublicSite() {
   }, [isLoaded]);
 
   return (
-    <div className="flex flex-col w-full min-h-screen">
-      <div id="hero" className="w-full !border-none section-wrapper"><Home /></div>
-      <div id="services" className="w-full !border-none section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ServicesSection /></Suspense></div>
-      {/* How We Transform Your Vision / ProcessSection kept in codebase but hidden from client build/render */}
-      {/* <div id="process" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ProcessSection /></Suspense></div> */}
-      {/* Our Expertise / TechStack kept in codebase but hidden from client build/render */}
-      {/* <div id="techstack" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><TechStackSection /></Suspense></div> */}
-      <div id="why-us" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><WhyUsSection /></Suspense></div>
-      <div id="projects" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ProjectsSection /></Suspense></div>
-      <div id="achievements" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><AchievementsSection /></Suspense></div>
-      <div id="reviews" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ReviewsSection /></Suspense></div>
-      <div id="leadership" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><LeadershipSection /></Suspense></div>
-      <div id="contact" className="w-full section-wrapper empty:min-h-[100dvh]"><Suspense fallback={null}><ContactSection /><div className="block md:hidden"><MobileFooter /></div><div className="hidden md:block"><OrbitFooter /></div></Suspense></div>
+    <main id="main-content" className="flex flex-col w-full min-h-screen bg-[#FDFBF7]">
+      <div className="w-full !border-none section-wrapper"><Home /></div>
+      <div className="w-full !border-none section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><ServicesSection /></Suspense></SectionErrorBoundary></div>
+      <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><WhyUsSection /></Suspense></SectionErrorBoundary></div>
+      <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><ProjectsSection /></Suspense></SectionErrorBoundary></div>
+      <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><AchievementsSection /></Suspense></SectionErrorBoundary></div>
+      <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><ReviewsSection /></Suspense></SectionErrorBoundary></div>
+      <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><LeadershipSection /></Suspense></SectionErrorBoundary></div>
+      <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><ContactSection /><div className="block md:hidden"><MobileFooter /></div><div className="hidden md:block"><OrbitFooter /></div></Suspense></SectionErrorBoundary></div>
 
       {isLoaded && (
         <Suspense fallback={null}>
@@ -384,7 +421,7 @@ function PublicSite() {
           <Chatbot />
         </Suspense>
       )}
-    </div>
+    </main>
   );
 }
 
@@ -392,7 +429,8 @@ function PublicSite() {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30000,
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
       retry: 1,
     },
   },

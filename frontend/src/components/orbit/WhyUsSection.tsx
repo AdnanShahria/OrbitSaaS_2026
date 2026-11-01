@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useContent } from '@/contexts/ContentContext';
 import { useLang } from '@/contexts/LanguageContext';
@@ -594,7 +594,7 @@ function WhyUsMarqueeCard({ item, index }: { item: any; index: number }) {
           <div className={`flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-md border shadow-2xs ${theme.bg} ${theme.border} ${theme.iconColor}`}>
             <Icon size={13} className="sm:w-3.5 sm:h-3.5" strokeWidth={2.2} />
           </div>
-          <h4 
+          <h3 
             className={`text-[13px] sm:text-[14.5px] leading-snug font-bold bg-clip-text text-transparent bg-gradient-to-r ${theme.text} truncate`}
             style={{ 
               fontFamily: 'var(--font-display)',
@@ -603,9 +603,9 @@ function WhyUsMarqueeCard({ item, index }: { item: any; index: number }) {
             }}
           >
             {item.title}
-          </h4>
+          </h3>
         </div>
-        <span className="text-[10px] font-mono font-bold text-zinc-400 px-1.5 py-0.2 rounded-full bg-zinc-100 border border-zinc-200/70 shrink-0">
+        <span className="text-[10px] font-mono font-bold text-zinc-600 px-1.5 py-0.2 rounded-full bg-zinc-100 border border-zinc-200/80 shrink-0">
           0{index + 1}
         </span>
       </div>
@@ -658,7 +658,7 @@ function WhyUsGrid2x2Card({ item, index }: { item: any; index: number }) {
           <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border shadow-2xs ${theme.bg} ${theme.border} ${theme.iconColor}`}>
             <Icon size={12} strokeWidth={2.2} />
           </div>
-          <h4 
+          <h3 
             className={`text-[11.5px] sm:text-[13px] leading-tight font-bold bg-clip-text text-transparent bg-gradient-to-r ${theme.text} truncate`}
             style={{ 
               fontFamily: 'var(--font-display)',
@@ -667,9 +667,9 @@ function WhyUsGrid2x2Card({ item, index }: { item: any; index: number }) {
             }}
           >
             {item.title}
-          </h4>
+          </h3>
         </div>
-        <span className="text-[9px] font-mono font-bold text-zinc-400 px-1 py-0.2 rounded bg-zinc-100 border border-zinc-200 shrink-0">
+        <span className="text-[9px] font-mono font-bold text-zinc-600 px-1 py-0.2 rounded bg-zinc-100 border border-zinc-200/80 shrink-0">
           0{index + 1}
         </span>
       </div>
@@ -703,7 +703,26 @@ export function WhyUsSection() {
   const { lang } = useLang();
   
   // Layout toggle: 'marquee' (smooth infinite carousel) vs 'grid' (2x2 Bento grid)
-  const [layoutMode, setLayoutMode] = useState<'marquee' | 'grid'>('marquee');
+  // Default to 2x2 grid on mobile (< 768px), and marquee flow on desktop
+  const [layoutMode, setLayoutMode] = useState<'marquee' | 'grid'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'grid';
+    }
+    return 'marquee';
+  });
+
+  // Track if user explicitly clicked a mode selector to prevent automatic resize override
+  const userInteractedRef = useRef(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (!userInteractedRef.current) {
+        setLayoutMode(window.innerWidth < 768 ? 'grid' : 'marquee');
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const t = (content[lang] as any)?.whyUs;
   const items = t?.items || [];
@@ -773,7 +792,10 @@ export function WhyUsSection() {
           >
             <button
               type="button"
-              onClick={() => setLayoutMode('marquee')}
+              onClick={() => {
+                userInteractedRef.current = true;
+                setLayoutMode('marquee');
+              }}
               className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold transition-all duration-300 ${
                 layoutMode === 'marquee'
                   ? 'bg-white text-zinc-950 shadow-xs border border-zinc-200/60'
@@ -786,7 +808,10 @@ export function WhyUsSection() {
 
             <button
               type="button"
-              onClick={() => setLayoutMode('grid')}
+              onClick={() => {
+                userInteractedRef.current = true;
+                setLayoutMode('grid');
+              }}
               className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold transition-all duration-300 ${
                 layoutMode === 'grid'
                   ? 'bg-white text-zinc-950 shadow-xs border border-zinc-200/60'
@@ -891,9 +916,9 @@ export function WhyUsSection() {
                 </div>
                 
                 <div className="space-y-0.5 min-w-0 w-full">
-                  <h4 className="text-[10px] sm:text-[11.5px] md:text-[13px] font-bold text-zinc-900 tracking-tight truncate sm:whitespace-normal">
+                  <h3 className="text-[10px] sm:text-[11.5px] md:text-[13px] font-bold text-zinc-900 tracking-tight truncate sm:whitespace-normal">
                     {benefit.title}
-                  </h4>
+                  </h3>
                   <p className="text-[8px] sm:text-[10px] md:text-xs text-zinc-500 leading-tight sm:leading-relaxed line-clamp-2 sm:line-clamp-3">
                     {benefit.desc || benefit.description}
                   </p>

@@ -46,6 +46,8 @@ function CompactAchievementCard({ item, i, lang }: { item: AchievementItem; i: n
                         <ImageWithSkeleton
                             src={coverImage}
                             alt={item.title}
+                            width={640}
+                            height={400}
                             className="w-full h-full object-cover no-browser-trigger"
                         />
                     </motion.div>

@@ -9,9 +9,19 @@ interface ImageWithSkeletonProps {
     className?: string;
     showSkeleton?: boolean;
     priority?: boolean;
+    width?: number | string;
+    height?: number | string;
 }
 
-export function ImageWithSkeleton({ src, alt, className, showSkeleton = true, priority = false }: ImageWithSkeletonProps) {
+export function ImageWithSkeleton({ 
+    src, 
+    alt, 
+    className, 
+    showSkeleton = true, 
+    priority = false,
+    width,
+    height
+}: ImageWithSkeletonProps) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
@@ -147,6 +157,8 @@ export function ImageWithSkeleton({ src, alt, className, showSkeleton = true, pr
                     ref={imgRef}
                     src={currentSrc}
                     alt={alt}
+                    width={width}
+                    height={height}
                     onLoad={() => setIsLoaded(true)}
                     onError={handleImageError}
                     loading={priority ? 'eager' : 'lazy'}

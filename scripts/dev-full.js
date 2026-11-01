@@ -25,7 +25,12 @@ const c = {
 };
 
 // Clears the current line completely and resets cursor to column 1
-const CLEAR_LINE = '\x1b[2K\r';
+function clearLine() {
+    if (process.stdout.isTTY) {
+        readline.cursorTo(process.stdout, 0);
+        readline.clearLine(process.stdout, 0);
+    }
+}
 
 // ── Branding ─────────────────────────────────────────────────────────
 function printLogo() {
@@ -91,8 +96,11 @@ function getStatusLine() {
 const spinnerInterval = setInterval(() => {
     if (frontendReady && backendReady) return;
     frame++;
-    process.stdout.write(`${CLEAR_LINE}${getStatusLine()}`);
-}, 100);
+    if (process.stdout.isTTY) {
+        clearLine();
+        process.stdout.write(getStatusLine());
+    }
+}, 150);
 
 // ── API Tracking Dashboard ───────────────────────────────────────────
 let apiCallsHistory = [];
@@ -105,7 +113,7 @@ function trackApiCall() {
 }
 
 function renderDashboard() {
-    if (!frontendReady || !backendReady) return;
+    if (!frontendReady || !backendReady || !process.stdout.isTTY) return;
     
     const now = Date.now();
     apiCallsHistory = apiCallsHistory.filter(time => now - time < 60000);
@@ -115,34 +123,34 @@ function renderDashboard() {
     if (rate === 0) status = `${c.dim}Idle${c.reset}`;
     else if (rate <= 15) status = `${c.green}Optimal${c.reset}`;
     else if (rate <= 30) status = `${c.yellow}Elevated${c.reset}`;
-    else status = `${c.red}${c.bold}Spamming!${c.reset}`;
+    else status = `${c.red}${c.bold}High Traffic${c.reset}`;
 
-    const dashSpinner = dots[frame % dots.length];
-    const isRecent = (now - lastApiCallTime) < 500;
+    const isRecent = (now - lastApiCallTime) < 1000;
     const spark = isRecent ? `${c.cyan}${c.bold}⚡${c.reset}` : `${c.dim}⚡${c.reset}`;
     
-    // Construct the visible text first to measure its length
-    const plainText = `  *  *  API Calls (60s): ${rate}  │  Status: ` + status.replace(/\x1b\[\d+m/g, '');
-    let output = `  ${c.magenta}${dashSpinner}${c.reset}  ${spark}  ${c.white}API Calls (60s): ${c.bold}${rate}${c.reset}  ${c.dim}│${c.reset}  ${c.white}Status: ${status}`;
+    const output = `  ${spark}  ${c.white}API Calls (60s): ${c.bold}${rate}${c.reset}  ${c.dim}│${c.reset}  ${c.white}Status: ${status}`;
     
-    // If the terminal is too narrow, just show API calls
-    if (process.stdout.columns && plainText.length > process.stdout.columns) {
-        output = `  ${c.magenta}${dashSpinner}${c.reset}  ${spark}  ${c.white}APIs/min: ${c.bold}${rate}${c.reset}`;
-    }
-    
-    process.stdout.write(`${CLEAR_LINE}${output}`);
+    clearLine();
+    process.stdout.write(output);
 }
 
 function printLog(tag, line) {
-    process.stdout.write(`${CLEAR_LINE}  ${tag} ${c.dim}${line}${c.reset}\n`);
-    renderDashboard();
+    if (process.stdout.isTTY) {
+        clearLine();
+    }
+    console.log(`  ${tag} ${c.dim}${line}${c.reset}`);
+    if (process.stdout.isTTY) {
+        renderDashboard();
+    }
 }
 
 // ── Ready banner ─────────────────────────────────────────────────────
 function showReadyBanner() {
     if (!frontendReady || !backendReady) return;
     clearInterval(spinnerInterval);
-    process.stdout.write(CLEAR_LINE);
+    if (process.stdout.isTTY) {
+        clearLine();
+    }
 
     console.log();
     console.log(`  ${c.green}${c.bold}┌──────────────────────────────────────────┐${c.reset}`);
@@ -155,10 +163,13 @@ function showReadyBanner() {
     console.log(`  ${c.green}${c.bold}└──────────────────────────────────────────┘${c.reset}`);
     console.log();
 
-    dashboardInterval = setInterval(() => {
-        frame++;
-        renderDashboard();
-    }, 100);
+    renderDashboard();
+
+    if (process.stdout.isTTY) {
+        dashboardInterval = setInterval(() => {
+            renderDashboard();
+        }, 1000);
+    }
 }
 
 // ── Stream child output ──────────────────────────────────────────────
@@ -186,8 +197,8 @@ function handleOutput(stream, label, color, isStderr = false) {
             line.includes('Invalid key: Expected never')
         )) return;
 
-        // Detect API calls
-        if (label === 'Backend' && line.match(/api/i)) {
+        // Detect HTTP API calls
+        if (label === 'Backend' && line.match(/(GET|POST|PUT|PATCH|DELETE)\s+\/api\//i)) {
             trackApiCall();
         }
 
@@ -221,7 +232,7 @@ function shutdown(reason) {
 
     clearInterval(spinnerInterval);
     if (dashboardInterval) clearInterval(dashboardInterval);
-    process.stdout.write(CLEAR_LINE);
+    if (process.stdout.isTTY) clearLine();
 
     if (reason) {
         console.log(`\n  ${c.red}${c.bold}✖  ${reason}${c.reset}`);

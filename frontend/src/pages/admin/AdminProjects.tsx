@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionHeader, SaveButton, TextField, ErrorAlert, ItemListEditor, LangToggle, JsonPanel, ToggleField } from '@/components/admin/EditorComponents';
-import { Upload, Trash2, X, Plus, Layers, Settings2, ChevronDown, HelpCircle, Search, GripVertical, Link2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Upload, Trash2, X, Plus, Layers, Settings2, ChevronDown, HelpCircle, Search, GripVertical, Link2, ArrowUp, ArrowDown, Sparkles, ExternalLink } from 'lucide-react';
 import { RichTextEditor } from '@/components/admin/RichTextEditor';
 import { useContent } from '@/contexts/ContentContext';
 import { uploadImage } from '@/lib/imageUpload';
@@ -215,6 +215,7 @@ interface UnifiedProject {
     order: number; // Display order on homepage
     images: string[];
     shareImage?: string; // Branded social share poster with top-right logo
+    seoCover?: string; // Explicit SEO / Social banner cover alias
     hoverImages: number[]; // Indices into images[] to show on hover
     link: string;
     categories: string[];
@@ -240,6 +241,7 @@ const DEFAULT_PROJECT: UnifiedProject = {
     order: 0,
     images: [],
     shareImage: '',
+    seoCover: '',
     hoverImages: [],
     link: '',
     categories: ['SaaS'],
@@ -410,7 +412,7 @@ function ProjectEditor({ item, update, categories: availableCategories, onSave }
                                         });
                                         const uploaded = await uploadImage(posterFile, 'projects', true);
                                         const shareUrl = typeof uploaded === 'object' ? (uploaded as any).primary : uploaded;
-                                        update({ ...item, images: imgs, hoverImages: validHover, shareImage: shareUrl });
+                                        update({ ...item, images: imgs, hoverImages: validHover, shareImage: shareUrl, seoCover: shareUrl });
                                         toast.success('Branded share poster generated!', { id: toastId });
                                     } catch (err) {
                                         console.warn('Share poster generation warning:', err);
@@ -473,6 +475,81 @@ function ProjectEditor({ item, update, categories: availableCategories, onSave }
                                 )}
                             </div>
                         )}
+                    </div>
+                )}
+            </div>
+
+            {/* Branded Social Share & SEO Banner (1200x630) */}
+            <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-foreground">🖼️ Branded Social & SEO Share Banner (1200×630)</span>
+                            {(item.seoCover || item.shareImage) ? (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                                    ✓ Active Cover
+                                </span>
+                            ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30">
+                                    ⚠️ Missing Cover
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                            Renders on WhatsApp, LinkedIn, Twitter, and search engine link previews with top-right ORBIT SaaS logo.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            const cover = item.images?.[0] || item.image;
+                            if (!cover) {
+                                toast.error('Please add or upload a project cover image first.');
+                                return;
+                            }
+                            const toastId = toast.loading('Generating 1200×630 branded SEO cover...');
+                            try {
+                                const posterFile = await generateSharePoster(cover, {
+                                    type: 'project',
+                                    title: item.en?.title || item.bn?.title || item.id,
+                                });
+                                const uploaded = await uploadImage(posterFile, 'projects', true);
+                                const url = typeof uploaded === 'object' ? (uploaded as any).primary : uploaded;
+                                update({ ...item, shareImage: url, seoCover: url });
+                                toast.success('Branded SEO share cover generated!', { id: toastId });
+                            } catch (e: any) {
+                                console.error(e);
+                                toast.error(e.message || 'Failed to generate SEO cover', { id: toastId });
+                            }
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary text-xs font-semibold border border-primary/30 transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                    >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        {(item.seoCover || item.shareImage) ? 'Regenerate SEO Cover' : 'Auto-Generate SEO Cover'}
+                    </button>
+                </div>
+
+                {(item.seoCover || item.shareImage) && (
+                    <div className="relative rounded-lg overflow-hidden border border-border/80 bg-black/40 aspect-[1200/630] max-w-sm group">
+                        <img
+                            src={getImageUrl(item.seoCover || item.shareImage)}
+                            alt="Social Share Banner"
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <a
+                                href={getImageUrl(item.seoCover || item.shareImage)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 rounded-md bg-white/20 hover:bg-white/30 text-white text-xs font-medium flex items-center gap-1"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5" /> View Full Poster
+                            </a>
+                        </div>
+                        <div className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] text-white/90 font-mono">
+                            1200 × 630 • Social Link Preview
+                        </div>
                     </div>
                 )}
             </div>
@@ -1114,7 +1191,8 @@ export default function AdminProjects() {
                 id: enItem.id || bnItem.id || '',
                 order: enItem.order ?? bnItem.order ?? i,
                 images: sharedImages,
-                shareImage: enItem.shareImage || bnItem.shareImage || '',
+                shareImage: enItem.shareImage || bnItem.shareImage || enItem.seoCover || bnItem.seoCover || '',
+                seoCover: enItem.seoCover || bnItem.seoCover || enItem.shareImage || bnItem.shareImage || '',
                 hoverImages: enItem.hoverImages || bnItem.hoverImages || [],
                 link: enItem.link || bnItem.link || '',
                 categories: sharedCategories,
@@ -1158,7 +1236,8 @@ export default function AdminProjects() {
                 id: p.id,
                 order: p.order,
                 images: p.images,
-                shareImage: p.shareImage || p.images[0] || '',
+                shareImage: p.shareImage || p.seoCover || p.images[0] || '',
+                seoCover: p.seoCover || p.shareImage || p.images[0] || '',
                 hoverImages: p.hoverImages || [],
                 image: p.images[0] || '',
                 link: p.link,
@@ -1178,7 +1257,8 @@ export default function AdminProjects() {
                 id: p.id,
                 order: p.order,
                 images: p.images,
-                shareImage: p.shareImage || p.images[0] || '',
+                shareImage: p.shareImage || p.seoCover || p.images[0] || '',
+                seoCover: p.seoCover || p.shareImage || p.images[0] || '',
                 hoverImages: p.hoverImages || [],
                 image: p.images[0] || '',
                 link: p.link,
@@ -1479,7 +1559,8 @@ export default function AdminProjects() {
                                 id: p.id,
                                 order: p.order,
                                 images: p.images,
-                                shareImage: p.shareImage || p.images[0] || '',
+                                shareImage: p.shareImage || p.seoCover || p.images[0] || '',
+                                seoCover: p.seoCover || p.shareImage || p.images[0] || '',
                                 hoverImages: p.hoverImages,
                                 link: p.link,
                                 categories: p.categories,
@@ -1502,7 +1583,8 @@ export default function AdminProjects() {
                                 id: p.id,
                                 order: p.order,
                                 images: p.images,
-                                shareImage: p.shareImage || p.images[0] || '',
+                                shareImage: p.shareImage || p.seoCover || p.images[0] || '',
+                                seoCover: p.seoCover || p.shareImage || p.images[0] || '',
                                 hoverImages: p.hoverImages,
                                 link: p.link,
                                 categories: p.categories,
@@ -1544,7 +1626,8 @@ export default function AdminProjects() {
                                 id: en.id || bn.id || '',
                                 order: en.order ?? bn.order ?? i,
                                 images: en.images || bn.images || [],
-                                shareImage: en.shareImage || bn.shareImage || '',
+                                shareImage: en.shareImage || bn.shareImage || en.seoCover || bn.seoCover || '',
+                                seoCover: en.seoCover || bn.seoCover || en.shareImage || bn.shareImage || '',
                                 hoverImages: en.hoverImages || bn.hoverImages || [],
                                 link: en.link || bn.link || '',
                                 categories: Array.isArray(importCats) ? importCats : [importCats],

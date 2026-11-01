@@ -65,6 +65,18 @@ export function buildClientKnowledgeBase(activeContent: any, chatLang: Lang): { 
     knowledgeBase += "\n";
   }
 
+  const contactEmail = (activeContent.hero as any)?.contactEmail || (activeContent.footer as any)?.email || 'contact@orbitsaas.cloud';
+  const rawWhatsapp = (activeContent.contact as any)?.whatsapp || (activeContent.footer as any)?.phone || (activeContent.hero as any)?.whatsappNumber || '+8801853452264';
+  const cleanWhatsapp = rawWhatsapp.replace(/[^0-9]/g, '');
+  const whatsappDisplay = rawWhatsapp.startsWith('+') ? rawWhatsapp : `+${rawWhatsapp}`;
+  const location = (activeContent.footer as any)?.location || 'Rajshahi, Bangladesh';
+
+  knowledgeBase += "OFFICIAL CONTACT DETAILS (STRICT TRUTH - NEVER INVENT OTHER NUMBERS/EMAILS):\n";
+  knowledgeBase += `- Official Email: ${contactEmail}\n`;
+  knowledgeBase += `- WhatsApp / Direct Phone: ${whatsappDisplay} (https://wa.me/${cleanWhatsapp})\n`;
+  knowledgeBase += `- Contact & Free Quote Form: ${siteBaseUrl}/#contact\n`;
+  knowledgeBase += `- Location: ${location}\n\n`;
+
   knowledgeBase += `CORE LINKS: Home: ${siteBaseUrl}, Projects: ${siteBaseUrl}/project, Contact: ${siteBaseUrl}/#contact\n\n`;
 
   const qaContext = (activeT.chatbot.qaPairs || [])
@@ -94,7 +106,12 @@ CORE BEHAVIOR:
 3. Discovery: Gradually understand project type, business goal, target audience, features, design style, timeline, budget, and support needs.
 4. Trust Building: Use concrete facts only. Mention project-based pricing, milestone payments (25/50/75/100), source code handover, deployment instructions, documentation, and support when relevant. Avoid vague marketing claims.
 5. Conversion: Every meaningful reply should naturally move the conversation forward.
-6. Contact Info: Ask for email or phone only after providing value, estimation, consultation, or proposal context. Never ask too early.
+6. Contact Info: When the user asks how to contact ORBIT or wants to get in touch, ALWAYS provide our official contact channels directly:
+   - Email: contact@orbitsaas.cloud
+   - WhatsApp / Direct Phone: +8801853452264 (Direct Chat: https://wa.me/8801853452264)
+   - Booking & Free Quote Form: https://orbitsaas.cloud/#contact
+   - Office: Rajshahi, Bangladesh
+   CRITICAL: NEVER hallucinate, invent, or guess any fake phone numbers or email addresses! Only provide the verified channels above.
 
 PRICING:
 We use project-based pricing, not hourly billing.
@@ -181,7 +198,12 @@ ORBIT SaaS একটি বাংলাদেশভিত্তিক সফট�
 3. ধাপে ধাপে জানুন: Project Type, Business Goal, Target Audience, Features, Design Style, Timeline, Budget এবং Support Requirement স্বাভাবিকভাবে বুঝে নিন।
 4. বিশ্বাস তৈরি করুন: শুধু বাস্তব তথ্য ব্যবহার করুন। প্রয়োজনে Project-based pricing, 25/50/75/100 milestone payment, Source Code Handover, Documentation, Deployment Support ইত্যাদি উল্লেখ করুন। ফাঁকা মার্কেটিং দাবি এড়িয়ে চলুন।
 5. কনভার্সন সচেতন থাকুন: প্রতিটি গুরুত্বপূর্ণ উত্তর এমনভাবে দিন যাতে কথোপকথন স্বাভাবিকভাবে পরবর্তী ধাপে এগোয়।
-6. Contact Information: আগে সাহায্য করুন, তারপর প্রয়োজন হলে ইমেইল বা ফোন নম্বর চাইুন। শুরুতেই চাইবেন না।
+6. Contact Information: ইউজার যোগাযোগ করতে চাইলে সরাসরি আমাদের অফিসিয়াল যোগাযোগের মাধ্যমগুলো দিন:
+   - ইমেইল: contact@orbitsaas.cloud
+   - হোয়াটসঅ্যাপ / সরাসরি ফোন: +8801853452264 (সরাসরি চ্যাট: https://wa.me/8801853452264)
+   - বুকিং ও ফ্রি কোট ফর্ম: https://orbitsaas.cloud/#contact
+   - অফিস: রাজশাহী, বাংলাদেশ
+   কখনও কোনো ভুয়া বা কাল্পনিক ফোন নম্বর অথবা ইমেইল বানিয়ে বলবেন না! শুধুমাত্র উপরের অফিসিয়াল তথ্যগুলোই দিন।
 
 প্রাইসিং:
 আমরা hourly billing করি না।

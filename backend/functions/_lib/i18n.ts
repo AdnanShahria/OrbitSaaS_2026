@@ -213,7 +213,7 @@ export const translations = {
       brandName: 'ORBIT SaaS',
       rights: '© 2025 ORBIT SaaS. All rights reserved.',
       tagline: 'Full-Service Software & AI Agency — Web, AI, Mobile & Beyond.',
-      email: 'contact@orbitsaas.com',
+      email: 'contact@orbitsaas.cloud',
       phone: '+8801853452264',
       location: 'Rajshahi, Bangladesh',
       mapLink: 'https://www.google.com/maps/search/?api=1&query=24.36545054786298,88.62639818383883',
@@ -233,7 +233,16 @@ export const translations = {
       placeholder: 'Ask about our services...',
       greeting: 'Hi! I\'m ORBIT\'s AI assistant. How can I help you today?',
       systemPrompt: '',
-      qaPairs: [] as { question: string; answer: string }[],
+      qaPairs: [
+        {
+          question: 'How can I contact ORBIT SaaS?',
+          answer: 'You can reach us directly via email at contact@orbitsaas.cloud, chat with us on WhatsApp at +8801853452264 (https://wa.me/8801853452264), or book an appointment at https://orbitsaas.cloud/#contact.'
+        },
+        {
+          question: 'What is your phone number or WhatsApp?',
+          answer: 'Our official WhatsApp and phone line is +8801853452264 (https://wa.me/8801853452264).'
+        }
+      ] as { question: string; answer: string }[],
     },
     process: {
       subtitle: 'Our Methodology',
@@ -456,7 +465,7 @@ export const translations = {
       brandName: 'ORBIT SaaS',
       rights: '© ২০২৬ অরবিট সাস (ORBIT SaaS)। সকল অধিকার সংরক্ষিত।',
       tagline: 'ফুল-সার্ভিস সফটওয়্যার ও এআই এজেন্সি — ওয়েব, এআই, মোবাইল অ্যাপস এবং আরও অনেক কিছু।',
-      email: 'contact@orbitsaas.com',
+      email: 'contact@orbitsaas.cloud',
       phone: '+8801853452264',
       location: 'রাজশাহী, বাংলাদেশ',
       mapLink: 'https://www.google.com/maps/search/?api=1&query=24.36545054786298,88.62639818383883',
@@ -476,7 +485,16 @@ export const translations = {
       placeholder: 'আমাদের সেবাসমূহ সম্পর্কে জিজ্ঞাসা করুন...',
       greeting: 'হ্যালো! আমি অরবিটের এআই অ্যাসিস্ট্যান্ট। আমি আপনাকে কীভাবে সাহায্য করতে পারি?',
       systemPrompt: '',
-      qaPairs: [] as { question: string; answer: string }[],
+      qaPairs: [
+        {
+          question: 'আমি কীভাবে ORBIT SaaS-এর সাথে যোগাযোগ করতে পারি?',
+          answer: 'আপনি সরাসরি contact@orbitsaas.cloud-এ ইমেইল করতে পারেন, হোয়াটসঅ্যাপে +8801853452264 (https://wa.me/8801853452264)-এ মেসেজ দিতে পারেন অথবা https://orbitsaas.cloud/#contact-এ গিয়ে অ্যাপয়েন্টমেন্ট শিডিউল করতে পারেন।'
+        },
+        {
+          question: 'আপনাদের ফোন নম্বর বা হোয়াটসঅ্যাপ কত?',
+          answer: 'আমাদের অফিসিয়াল হোয়াটসঅ্যাপ এবং সরাসরি যোগাযোগের নম্বর হলো +8801853452264 (https://wa.me/8801853452264)।'
+        }
+      ] as { question: string; answer: string }[],
     },
     process: {
       subtitle: 'আমাদের কর্মপদ্ধতি',

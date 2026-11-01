@@ -15,10 +15,11 @@ export async function notifySitemapUpdate(env: Env, changedUrls: string[] = []) 
         ...changedUrls.map(u => u.startsWith('http') ? u : `${SITE_URL}${u.startsWith('/') ? '' : '/'}${u}`)
     ]));
 
+    let cachePurged = false;
     // 1. Purge Cloudflare Edge Cache for Sitemaps so crawlers get fresh XML immediately
     if (env.CLOUDFLARE_API_TOKEN && env.CLOUDFLARE_ZONE_ID) {
         try {
-            await fetch(
+            const purgeRes = await fetch(
                 `https://api.cloudflare.com/client/v4/zones/${env.CLOUDFLARE_ZONE_ID}/purge_cache`,
                 {
                     method: 'POST',
@@ -35,14 +36,17 @@ export async function notifySitemapUpdate(env: Env, changedUrls: string[] = []) 
                     }),
                 }
             );
+            cachePurged = purgeRes.ok;
         } catch (err) {
             console.error('[sitemap-notifier] Cloudflare cache purge error:', err);
         }
     }
 
+    let indexNowOk = false;
+    let indexNowStatus = 0;
     // 2. Ping IndexNow (notifies Microsoft Bing, Yandex, Seznam & Naver immediately)
     try {
-        await fetch('https://api.indexnow.org/indexnow', {
+        const inRes = await fetch('https://api.indexnow.org/indexnow', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json; charset=utf-8' },
             body: JSON.stringify({
@@ -52,7 +56,17 @@ export async function notifySitemapUpdate(env: Env, changedUrls: string[] = []) 
                 urlList: urlsToPing
             })
         });
+        indexNowStatus = inRes.status;
+        indexNowOk = inRes.ok || inRes.status === 200 || inRes.status === 202;
     } catch (err) {
         console.error('[sitemap-notifier] IndexNow ping error:', err);
     }
+
+    return {
+        success: true,
+        cachePurged,
+        indexNowOk,
+        indexNowStatus,
+        urlsNotified: urlsToPing.length
+    };
 }

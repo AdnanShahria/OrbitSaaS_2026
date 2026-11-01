@@ -56,13 +56,15 @@
   <meta name="ICBM" content="24.3745, 88.6042" />
 
   <!-- ═══════════════════════════════════════════════════
-       AEO — AI ENGINE OPTIMIZATION
+       AEO & ARD — AI ENGINE & AGENTIC RESOURCE DISCOVERY
        AI agents and LLMs can read this page's content.
        llms.txt: https://orbitsaas.cloud/llms.txt
+       ard.json: https://orbitsaas.cloud/.well-known/ard.json
        ═══════════════════════════════════════════════════ -->
   <meta name="ai-content-declarations" content="human-authored" />
   <!-- Hint to AI crawlers that content is available and accessible -->
   <link rel="alternate" type="text/plain" href="https://orbitsaas.cloud/llms.txt" title="LLMs.txt — AI-readable site summary" />
+  <link rel="ard" href="/.well-known/ard.json" type="application/json" title="Agentic Resource Discovery Manifest" />
 
   <!-- ═══════════════════════════════════════════════════
        THEME
@@ -105,13 +107,20 @@
   <link rel="alternate" hreflang="x-default" href="https://orbitsaas.cloud/" />
 
   <!-- ═══════════════════════════════════════════════════
-       FONTS: Preconnect for fast resolution
+       FONTS: Preconnect + Non-blocking Asynchronous Load
        ═══════════════════════════════════════════════════ -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Poppins:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800;900&display=swap"
-    rel="stylesheet" />
+    rel="preload"
+    as="style"
+    href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Poppins:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap"
+    onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Poppins:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" />
+  </noscript>
 
   <!-- ═══════════════════════════════════════════════════
        FAVICON & PWA ICONS
@@ -211,7 +220,7 @@
           {
             "@type": "ContactPoint",
             "contactType": "sales",
-            "email": "contact@orbitsaas.com",
+            "email": "contact@orbitsaas.cloud",
             "availableLanguage": ["English", "Bengali"]
           }
         ],

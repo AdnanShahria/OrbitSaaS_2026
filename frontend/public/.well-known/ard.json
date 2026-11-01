@@ -1,0 +1,43 @@
+{
+  "$schema": "https://agentic-resource.org/schema/v1/ard.json",
+  "name": "ORBIT SaaS",
+  "version": "1.0.0",
+  "description": "Top-rated custom web development, AI chatbot, SaaS platform and intelligent agent agency based in Rajshahi, Bangladesh serving businesses worldwide.",
+  "url": "https://orbitsaas.cloud",
+  "provider": {
+    "name": "ORBIT SaaS",
+    "url": "https://orbitsaas.cloud",
+    "email": "contact@orbitsaas.com"
+  },
+  "resources": [
+    {
+      "type": "llms-txt",
+      "url": "https://orbitsaas.cloud/llms.txt",
+      "description": "Comprehensive AI-readable site summary, service definitions, tech stack, and documentation for autonomous agents and LLMs"
+    },
+    {
+      "type": "sitemap",
+      "url": "https://orbitsaas.cloud/sitemap.xml",
+      "description": "Full XML Sitemap of public pages and sections"
+    },
+    {
+      "type": "api",
+      "url": "https://orbitsaas.cloud/api",
+      "description": "Public backend APIs for leads, inquiries, and public content"
+    }
+  ],
+  "capabilities": [
+    "custom-web-development",
+    "ai-chatbot-development",
+    "saas-platform-development",
+    "mobile-app-development",
+    "ecommerce-development",
+    "agentic-ai-automation"
+  ],
+  "agent_access": {
+    "enabled": true,
+    "contact": "contact@orbitsaas.com",
+    "whatsapp": "https://wa.me/8801853452264"
+  }
+}
+

@@ -30,6 +30,18 @@ const PATH_TO_SECTION: Record<string, string> = {
   '/contact': 'contact',
 };
 
+const SECTION_TO_PATH: Record<string, string> = {
+  hero: '/',
+  services: '/services',
+  tech: '/techstack',
+  'why-us': '/why-us',
+  project: '/proj',
+  achievements: '/achievements',
+  reviews: '/reviews',
+  leadership: '/leadership',
+  contact: '/contact',
+};
+
 // ── WhatsApp Icon Component ──
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -91,11 +103,24 @@ export function Navbar() {
         // Skip homepage section scroll spy on dedicated subpages
         if (isProjectPage || isAchievementPage) return;
 
+        // Top of page check: Always snap to hero/'/' when scrolled near top of page
+        if (window.scrollY < 120) {
+          if (activeSection !== 'hero') {
+            startTransition(() => {
+              setActiveSection('hero');
+            });
+          }
+          if (window.location.pathname !== '/') {
+            window.history.replaceState(null, '', '/');
+          }
+          return;
+        }
+
         // Scroll Spy Logic
         const sections = ['hero', 'services', 'why-us', 'projects', 'achievements', 'reviews', 'leadership', 'contact'];
         for (let i = sections.length - 1; i >= 0; i--) {
           const id = sections[i];
-          const element = document.getElementById(id);
+          const element = document.getElementById(id) || (id === 'hero' ? document.getElementById('home') : null);
           if (element && element.offsetHeight > 0) {
             const rect = element.getBoundingClientRect();
             // Adjust offset as needed (150px from top)
@@ -105,13 +130,17 @@ export function Navbar() {
               if (activeSection !== virtualSection) {
                  startTransition(() => {
                    setActiveSection(virtualSection);
-                   
-                   // Optionally update URL gracefully based on mapped path, avoiding reload
-                   const pathRecord = Object.entries(PATH_TO_SECTION).find(([path, sec]) => sec === virtualSection && path !== '/project' && path !== '/proj');
-                   if (pathRecord && window.location.pathname !== pathRecord[0]) {
-                     window.history.replaceState(null, '', pathRecord[0]);
-                   }
                  });
+              }
+
+              // Update URL gracefully based on mapped path, avoiding reload
+              const customUrl = t?.nav?.urls?.[virtualSection] || t?.nav?.urls?.[virtualSection === 'project' ? 'projects' : virtualSection];
+              const targetPath = (customUrl && !customUrl.startsWith('http') && !customUrl.startsWith('mailto:'))
+                ? customUrl
+                : SECTION_TO_PATH[virtualSection];
+
+              if (targetPath && window.location.pathname !== targetPath) {
+                window.history.replaceState(null, '', targetPath);
               }
               break;
             }
@@ -125,7 +154,7 @@ export function Navbar() {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [activeSection]);
+  }, [activeSection, t?.nav?.urls]);
 
   // Sync with Chatbot & Lightbox state to hide navbar
   useEffect(() => {
@@ -217,6 +246,8 @@ export function Navbar() {
                   <img
                     src={orbitLogo}
                     alt="ORBIT SaaS — Custom Web Development & AI Agency"
+                    width={32}
+                    height={32}
                     className="h-7 sm:h-8 w-auto object-contain relative z-10 transition-transform duration-700 group-hover:scale-110 group-hover:rotate-[5deg] rounded-lg"
                   />
                   {/* Premium Shimmer Effect */}
@@ -431,6 +462,7 @@ export function Navbar() {
                   onClick={() => {
                     window.open(whatsappLink, '_blank');
                   }}
+                  aria-label="Contact us on WhatsApp"
                   className={`group relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-all duration-300 shadow-xs ${
                     isLightMode
                       ? 'border-emerald-500/40 bg-emerald-50/80 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600'
@@ -453,6 +485,8 @@ export function Navbar() {
                 initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
+                aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+                aria-expanded={mobileOpen}
                 className="lg:hidden relative z-[1001] w-8 h-8 flex items-center justify-center rounded-full transition-colors"
                 onClick={() => setMobileOpen(!mobileOpen)}
                 style={{ color: mobileOpen ? (isLightMode ? '#09090B' : '#FFFFFF') : theme.text }}

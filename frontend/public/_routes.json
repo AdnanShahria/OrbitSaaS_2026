@@ -4,6 +4,8 @@
     "include": [
         "/api/*",
         "/project/*",
+        "/achievement/*",
+        "/leadership/*",
         "/sitemap.xml",
         "/sitemap-images.xml"
     ],

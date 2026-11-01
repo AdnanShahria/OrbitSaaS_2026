@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
+import { uploadImage } from '@/lib/imageUpload';
+import { getImageUrl } from '@/lib/imageUrl';
 import { SectionHeader, LangToggle, SaveButton, TextField, ErrorAlert, useSectionEditor, JsonPanel } from '@/components/admin/EditorComponents';
 import { RichText } from '@/components/ui/RichText';
 import {
     Globe, Bot, Zap, Smartphone, ShoppingCart, Rocket, Code, Database, Shield, Cloud,
     Cpu, Monitor, Wifi, Mail, Camera, Music, Heart, Star, Target, Briefcase,
     Award, BookOpen, Users, BarChart3, Sparkles, Layers, Settings2, Eye, Palette, Brain, Wrench,
-    Activity, ChevronDown, MessageSquare, ArrowRight
+    Activity, ChevronDown, MessageSquare, ArrowRight, Upload, ImageIcon, RotateCcw, Loader2
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -91,6 +94,32 @@ export default function AdminHero() {
     const [whatsappNumber, setWhatsappNumber] = useState('');
     const [contactEmail, setContactEmail] = useState('');
 
+    // Hero background image
+    const [heroBgImage, setHeroBgImage] = useState('/images/hero-ai-hand-v3.jpg');
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingImage(true);
+        const toastId = toast.loading('Uploading hero background image...');
+        try {
+            const uploaded = await uploadImage(file, 'hero', false);
+            const resolvedUrl = getImageUrl(uploaded) || (typeof uploaded === 'string' ? uploaded : (uploaded as any)?.primary);
+            if (resolvedUrl) {
+                setHeroBgImage(resolvedUrl);
+                toast.success('Hero background image uploaded successfully!', { id: toastId });
+            }
+        } catch (err) {
+            console.error('Hero image upload failed:', err);
+            toast.error('Upload failed. Please try again.', { id: toastId });
+        } finally {
+            setUploadingImage(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     // Feature Cards (Right side on desktop)
     const [feature1Title, setFeature1Title] = useState('Agentic AI nodes');
     const [feature1Icon, setFeature1Icon] = useState('Activity');
@@ -130,7 +159,10 @@ export default function AdminHero() {
             setCta(d.cta || 'Get Started');
             setLearnMore(d.learnMore || 'Our Services');
             setWhatsappNumber(d.whatsappNumber || '8801853452264');
-            setContactEmail(d.contactEmail || 'contact@orbitsaas.com');
+            setContactEmail(d.contactEmail || 'contact@orbitsaas.cloud');
+
+            // Hero background
+            setHeroBgImage(d.heroBgImage || '/images/hero-ai-hand-v3.jpg');
 
             // Features
             setFeature1Title(d.feature1Title || 'Agentic AI nodes');
@@ -172,6 +204,7 @@ export default function AdminHero() {
         learnMore,
         whatsappNumber,
         contactEmail,
+        heroBgImage,
         feature1Title,
         feature1Icon,
         feature1Steps: [f1Step1, f1Step2, f1Step3, f1Step4],
@@ -242,8 +275,141 @@ export default function AdminHero() {
                     </div>
                 </div>
 
-                {/* Right Column: CTA Buttons & Live Preview (5 Cols) */}
+                {/* Right Column: Hero Image, CTA Buttons & Live Preview (5 Cols) */}
                 <div className="lg:col-span-5 space-y-5 flex flex-col">
+                    {/* Hero Background / Banner Image */}
+                    <div className="bg-card rounded-xl p-4 md:p-6 border border-border space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-foreground flex items-center gap-2">
+                                <ImageIcon size={18} className="text-primary" />
+                                Hero Visual / Banner Image
+                            </h3>
+                            {heroBgImage && heroBgImage !== '/images/hero-ai-hand-v3.jpg' && (
+                                <button
+                                    type="button"
+                                    onClick={() => setHeroBgImage('/images/hero-ai-hand-v3.jpg')}
+                                    className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors px-2 py-1 rounded bg-secondary/60 hover:bg-secondary"
+                                    title="Reset to default image"
+                                >
+                                    <RotateCcw size={11} />
+                                    Reset Default
+                                </button>
+                            )}
+                        </div>
+                        <p className="text-xs text-muted-foreground -mt-2">
+                            This static image replaces heavy animations, dramatically speeding up page performance while showcasing a high-end visual.
+                        </p>
+
+                        {/* Image Preview */}
+                        <div className="relative rounded-xl overflow-hidden border border-border bg-black/40 aspect-[16/9] flex items-center justify-center group">
+                            {heroBgImage ? (
+                                <img
+                                    src={getImageUrl(heroBgImage) || heroBgImage}
+                                    alt="Hero background preview"
+                                    className="w-full h-full object-cover object-center"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src = '/images/hero-ai-hand-v3.jpg';
+                                    }}
+                                />
+                            ) : (
+                                <div className="text-xs text-muted-foreground flex flex-col items-center gap-1">
+                                    <ImageIcon size={28} className="opacity-40" />
+                                    <span>No hero image set</span>
+                                </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none">
+                                <span className="text-xs text-white font-medium bg-black/60 px-3 py-1 rounded-full border border-white/20">
+                                    Current Hero Visual
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Upload & URL Input */}
+                        <div className="space-y-2">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleImageUpload}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            <button
+                                type="button"
+                                disabled={uploadingImage}
+                                onClick={() => fileInputRef.current?.click()}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                            >
+                                {uploadingImage ? (
+                                    <>
+                                        <Loader2 size={13} className="animate-spin" />
+                                        <span>Uploading &amp; Optimizing...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload size={13} />
+                                        <span>Upload New Hero Image</span>
+                                    </>
+                                )}
+                            </button>
+
+                            <div>
+                                <TextField
+                                    label="Or enter Image URL / Local path"
+                                    value={typeof heroBgImage === 'string' ? heroBgImage : (heroBgImage as any)?.primary || ''}
+                                    onChange={setHeroBgImage}
+                                />
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    Default: <code>/images/hero-ai-hand-v3.jpg</code> (or R2 / Cloudflare CDN URL)
+                                </p>
+                            </div>
+
+                            {/* Quick AI Wallpaper Presets */}
+                            <div className="space-y-1.5 pt-2 border-t border-border/50">
+                                <label className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                                    <span>AI Wallpaper Presets</span>
+                                    <span className="text-[10px] text-primary font-medium">16:9 Widescreen</span>
+                                </label>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {[
+                                        { label: 'Concept 3', desc: 'Quantum Spark', url: '/images/hero-ai-hand-v3.jpg' },
+                                        { label: 'Concept 1', desc: 'White Ceramic', url: '/images/hero-ai-hand-v1.jpg' },
+                                        { label: 'Concept 2', desc: 'Dark Cyber', url: '/images/hero-ai-hand-v2.jpg' },
+                                        { label: 'Original', desc: 'Adam Concept', url: '/images/hero-bg-backup.png' },
+                                    ].map((preset) => {
+                                        const currentVal = typeof heroBgImage === 'string' ? heroBgImage : (heroBgImage as any)?.primary;
+                                        const isSelected = currentVal === preset.url;
+                                        return (
+                                            <button
+                                                key={preset.url}
+                                                type="button"
+                                                onClick={() => setHeroBgImage(preset.url)}
+                                                className={`relative rounded-lg overflow-hidden border p-1 text-left transition-all cursor-pointer ${
+                                                    isSelected
+                                                        ? 'border-primary ring-2 ring-primary/40 bg-primary/10'
+                                                        : 'border-border hover:border-primary/50 bg-secondary/30'
+                                                }`}
+                                            >
+                                                <div className="aspect-[16/9] w-full rounded overflow-hidden bg-black/50 mb-1">
+                                                    <img
+                                                        src={preset.url}
+                                                        alt={preset.label}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                                <div className="text-[10px] font-semibold text-foreground truncate leading-tight">
+                                                    {preset.label}
+                                                </div>
+                                                <div className="text-[9px] text-muted-foreground truncate">
+                                                    {preset.desc}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* CTAs */}
                     <div className="bg-card rounded-xl p-4 md:p-6 border border-border space-y-4">
                         <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2">
@@ -262,7 +428,7 @@ export default function AdminHero() {
                             </div>
                             <div>
                                 <TextField label="Contact Email" value={contactEmail} onChange={setContactEmail} />
-                                <p className="text-[10px] text-muted-foreground mt-0.5">e.g. <code>contact@orbitsaas.com</code></p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">e.g. <code>contact@orbitsaas.cloud</code></p>
                             </div>
                         </div>
                     </div>
@@ -420,7 +586,8 @@ export default function AdminHero() {
                         setCta(parsed.cta || 'Get Started');
                         setLearnMore(parsed.learnMore || 'Our Services');
                         setWhatsappNumber(parsed.whatsappNumber || '8801853452264');
-                        setContactEmail(parsed.contactEmail || 'contact@orbitsaas.com');
+                        setContactEmail(parsed.contactEmail || 'contact@orbitsaas.cloud');
+                        setHeroBgImage(parsed.heroBgImage || '/images/hero-ai-hand-v3.jpg');
 
                         setFeature1Title(parsed.feature1Title || 'Agentic AI nodes');
                         setFeature1Icon(parsed.feature1Icon || 'Activity');

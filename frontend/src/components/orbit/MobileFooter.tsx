@@ -125,6 +125,8 @@ export function MobileFooter() {
               <img
                 src={orbitLogo}
                 alt="ORBIT SaaS — Custom Web Development & AI Agency"
+                width={32}
+                height={32}
                 className="w-8 h-8 object-contain rounded-lg"
               />
               <span className="text-lg font-black text-zinc-900 tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -178,7 +180,7 @@ export function MobileFooter() {
           </div>
 
           {/* Copyright */}
-          <div className="text-[10px] text-zinc-400 text-center pt-3.5 border-t border-zinc-100 select-none">
+          <div className="text-[10px] text-zinc-600 text-center pt-3.5 border-t border-zinc-100 select-none">
             {t?.rights || '© 2026 ORBIT SaaS. All rights reserved.'}
           </div>
 
@@ -209,19 +211,16 @@ export function MobileFooter() {
           
           {/* Quick Links Card */}
           <div className="bg-white border border-zinc-200/80 rounded-[20px] p-4 flex flex-col shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
-            <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] mb-3 pb-1 border-b border-zinc-100">
+            <h3 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] mb-3 pb-1 border-b border-zinc-100">
               {lang === 'bn' ? 'লিংক' : 'Links'}
-            </h4>
+            </h3>
             <ul className="space-y-2">
               {footerNavLinks.map((link, i) => (
-                <div key={i}>
-                  {i > 0 && <GoldenArrowSeparator />}
-                  <li>
-                    <Link to={link.href} className="text-xs text-zinc-500 active:text-emerald-600">
-                      {link.label}
-                    </Link>
-                  </li>
-                </div>
+                <li key={i} className={i > 0 ? "pt-1.5 border-t border-zinc-100/80" : ""}>
+                  <Link to={link.href} className="text-xs text-zinc-600 active:text-emerald-600 hover:text-emerald-700 font-medium">
+                    {link.label}
+                  </Link>
+                </li>
               ))}
             </ul>
           </div>
@@ -229,27 +228,21 @@ export function MobileFooter() {
           {/* Services Card */}
           <div className="bg-white border border-zinc-200/80 rounded-[20px] p-4 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
             <div>
-              <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] mb-3 pb-1 border-b border-zinc-100">
+              <h3 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] mb-3 pb-1 border-b border-zinc-100">
                 {lang === 'bn' ? 'সেবা' : 'Services'}
-              </h4>
+              </h3>
               <ul className="space-y-2">
                 {displayServices.length > 0 ? (
                   displayServices.slice(0, 3).map((service: any, i: number) => (
-                    <div key={i}>
-                      {i > 0 && <GoldenArrowSeparator />}
-                      <li className="text-xs text-zinc-500 truncate">
-                        {service.title.split(' & ')[0]}
-                      </li>
-                    </div>
+                    <li key={i} className={`text-xs text-zinc-600 font-medium truncate ${i > 0 ? "pt-1.5 border-t border-zinc-100/80" : ""}`}>
+                      {service.title.split(' & ')[0]}
+                    </li>
                   ))
                 ) : (
                   fallbackServices.slice(0, 3).map((serviceName: string, i: number) => (
-                    <div key={i}>
-                      {i > 0 && <GoldenArrowSeparator />}
-                      <li className="text-xs text-zinc-500 truncate">
-                        {serviceName.split(' & ')[0]}
-                      </li>
-                    </div>
+                    <li key={i} className={`text-xs text-zinc-600 font-medium truncate ${i > 0 ? "pt-1.5 border-t border-zinc-100/80" : ""}`}>
+                      {serviceName.split(' & ')[0]}
+                    </li>
                   ))
                 )}
               </ul>
@@ -268,10 +261,10 @@ export function MobileFooter() {
 
         {/* Box 4: Newsletter */}
         <div className="bg-white border border-zinc-200/80 rounded-[20px] p-4 flex flex-col gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
-          <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] pb-1 border-b border-zinc-100">
+          <h3 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] pb-1 border-b border-zinc-100">
             {lang === 'bn' ? 'নিউজলেটার' : 'Newsletter'}
-          </h4>
-          <p className="text-[11px] text-zinc-500 leading-relaxed">
+          </h3>
+          <p className="text-[11px] text-zinc-600 leading-relaxed font-medium">
             {lang === 'bn' 
               ? 'সর্বশেষ আপডেট এবং টেকনোলজি তথ্য পেতে সাবস্ক্রাইব করুন।' 
               : 'Get exclusive updates & tech insights in your inbox.'}
@@ -282,7 +275,7 @@ export function MobileFooter() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={lang === 'bn' ? 'আপনার ইমেইল লিখুন' : 'your@email.com'}
-              className="w-full px-3 py-2.5 rounded-lg text-xs bg-zinc-50 border border-zinc-200 text-zinc-900 outline-none focus:border-emerald-500 focus:bg-white placeholder:text-zinc-400 shadow-inner/5"
+              className="w-full px-3 py-2.5 rounded-lg text-xs bg-zinc-50 border border-zinc-200 text-zinc-900 outline-none focus:border-emerald-500 focus:bg-white placeholder:text-zinc-500 shadow-inner/5"
               required
             />
             <button
@@ -296,16 +289,16 @@ export function MobileFooter() {
           </form>
 
           {/* Legal Links inside mobile Newsletter card */}
-          <div className="flex items-center gap-3 mt-3 pt-2.5 border-t border-zinc-100 text-[10px] text-zinc-400 justify-center">
+          <div className="flex items-center gap-3 mt-3 pt-2.5 border-t border-zinc-100 text-[10px] text-zinc-600 justify-center font-medium">
             {displayLegalLinks.map((link: any, i: number) => (
               <span key={i} className="flex items-center gap-3">
-                {i > 0 && <span className="text-zinc-200">/</span>}
+                {i > 0 && <span className="text-zinc-300">/</span>}
                 {link.url.startsWith('http') ? (
-                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 active:text-emerald-600 transition-colors cursor-pointer">
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-700 active:text-emerald-800 transition-colors cursor-pointer">
                     {link.label}
                   </a>
                 ) : (
-                  <Link to={link.url} className="hover:text-emerald-600 active:text-emerald-600 transition-colors cursor-pointer">
+                  <Link to={link.url} className="hover:text-emerald-700 active:text-emerald-800 transition-colors cursor-pointer">
                     {link.label}
                   </Link>
                 )}

@@ -9,7 +9,7 @@ import {
     JsonPanel,
     ToggleField,
 } from '@/components/admin/EditorComponents';
-import { Upload, Trash2, User, Mail, Instagram, Facebook, Twitter, Linkedin, Github, Globe, Briefcase, AtSign, Send, Share2, Copy, Check } from 'lucide-react';
+import { Upload, Trash2, User, Mail, Instagram, Facebook, Twitter, Linkedin, Github, Globe, Briefcase, AtSign, Send, Share2, Copy, Check, Sparkles, ExternalLink } from 'lucide-react';
 import { uploadImage } from '@/lib/imageUpload';
 import { useContent } from '@/contexts/ContentContext';
 import { getImageUrl } from '@/lib/imageUrl';
@@ -56,6 +56,7 @@ interface UnifiedMember {
     id?: string;
     image: string;
     shareImage?: string;
+    seoCover?: string;
     badge?: string;
     order: number;
     hidden?: boolean;
@@ -77,6 +78,7 @@ const DEFAULT_MEMBER: UnifiedMember = {
     id: '',
     image: '',
     shareImage: '',
+    seoCover: '',
     badge: '',
     order: 0,
     hidden: false,
@@ -335,9 +337,85 @@ function MemberEditor({
                     onChange={(url, shareUrl) => update({
                         ...item,
                         image: url,
-                        ...(shareUrl ? { shareImage: shareUrl } : {})
+                        ...(shareUrl ? { shareImage: shareUrl, seoCover: shareUrl } : {})
                     })}
                 />
+
+                {/* Branded Executive Share Card & SEO Banner (1200x630) */}
+                <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-foreground">🖼️ Branded Profile & SEO Share Card (1200×630)</span>
+                                {(item.seoCover || item.shareImage) ? (
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                                        ✓ Active Card
+                                    </span>
+                                ) : (
+                                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30">
+                                        ⚠️ Missing Card
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                                Executive profile card with portrait, name, role, verified badge, and top-right ORBIT SaaS logo for WhatsApp & social link sharing.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                if (!item.image) {
+                                    toast.error('Please upload a member photo first.');
+                                    return;
+                                }
+                                const toastId = toast.loading('Generating 1200×630 executive share card...');
+                                try {
+                                    const posterFile = await generateSharePoster(item.image, {
+                                        type: 'leadership',
+                                        name: item.en?.name || item.bn?.name || 'Leader',
+                                        role: item.en?.role || item.bn?.role || 'ORBIT SaaS',
+                                        subDetail: item.en?.subDetail || item.bn?.subDetail || '',
+                                    });
+                                    const uploaded = await uploadImage(posterFile, 'team', true);
+                                    const url = typeof uploaded === 'object' ? (uploaded as any).primary : uploaded;
+                                    update({ ...item, shareImage: url, seoCover: url });
+                                    toast.success('Executive share card generated!', { id: toastId });
+                                } catch (e: any) {
+                                    console.error(e);
+                                    toast.error(e.message || 'Failed to generate share card', { id: toastId });
+                                }
+                            }}
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary text-xs font-semibold border border-primary/30 transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                        >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            {(item.seoCover || item.shareImage) ? 'Regenerate Share Card' : 'Auto-Generate Share Card'}
+                        </button>
+                    </div>
+
+                    {(item.seoCover || item.shareImage) && (
+                        <div className="relative rounded-lg overflow-hidden border border-border/80 bg-black/40 aspect-[1200/630] max-w-sm group">
+                            <img
+                                src={getImageUrl(item.seoCover || item.shareImage)}
+                                alt="Member Share Card"
+                                className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                <a
+                                    href={getImageUrl(item.seoCover || item.shareImage)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-2.5 py-1 rounded-md bg-white/20 hover:bg-white/30 text-white text-xs font-medium flex items-center gap-1"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" /> View Full Card
+                                </a>
+                            </div>
+                            <div className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] text-white/90 font-mono">
+                                1200 × 630 • Profile Link Preview
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
@@ -512,7 +590,8 @@ export default function AdminLeadership() {
             merged.push({
                 id: en.id || bn.id || fallbackSlug,
                 image: en.image || bn.image || '',
-                shareImage: en.shareImage || bn.shareImage || '',
+                shareImage: en.shareImage || bn.shareImage || en.seoCover || bn.seoCover || '',
+                seoCover: en.seoCover || bn.seoCover || en.shareImage || bn.shareImage || '',
                 badge: en.badge || bn.badge || '',
                 order: en.order ?? bn.order ?? i + 1,
                 hidden: en.hidden ?? bn.hidden ?? false,
@@ -547,7 +626,8 @@ export default function AdminLeadership() {
                     bio: m.en.bio,
                     badge: m.badge,
                     image: m.image,
-                    shareImage: m.shareImage || '',
+                    shareImage: m.shareImage || m.seoCover || '',
+                    seoCover: m.seoCover || m.shareImage || '',
                     order: m.order,
                     hidden: m.hidden,
                     socials: m.socials,
@@ -564,7 +644,8 @@ export default function AdminLeadership() {
                     bio: m.bn.bio,
                     badge: m.badge,
                     image: m.image,
-                    shareImage: m.shareImage || '',
+                    shareImage: m.shareImage || m.seoCover || '',
+                    seoCover: m.seoCover || m.shareImage || '',
                     order: m.order,
                     hidden: m.hidden,
                     socials: m.socials,
@@ -742,7 +823,8 @@ export default function AdminLeadership() {
                             badge: m.badge,
                             bio: m.en.bio,
                             image: m.image,
-                            shareImage: m.shareImage || '',
+                            shareImage: m.shareImage || m.seoCover || '',
+                            seoCover: m.seoCover || m.shareImage || '',
                             order: m.order,
                             hidden: m.hidden,
                             socials: m.socials,
@@ -760,7 +842,8 @@ export default function AdminLeadership() {
                             badge: m.badge,
                             bio: m.bn.bio,
                             image: m.image,
-                            shareImage: m.shareImage || '',
+                            shareImage: m.shareImage || m.seoCover || '',
+                            seoCover: m.seoCover || m.shareImage || '',
                             order: m.order,
                             hidden: m.hidden,
                             socials: m.socials,
@@ -796,7 +879,8 @@ export default function AdminLeadership() {
                         merged.push({
                             id: en.id || bn.id || fallbackSlug,
                             image: en.image || bn.image || '',
-                            shareImage: en.shareImage || bn.shareImage || '',
+                            shareImage: en.shareImage || bn.shareImage || en.seoCover || bn.seoCover || '',
+                            seoCover: en.seoCover || bn.seoCover || en.shareImage || bn.shareImage || '',
                             badge: en.badge || bn.badge || '',
                             order: en.order ?? bn.order ?? i + 1,
                             hidden: en.hidden ?? bn.hidden ?? false,

@@ -358,7 +358,7 @@ export function LeadershipSection() {
       list.push({
         key: 'email',
         label: 'Email',
-        href: 'mailto:contact@orbitsaas.com',
+        href: 'mailto:contact@orbitsaas.cloud',
         icon: Mail,
         pillClass: 'border-emerald-300/90 bg-emerald-50/80 text-emerald-700 hover:bg-emerald-100',
       });
@@ -379,7 +379,7 @@ export function LeadershipSection() {
   };
 
   return (
-    <section className="relative overflow-hidden pt-3 sm:pt-5 pb-8 sm:pb-12 bg-[#FDFBF7]">
+    <section id="leadership" className="relative overflow-hidden pt-3 sm:pt-5 pb-8 sm:pb-12 bg-[#FDFBF7]">
       {/* Decorative Subtle Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-amber-100/25 rounded-full blur-[100px] -translate-y-1/2" />
@@ -655,7 +655,7 @@ export function LeadershipSection() {
                   <div className="overflow-y-auto custom-scrollbar flex-1 pr-1 -mr-1 space-y-3 sm:space-y-4">
                     {/* About Section */}
                     <div>
-                      <h4 className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      <h4 className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
                         ABOUT
                       </h4>
                       <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line font-normal">
@@ -670,7 +670,7 @@ export function LeadershipSection() {
                     {/* Connect Section */}
                     <div>
                       <div className="flex items-center flex-wrap gap-2 pt-0.5">
-                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 shrink-0">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-600 mr-1 shrink-0">
                           CONNECT:
                         </span>
                         {getEnabledContacts(selectedMember).map((contact) => {

@@ -16,6 +16,7 @@ export function ChatToggleButton() {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={() => setOpen(!open)}
+      aria-label={open ? "Close live chat" : "Open live chat assistant"}
       className={`fixed bottom-[6dvh] md:bottom-4 right-4 sm:right-6 z-[200] flex items-center justify-center cursor-pointer transition-all duration-300 ${
         open || isLowEnd
           ? 'w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-xl' + (open ? ' hidden md:flex' : '')

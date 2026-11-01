@@ -632,6 +632,242 @@ async function handleAuditLog(request: Request, env: Env): Promise<Response> {
     }, request);
 }
 
+// ─── SEO Covers Management & Audit ───
+async function ensureSeoCoversTable(db: any) {
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS seo_covers (
+            id TEXT PRIMARY KEY,
+            item_type TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            title TEXT,
+            source_image TEXT,
+            seo_cover TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )
+    `);
+}
+
+function extractSimpleUrl(raw: any): string {
+    if (!raw) return '';
+    if (typeof raw === 'string') {
+        const trimmed = raw.trim();
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                return extractSimpleUrl(parsed);
+            } catch {}
+        }
+        if (trimmed.includes('|||')) return trimmed.split('|||')[0].trim();
+        return trimmed;
+    }
+    if (typeof raw === 'object' && raw !== null) {
+        return extractSimpleUrl(raw.primary) || extractSimpleUrl(raw.url) || extractSimpleUrl(raw.src) || extractSimpleUrl(raw.fallback) || '';
+    }
+    return '';
+}
+
+async function handleSeoCoversAudit(request: Request, env: Env): Promise<Response> {
+    const db = getDb(env);
+    await ensureSeoCoversTable(db);
+
+    const rows = await db.execute({
+        sql: "SELECT section, data FROM site_content WHERE section IN ('projects', 'achievements', 'leadership') AND lang = 'en'",
+        args: []
+    });
+
+    const items: Array<{
+        id: string;
+        type: 'project' | 'achievement' | 'leadership';
+        title: string;
+        role?: string;
+        subDetail?: string;
+        sourceImage: string;
+        seoCover: string;
+        shareImage: string;
+        hasCover: boolean;
+        url: string;
+    }> = [];
+
+    const stats = {
+        total: 0,
+        covered: 0,
+        missing: 0,
+        percent: 0,
+        byType: {
+            projects: { total: 0, covered: 0, missing: 0 },
+            achievements: { total: 0, covered: 0, missing: 0 },
+            leadership: { total: 0, covered: 0, missing: 0 },
+        }
+    };
+
+    for (const row of rows.rows) {
+        const sec = row.section as string;
+        const data = JSON.parse(row.data as string || '{}');
+        const list = Array.isArray(data) ? data : (data.members || data.items || []);
+        const itemType = sec === 'leadership' ? 'leadership' : (sec === 'projects' ? 'project' : 'achievement');
+
+        for (const item of list) {
+            const rawSource = item.image || item.images?.[0] || '';
+            const rawCover = item.seoCover || item.shareImage || '';
+            const sourceUrl = extractSimpleUrl(rawSource);
+            const coverUrl = extractSimpleUrl(rawCover);
+            const itemId = String(item.id || item.name || '');
+            const title = String(item.title || item.name || itemId);
+            const hasCover = !!coverUrl;
+
+            const entry = {
+                id: itemId,
+                type: itemType as any,
+                title,
+                role: item.role || '',
+                subDetail: item.subDetail || '',
+                sourceImage: sourceUrl,
+                seoCover: coverUrl,
+                shareImage: coverUrl,
+                hasCover,
+                url: itemType === 'project' ? `/project/${itemId}` : (itemType === 'achievement' ? `/achievement/${itemId}` : `/leadership?member=${encodeURIComponent(itemId)}`)
+            };
+
+            items.push(entry);
+            stats.total++;
+            if (hasCover) stats.covered++;
+            else stats.missing++;
+
+            const group = itemType === 'project' ? stats.byType.projects : (itemType === 'achievement' ? stats.byType.achievements : stats.byType.leadership);
+            group.total++;
+            if (hasCover) group.covered++;
+            else group.missing++;
+        }
+    }
+
+    stats.percent = stats.total > 0 ? Math.round((stats.covered / stats.total) * 100) : 100;
+
+    return jsonResponse({
+        success: true,
+        stats,
+        items
+    }, request);
+}
+
+async function handleSeoCoversSync(request: Request, env: Env): Promise<Response> {
+    const db = getDb(env);
+    await ensureSeoCoversTable(db);
+
+    let body: any = {};
+    try {
+        body = await request.json();
+    } catch {
+        return jsonResponse({ error: 'Invalid JSON body' }, request, 400);
+    }
+
+    const updates: Array<{
+        type: 'project' | 'achievement' | 'leadership';
+        id: string;
+        seoCover: string;
+        shareImage?: string;
+        title?: string;
+        sourceImage?: string;
+    }> = Array.isArray(body.updates) ? body.updates : [];
+
+    if (updates.length === 0) {
+        return jsonResponse({ error: 'No updates provided' }, request, 400);
+    }
+
+    // 1. Upsert into seo_covers table
+    for (const u of updates) {
+        const coverUrl = u.seoCover || u.shareImage || '';
+        if (!coverUrl) continue;
+        const entryId = `${u.type}:${u.id}`;
+        await db.execute({
+            sql: `INSERT INTO seo_covers (id, item_type, item_id, title, source_image, seo_cover, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                  ON CONFLICT(id) DO UPDATE SET
+                    title = excluded.title,
+                    source_image = excluded.source_image,
+                    seo_cover = excluded.seo_cover,
+                    updated_at = datetime('now')`,
+            args: [
+                entryId,
+                u.type,
+                u.id,
+                u.title || u.id,
+                u.sourceImage || '',
+                coverUrl
+            ]
+        });
+    }
+
+    // 2. Also update site_content for each section in both 'en' and 'bn'
+    const typesToUpdate = new Set(updates.map(u => u.type));
+
+    for (const type of typesToUpdate) {
+        const sec = type === 'project' ? 'projects' : (type === 'achievement' ? 'achievements' : 'leadership');
+        const updatesForType = updates.filter(u => u.type === type);
+
+        for (const lang of ['en', 'bn']) {
+            const rowRes = await db.execute({
+                sql: "SELECT data FROM site_content WHERE section = ? AND lang = ?",
+                args: [sec, lang]
+            });
+            if (rowRes.rows.length === 0) continue;
+
+            const data = JSON.parse(rowRes.rows[0].data as string || '{}');
+            const list = Array.isArray(data) ? data : (data.members || data.items || []);
+
+            let changed = false;
+            for (const item of list) {
+                const match = updatesForType.find(u => u.id === item.id || u.id === item.name);
+                if (match) {
+                    const coverUrl = match.seoCover || match.shareImage || '';
+                    item.seoCover = coverUrl;
+                    item.shareImage = coverUrl;
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                await db.execute({
+                    sql: "UPDATE site_content SET data = ?, updated_at = datetime('now') WHERE section = ? AND lang = ?",
+                    args: [JSON.stringify(data), sec, lang]
+                });
+            }
+        }
+    }
+
+    // 3. Refresh content_cache for both en and bn
+    for (const lang of ['en', 'bn']) {
+        const sectionsRes = await db.execute({
+            sql: 'SELECT section, data FROM site_content WHERE lang = ?',
+            args: [lang]
+        });
+        const fullContent: Record<string, any> = {};
+        for (const r of sectionsRes.rows) {
+            fullContent[r.section as string] = JSON.parse(r.data as string || '{}');
+        }
+        await db.execute({
+            sql: `INSERT INTO content_cache (lang, data, updated_at)
+                  VALUES (?, ?, datetime('now'))
+                  ON CONFLICT(lang) DO UPDATE SET data = excluded.data, updated_at = datetime('now')`,
+            args: [lang, JSON.stringify(fullContent)]
+        });
+    }
+
+    // 4. Notify sitemap
+    try {
+        const { notifySitemapUpdate } = await import('../_lib/sitemap-notifier');
+        await notifySitemapUpdate(env);
+    } catch (e) {
+        console.warn('Sitemap notify skipped in seo covers sync:', e);
+    }
+
+    return jsonResponse({
+        success: true,
+        message: `Successfully synchronized ${updates.length} SEO covers into database & updated content cache.`,
+        updatedCount: updates.length
+    }, request);
+}
+
 // ─── Main Router ───
 export const onRequest: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
@@ -653,15 +889,27 @@ export const onRequest: PagesFunction<Env> = async (context) => {
                 }
                 return await handleAuditLog(request, env);
             }
+            case 'seo-covers-audit': {
+                if (!(await isAuthorized(request, env.JWT_SECRET))) {
+                    return jsonResponse({ error: 'Unauthorized' }, request, 401);
+                }
+                return await handleSeoCoversAudit(request, env);
+            }
+            case 'seo-covers-sync': {
+                if (!(await isAuthorized(request, env.JWT_SECRET))) {
+                    return jsonResponse({ error: 'Unauthorized' }, request, 401);
+                }
+                return await handleSeoCoversSync(request, env);
+            }
             case 'ping-sitemap': {
                 if (!(await isAuthorized(request, env.JWT_SECRET))) {
                     return jsonResponse({ error: 'Unauthorized' }, request, 401);
                 }
                 const { notifySitemapUpdate } = await import('../_lib/sitemap-notifier');
-                await notifySitemapUpdate(env);
-                return jsonResponse({ success: true, message: 'Sitemaps refreshed and search engines notified successfully.' }, request);
+                const result = await notifySitemapUpdate(env);
+                return jsonResponse({ success: true, message: 'Sitemaps refreshed and search engines notified successfully.', result }, request);
             }
-            default: return jsonResponse({ error: 'Unknown action. Use ?action=login-send|login-verify|cache|seed|audit|ping-sitemap' }, request, 400);
+            default: return jsonResponse({ error: 'Unknown action. Use ?action=login-send|login-verify|cache|seed|audit|seo-covers-audit|seo-covers-sync|ping-sitemap' }, request, 400);
         }
     } catch (error) {
         console.error('Admin API error:', error);

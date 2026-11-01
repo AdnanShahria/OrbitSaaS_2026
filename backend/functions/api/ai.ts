@@ -235,6 +235,19 @@ function buildKnowledgeBase(content: Record<string, any>): string {
         if (activeSocials.length > 0) kb += 'SOCIALS: ' + activeSocials.map((s: any) => `${s.platform}: ${s.url}`).join(', ') + '\n';
     }
 
+    const contactEmail = content.hero?.contactEmail || content.footer?.email || 'contact@orbitsaas.cloud';
+    const rawWhatsapp = content.contact?.whatsapp || content.footer?.phone || content.hero?.whatsappNumber || '+8801853452264';
+    const cleanWhatsapp = rawWhatsapp.replace(/[^0-9]/g, '');
+    const whatsappDisplay = rawWhatsapp.startsWith('+') ? rawWhatsapp : `+${rawWhatsapp}`;
+    const location = content.footer?.location || 'Rajshahi, Bangladesh';
+
+    kb += 'OFFICIAL CONTACT DETAILS (STRICT TRUTH - NEVER INVENT OTHER NUMBERS/EMAILS):\n';
+    kb += `- Official Email: ${contactEmail}\n`;
+    kb += `- WhatsApp / Direct Phone: ${whatsappDisplay} (https://wa.me/${cleanWhatsapp})\n`;
+    kb += `- Contact & Free Quote Form: ${SITE_BASE_URL}/#contact\n`;
+    kb += `- Location: ${location}\n`;
+    kb += '- Instructions: When users ask how to contact us, provide these exact contact methods. NEVER invent any fake phone numbers or emails.\n';
+
     kb += `CORE LINKS: Home: ${SITE_BASE_URL} | Projects: ${SITE_BASE_URL}/project | Contact: ${SITE_BASE_URL}/#contact\n`;
 
     const linksData = content.links?.items || [];
@@ -249,7 +262,7 @@ async function generateGist(knowledgeBase: string, env: Env): Promise<string | n
             [
                 {
                     role: 'system',
-                    content: 'You are a technical documentator. Summarize the following company knowledge base into a SHORT factual reference (~200 words max). CRITICAL: All URLs, proper names (Project Titles, Service Names), and TEAM MEMBERS (Name + Role) must be preserved EXACTLY as in the source. NEVER drop team/leadership info. NEVER synthesize new categories. NEVER abbreviate URLs. NO marketing fluff. Output ONLY the summary.'
+                    content: 'You are a technical documentator. Summarize the following company knowledge base into a SHORT factual reference (~200 words max). CRITICAL: All URLs, proper names (Project Titles, Service Names), TEAM MEMBERS (Name + Role), and CONTACT DETAILS (Email, WhatsApp number, Contact URL) must be preserved EXACTLY as in the source. NEVER drop team/leadership or contact info. NEVER invent phone numbers or emails. NEVER abbreviate URLs. NO marketing fluff. Output ONLY the summary.'
                 },
                 { role: 'user', content: knowledgeBase }
             ], 

@@ -72,6 +72,7 @@ export default defineConfig(async ({ mode }) => {
       mode === "development" && componentTagger(),
       VitePWA({
         registerType: 'autoUpdate',
+        injectRegister: 'script-defer',
         includeAssets: ['favicon.ico', 'favicon.png', 'robots.txt'],
         manifest: {
           name: 'ORBIT SaaS – Best Website Development Company | Custom Web Solutions',
@@ -108,7 +109,19 @@ export default defineConfig(async ({ mode }) => {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
-          navigateFallbackDenylist: [/^\/api/, /^\/project/, /^\/assets/],
+          navigateFallbackDenylist: [
+            /^\/api/,
+            /^\/project/,
+            /^\/achievement/,
+            /^\/leadership/,
+            /^\/assets/,
+            /\.(xml|txt|html|ico|png|webp|svg|json|webmanifest)$/i,
+            /^\/sitemap.*\.xml$/i,
+            /^\/robots\.txt$/i,
+            /^\/llms\.txt$/i,
+            /^\/BingSiteAuth\.xml$/i,
+            /^\/google.*\.html$/i,
+          ],
           maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6 MiB (accommodates high-res 5.14 MB OrbitLogo)
           importScripts: ['/sw-push.js'],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
@@ -189,6 +202,11 @@ export default defineConfig(async ({ mode }) => {
       prerenderPlugin,
     ].filter(Boolean),
     build: {
+      modulePreload: {
+        resolveDependencies: (_filename, deps) => {
+          return deps.filter(dep => !dep.includes('charts') && !dep.includes('three'));
+        },
+      },
       rollupOptions: {
         output: {
           manualChunks(id: string) {
