@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState } from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useContent } from '@/contexts/ContentContext';
 import { useLang } from '@/contexts/LanguageContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   MonitorSmartphone,
   BotMessageSquare,
@@ -75,8 +76,8 @@ const SERVICE_THEMES = [
 ];
 
 /* ──────────── 0: Full Stack Web Design — Layered browser with depth ──────────── */
-const WebDesignVisual = () => (
-  <div className="relative w-full h-full flex items-center justify-center p-2">
+const WebDesignVisual = ({ isCompact }: { isCompact?: boolean }) => (
+  <div className="relative w-full h-full flex items-center justify-center p-2" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
     {/* Atmospheric glow behind */}
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120px] h-[80px] bg-gradient-to-br from-violet-400/15 via-pink-300/10 to-blue-400/15 rounded-full blur-xl" />
 
@@ -85,6 +86,7 @@ const WebDesignVisual = () => (
       className="absolute top-2 right-3 w-[80px] h-[60px] rounded-lg bg-[#1e1e2e] border border-violet-500/20 shadow-[0_4px_16px_rgba(139,92,246,0.12)] overflow-hidden"
       animate={{ opacity: [0.5, 0.8, 0.5] }}
       transition={{ duration: 4, repeat: Infinity }}
+      style={{ willChange: 'opacity' }}
     >
       <div className="p-1.5 space-y-1">
         <div className="flex gap-1">
@@ -110,6 +112,7 @@ const WebDesignVisual = () => (
       className="relative w-[140px] border border-purple-200/70 rounded-xl bg-white overflow-hidden shadow-[0_8px_30px_rgba(139,92,246,0.12)] z-10"
       animate={{ y: [0, -4, 0] }}
       transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+      style={{ willChange: 'transform' }}
     >
       {/* Chrome */}
       <div className="flex items-center gap-1 px-2 py-1.5 bg-gradient-to-r from-slate-50 via-purple-50/50 to-blue-50 border-b border-purple-100/50">
@@ -128,11 +131,13 @@ const WebDesignVisual = () => (
           className="w-full h-10 rounded-lg bg-gradient-to-br from-violet-500/20 via-pink-400/15 to-sky-400/20 relative overflow-hidden"
           animate={{ opacity: [0.6, 1, 0.6] }}
           transition={{ duration: 3, repeat: Infinity }}
+          style={{ willChange: 'opacity' }}
         >
           <motion.div
             className="absolute w-8 h-8 rounded-full bg-gradient-to-br from-pink-400/30 to-transparent blur-sm"
             animate={{ x: [0, 30, 0], y: [0, 5, 0] }}
             transition={{ duration: 6, repeat: Infinity }}
+            style={{ willChange: 'transform' }}
           />
           <div className="absolute bottom-1.5 left-2 w-12 h-1.5 bg-white/60 rounded-full" />
           <div className="absolute bottom-1.5 right-2 w-6 h-2 bg-violet-500/40 rounded-sm" />
@@ -147,9 +152,9 @@ const WebDesignVisual = () => (
             <motion.div
               key={i}
               className={`h-6 bg-gradient-to-b ${g} rounded-md border border-white/40`}
-              initial={{ scaleY: 0, originY: 1 }}
+              initial={isCompact ? false : { scaleY: 0, originY: 1 }}
               animate={{ scaleY: 1 }}
-              transition={{ delay: 0.3 + i * 0.12, duration: 0.5, ease: 'easeOut' }}
+              transition={isCompact ? { duration: 0 } : { delay: 0.3 + i * 0.12, duration: 0.5, ease: 'easeOut' }}
             />
           ))}
         </div>
@@ -160,6 +165,7 @@ const WebDesignVisual = () => (
             className="w-10 h-3 bg-gradient-to-r from-violet-500 to-purple-500 rounded-md shadow-[0_2px_8px_rgba(139,92,246,0.3)]"
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
+            style={{ willChange: 'transform' }}
           />
         </div>
       </div>
@@ -168,8 +174,8 @@ const WebDesignVisual = () => (
 );
 
 /* ──────────── 1: AI Chatbot — Refined conversation with AI brain ──────────── */
-const ChatbotVisual = () => (
-  <div className="relative w-full h-full flex items-center justify-center p-2">
+const ChatbotVisual = ({ isCompact }: { isCompact?: boolean }) => (
+  <div className="relative w-full h-full flex items-center justify-center p-2" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
     {/* Atmospheric glow */}
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100px] h-[80px] bg-gradient-to-br from-teal-400/10 via-cyan-300/8 to-emerald-400/10 rounded-full blur-xl" />
 
@@ -179,6 +185,7 @@ const ChatbotVisual = () => (
         className="absolute -top-1 right-0 z-20"
         animate={{ y: [0, -2, 0] }}
         transition={{ duration: 3, repeat: Infinity }}
+        style={{ willChange: 'transform' }}
       >
         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-400 to-cyan-500 shadow-[0_4px_16px_rgba(20,184,166,0.35)] flex items-center justify-center">
           <BotMessageSquare className="w-3.5 h-3.5 text-white" />
@@ -188,6 +195,7 @@ const ChatbotVisual = () => (
           className="absolute inset-0 rounded-lg border border-teal-400/40"
           animate={{ scale: [1, 1.6], opacity: [0.6, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
+          style={{ willChange: 'transform, opacity' }}
         />
       </motion.div>
 
@@ -196,9 +204,9 @@ const ChatbotVisual = () => (
         {/* User msg */}
         <motion.div
           className="ml-auto w-[78%] bg-gradient-to-br from-amber-100 to-orange-50 border border-amber-200/50 rounded-xl rounded-br-none px-2 py-1.5 shadow-sm"
-          initial={{ opacity: 0, x: 10, scale: 0.95 }}
+          initial={isCompact ? false : { opacity: 0, x: 10, scale: 0.95 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
+          transition={isCompact ? { duration: 0 } : { delay: 0.2, duration: 0.4 }}
         >
           <div className="w-full h-1 bg-amber-400/30 rounded-full mb-0.5" />
           <div className="w-3/4 h-1 bg-amber-300/20 rounded-full" />
@@ -207,9 +215,9 @@ const ChatbotVisual = () => (
         {/* Bot msg */}
         <motion.div
           className="mr-auto w-[82%] bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200/40 rounded-xl rounded-bl-none px-2 py-1.5 shadow-sm"
-          initial={{ opacity: 0, x: -10, scale: 0.95 }}
+          initial={isCompact ? false : { opacity: 0, x: -10, scale: 0.95 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
-          transition={{ delay: 0.7, duration: 0.4 }}
+          transition={isCompact ? { duration: 0 } : { delay: 0.7, duration: 0.4 }}
         >
           <div className="w-full h-1 bg-teal-400/30 rounded-full mb-0.5" />
           <div className="w-full h-1 bg-teal-300/20 rounded-full mb-0.5" />
@@ -219,9 +227,9 @@ const ChatbotVisual = () => (
         {/* User msg 2 */}
         <motion.div
           className="ml-auto w-[60%] bg-gradient-to-br from-amber-100 to-orange-50 border border-amber-200/50 rounded-xl rounded-br-none px-2 py-1.5 shadow-sm"
-          initial={{ opacity: 0, x: 10, scale: 0.95 }}
+          initial={isCompact ? false : { opacity: 0, x: 10, scale: 0.95 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
-          transition={{ delay: 1.2, duration: 0.4 }}
+          transition={isCompact ? { duration: 0 } : { delay: 1.2, duration: 0.4 }}
         >
           <div className="w-full h-1 bg-amber-400/25 rounded-full" />
         </motion.div>
@@ -229,9 +237,9 @@ const ChatbotVisual = () => (
         {/* Typing indicator */}
         <motion.div
           className="mr-auto flex items-center gap-1 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/40 rounded-xl rounded-bl-none px-2.5 py-1.5 w-fit shadow-sm"
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={isCompact ? false : { opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1.6, duration: 0.3 }}
+          transition={isCompact ? { duration: 0 } : { delay: 1.6, duration: 0.3 }}
         >
           {['bg-teal-500', 'bg-emerald-500', 'bg-cyan-500'].map((c, i) => (
             <motion.div
@@ -239,6 +247,7 @@ const ChatbotVisual = () => (
               className={`w-1.5 h-1.5 rounded-full ${c} shadow-sm`}
               animate={{ y: [0, -3, 0], scale: [0.8, 1.2, 0.8] }}
               transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.12 }}
+              style={{ willChange: 'transform' }}
             />
           ))}
         </motion.div>
@@ -248,8 +257,8 @@ const ChatbotVisual = () => (
 );
 
 /* ──────────── 2: AI Automation — Orbital pipeline with particles ──────────── */
-const AutomationVisual = () => (
-  <div className="relative w-full h-full flex items-center justify-center p-2">
+const AutomationVisual = ({ isCompact }: { isCompact?: boolean }) => (
+  <div className="relative w-full h-full flex items-center justify-center p-2" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
     {/* Background glow */}
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140px] h-[60px] bg-gradient-to-r from-emerald-400/10 via-amber-300/8 to-violet-400/10 rounded-full blur-xl" />
 
@@ -263,7 +272,7 @@ const AutomationVisual = () => (
         <motion.div
           key={i}
           className={`absolute w-1 h-1 rounded-full ${p.color}/50`}
-          style={{ top: p.top, left: p.left }}
+          style={{ top: p.top, left: p.left, willChange: 'transform, opacity' }}
           animate={{ y: [0, -8, 0], opacity: [0, 1, 0] }}
           transition={{ duration: 2, repeat: Infinity, delay: p.delay }}
         />
@@ -274,22 +283,25 @@ const AutomationVisual = () => (
         className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-[0_4px_16px_rgba(16,185,129,0.3)] relative"
         animate={{ scale: [1, 1.08, 1] }}
         transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ willChange: 'transform' }}
       >
         <Cpu className="w-4 h-4 text-white" />
         <motion.div
           className="absolute inset-0 rounded-2xl border border-emerald-300/40"
           animate={{ scale: [1, 1.3], opacity: [0.5, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
+          style={{ willChange: 'transform, opacity' }}
         />
       </motion.div>
 
-      {/* Connector 1 */}
+      {/* Connector 1: GPU-accelerated translateX instead of layout-triggering left */}
       <div className="relative w-3 sm:w-5 h-[3px]">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-300/40 to-amber-300/40 rounded-full" />
         <motion.div
-          className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-emerald-400 to-amber-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]"
-          animate={{ left: ['0%', '100%', '0%'] }}
+          className="absolute top-1/2 -translate-y-1/2 left-0 w-2 h-2 rounded-full bg-gradient-to-r from-emerald-400 to-amber-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]"
+          animate={{ x: ['0%', '125%', '0%'] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ willChange: 'transform' }}
         />
       </div>
 
@@ -298,26 +310,30 @@ const AutomationVisual = () => (
         className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-[0_4px_16px_rgba(245,158,11,0.3)] relative"
         animate={{ scale: [1, 1.08, 1] }}
         transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+        style={{ willChange: 'transform' }}
       >
         <motion.div
           className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full"
           animate={{ rotate: 360 }}
           transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+          style={{ willChange: 'transform' }}
         />
         <motion.div
           className="absolute inset-0 rounded-2xl border border-amber-300/40"
           animate={{ scale: [1, 1.3], opacity: [0.5, 0] }}
           transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+          style={{ willChange: 'transform, opacity' }}
         />
       </motion.div>
 
-      {/* Connector 2 */}
+      {/* Connector 2: GPU-accelerated translateX instead of layout-triggering left */}
       <div className="relative w-3 sm:w-5 h-[3px]">
         <div className="absolute inset-0 bg-gradient-to-r from-amber-300/40 to-violet-300/40 rounded-full" />
         <motion.div
-          className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-amber-400 to-violet-400 shadow-[0_0_6px_rgba(245,158,11,0.5)]"
-          animate={{ left: ['0%', '100%', '0%'] }}
+          className="absolute top-1/2 -translate-y-1/2 left-0 w-2 h-2 rounded-full bg-gradient-to-r from-amber-400 to-violet-400 shadow-[0_0_6px_rgba(245,158,11,0.5)]"
+          animate={{ x: ['0%', '125%', '0%'] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
+          style={{ willChange: 'transform' }}
         />
       </div>
 
@@ -326,16 +342,19 @@ const AutomationVisual = () => (
         className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-[0_4px_16px_rgba(139,92,246,0.3)] relative"
         animate={{ scale: [1, 1.08, 1] }}
         transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        style={{ willChange: 'transform' }}
       >
         <motion.div
           className="w-3.5 h-3.5 bg-white/70 rounded-md"
           animate={{ rotate: [0, 90, 0], scale: [0.8, 1, 0.8] }}
           transition={{ duration: 3, repeat: Infinity }}
+          style={{ willChange: 'transform' }}
         />
         <motion.div
           className="absolute inset-0 rounded-2xl border border-violet-300/40"
           animate={{ scale: [1, 1.3], opacity: [0.5, 0] }}
           transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+          style={{ willChange: 'transform, opacity' }}
         />
       </motion.div>
     </div>
@@ -343,8 +362,8 @@ const AutomationVisual = () => (
 );
 
 /* ──────────── 3: Mobile App Dev — Floating phone with app ecosystem ──────────── */
-const MobileAppVisual = () => (
-  <div className="relative w-full h-full flex items-center justify-center p-2">
+const MobileAppVisual = ({ isCompact }: { isCompact?: boolean }) => (
+  <div className="relative w-full h-full flex items-center justify-center p-2" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
     {/* Glow behind phone */}
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80px] h-[100px] bg-gradient-to-b from-violet-400/12 to-pink-400/8 rounded-full blur-xl" />
 
@@ -353,6 +372,7 @@ const MobileAppVisual = () => (
       className="absolute top-3 left-3 w-5 h-5 rounded-lg bg-gradient-to-br from-rose-400 to-pink-500 shadow-[0_2px_8px_rgba(244,63,94,0.3)] flex items-center justify-center"
       animate={{ y: [0, -4, 0], x: [0, 2, 0] }}
       transition={{ duration: 3, repeat: Infinity }}
+      style={{ willChange: 'transform' }}
     >
       <div className="w-2 h-2 bg-white/70 rounded-sm" />
     </motion.div>
@@ -360,6 +380,7 @@ const MobileAppVisual = () => (
       className="absolute top-5 right-4 w-5 h-5 rounded-lg bg-gradient-to-br from-sky-400 to-blue-500 shadow-[0_2px_8px_rgba(56,189,248,0.3)] flex items-center justify-center"
       animate={{ y: [0, 4, 0], x: [0, -2, 0] }}
       transition={{ duration: 3.5, repeat: Infinity, delay: 0.5 }}
+      style={{ willChange: 'transform' }}
     >
       <div className="w-2 h-0.5 bg-white/70 rounded-full mb-0.5" />
       <div className="w-2 h-0.5 bg-white/50 rounded-full" />
@@ -368,6 +389,7 @@ const MobileAppVisual = () => (
       className="absolute bottom-4 left-5 w-5 h-5 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 shadow-[0_2px_8px_rgba(16,185,129,0.3)] flex items-center justify-center"
       animate={{ y: [0, -3, 0] }}
       transition={{ duration: 4, repeat: Infinity, delay: 1 }}
+      style={{ willChange: 'transform' }}
     >
       <div className="w-2 h-2 rounded-full bg-white/60" />
     </motion.div>
@@ -377,6 +399,7 @@ const MobileAppVisual = () => (
       className="relative w-[56px] h-[96px] border-2 border-violet-300/70 rounded-2xl bg-white overflow-hidden shadow-[0_8px_30px_rgba(139,92,246,0.15)] z-10"
       animate={{ y: [0, -5, 0] }}
       transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+      style={{ willChange: 'transform' }}
     >
       {/* Notch */}
       <div className="absolute top-0.5 left-1/2 -translate-x-1/2 w-6 h-1.5 bg-gradient-to-r from-violet-200 to-purple-200 rounded-full z-10" />
@@ -385,6 +408,7 @@ const MobileAppVisual = () => (
         className="absolute inset-0 flex"
         animate={{ x: [0, -56, -112, 0] }}
         transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', times: [0, 0.3, 0.6, 1] }}
+        style={{ willChange: 'transform' }}
       >
         {/* Screen 1 — Social app */}
         <div className="w-[56px] h-full shrink-0 p-1.5 pt-3.5 flex flex-col gap-1 bg-gradient-to-b from-violet-50 to-white">
@@ -394,6 +418,7 @@ const MobileAppVisual = () => (
               className="absolute w-full h-3 bg-white/60 rounded-sm top-1 left-0 px-0.5"
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 2, repeat: Infinity }}
+              style={{ willChange: 'opacity' }}
             />
           </div>
           <div className="grid grid-cols-4 gap-0.5">
@@ -428,17 +453,17 @@ const MobileAppVisual = () => (
   </div>
 );
 
-
 /* ──────────── 4: eCommerce & Enterprise — Mini storefront with cart ──────────── */
-const EcommerceVisual = () => {
+const EcommerceVisual = ({ isCompact }: { isCompact?: boolean }) => {
   return (
-    <div className="relative w-full h-full flex items-center justify-center p-3">
+    <div className="relative w-full h-full flex items-center justify-center p-3" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
       <div className="relative w-[160px] h-[120px]">
         {/* Product card */}
         <motion.div
           className="absolute top-0 left-0 w-[72px] bg-white rounded-lg border-2 border-rose-200/60 overflow-hidden shadow-[0_3px_12px_rgba(244,63,94,0.1)]"
           animate={{ y: [0, -3, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ willChange: 'transform' }}
         >
           {/* Product image placeholder */}
           <div className="h-10 bg-gradient-to-br from-rose-100 via-pink-50 to-orange-50" />
@@ -450,6 +475,7 @@ const EcommerceVisual = () => {
               className="w-fit px-1.5 py-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full text-[5px] font-bold text-white"
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
+              style={{ willChange: 'transform' }}
             >
               $49.99
             </motion.div>
@@ -461,6 +487,7 @@ const EcommerceVisual = () => {
           className="absolute top-1 right-1"
           animate={{ scale: [1, 1.15, 1] }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+          style={{ willChange: 'transform' }}
         >
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center shadow-[0_3px_12px_rgba(251,146,60,0.3)]">
             <ShoppingCart className="w-4 h-4 text-white" />
@@ -470,6 +497,7 @@ const EcommerceVisual = () => {
             className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-[6px] font-bold text-white flex items-center justify-center shadow-sm"
             animate={{ scale: [0.9, 1.1, 0.9] }}
             transition={{ duration: 1.5, repeat: Infinity }}
+            style={{ willChange: 'transform' }}
           >
             3
           </motion.div>
@@ -480,6 +508,7 @@ const EcommerceVisual = () => {
           className="absolute bottom-0 right-0 w-[80px] h-[48px] rounded-lg bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 shadow-[0_4px_16px_rgba(99,102,241,0.25)] p-2 flex flex-col justify-between"
           animate={{ x: [20, 0, 0, 20], opacity: [0, 1, 1, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', times: [0, 0.2, 0.7, 1] }}
+          style={{ willChange: 'transform, opacity' }}
         >
           <div className="flex justify-between items-center">
             <div className="w-4 h-3 bg-amber-300/80 rounded-sm" />
@@ -499,6 +528,7 @@ const EcommerceVisual = () => {
           className="absolute bottom-8 left-[38%] w-5 h-5 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.4)]"
           animate={{ scale: [0, 1, 1, 0], opacity: [0, 1, 1, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', times: [0.15, 0.35, 0.65, 0.85], delay: 1 }}
+          style={{ willChange: 'transform, opacity' }}
         >
           <span className="text-white text-[8px] font-bold">✓</span>
         </motion.div>
@@ -508,20 +538,22 @@ const EcommerceVisual = () => {
 };
 
 /* ──────────── 5: PWA & Advanced Web Apps — Cross-platform orbiting devices ──────────── */
-const PWAVisual = () => (
-  <div className="relative w-full h-full flex items-center justify-center p-3">
+const PWAVisual = ({ isCompact }: { isCompact?: boolean }) => (
+  <div className="relative w-full h-full flex items-center justify-center p-3" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
     <div className="relative w-[150px] h-[130px]">
       {/* Orbiting ring 1 */}
       <motion.div
         className="absolute inset-2 rounded-full border border-dashed border-indigo-300/40"
         animate={{ rotate: 360 }}
         transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+        style={{ willChange: 'transform' }}
       />
       {/* Orbiting ring 2 */}
       <motion.div
         className="absolute inset-6 rounded-full border border-dashed border-orange-300/30"
         animate={{ rotate: -360 }}
         transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+        style={{ willChange: 'transform' }}
       />
 
       {/* Central app icon */}
@@ -530,6 +562,7 @@ const PWAVisual = () => (
           className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-[0_4px_20px_rgba(99,102,241,0.35)] flex items-center justify-center"
           animate={{ scale: [1, 1.08, 1] }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ willChange: 'transform' }}
         >
           <Globe className="w-5 h-5 text-white" />
         </motion.div>
@@ -540,6 +573,7 @@ const PWAVisual = () => (
         className="absolute top-0 right-2"
         animate={{ y: [0, -4, 0] }}
         transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ willChange: 'transform' }}
       >
         <div className="w-[18px] h-[30px] rounded-[4px] border-2 border-orange-400 bg-gradient-to-b from-orange-50 to-amber-50 shadow-[0_2px_8px_rgba(251,146,60,0.2)]">
           <div className="mx-auto mt-1 w-2 h-3 bg-orange-300/40 rounded-[1px]" />
@@ -552,6 +586,7 @@ const PWAVisual = () => (
         className="absolute bottom-1 left-0"
         animate={{ y: [0, 4, 0] }}
         transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+        style={{ willChange: 'transform' }}
       >
         <div className="w-[34px] h-[22px] rounded-[3px] border-2 border-blue-400 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-[0_2px_8px_rgba(59,130,246,0.2)]">
           <div className="m-1 h-2.5 bg-blue-200/50 rounded-[1px]" />
@@ -564,6 +599,7 @@ const PWAVisual = () => (
         className="absolute bottom-0 right-0"
         animate={{ y: [0, -3, 0] }}
         transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        style={{ willChange: 'transform' }}
       >
         <div className="w-[26px] h-[20px] rounded-[3px] border-2 border-violet-400 bg-gradient-to-br from-violet-50 to-purple-50 shadow-[0_2px_8px_rgba(139,92,246,0.2)]">
           <div className="m-0.5 h-3 bg-violet-200/40 rounded-[1px]" />
@@ -575,6 +611,7 @@ const PWAVisual = () => (
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full border border-indigo-400/30"
         animate={{ scale: [1, 2.5], opacity: [0.6, 0] }}
         transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut' }}
+        style={{ willChange: 'transform, opacity' }}
       />
 
       {/* Offline badge — top left */}
@@ -582,6 +619,7 @@ const PWAVisual = () => (
         className="absolute top-1 left-1 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-[5px] font-bold text-white shadow-[0_0_8px_rgba(16,185,129,0.3)] whitespace-nowrap"
         animate={{ opacity: [0.6, 1, 0.6] }}
         transition={{ duration: 2, repeat: Infinity }}
+        style={{ willChange: 'opacity' }}
       >
         OFFLINE ✓
       </motion.div>
@@ -617,13 +655,16 @@ const ServiceVisual = ({ index, isCompactMobile }: { index: number; isCompactMob
   return (
     <div
       ref={visualRef}
-      onMouseEnter={handleVisualEnter}
-      onMouseLeave={handleVisualLeave}
+      onMouseEnter={isCompactMobile ? undefined : handleVisualEnter}
+      onMouseLeave={isCompactMobile ? undefined : handleVisualLeave}
       className={`w-full h-full ${isCompactMobile ? 'min-h-[65px]' : 'min-h-[75px] md:min-h-0'} bg-white rounded-xl border-2 border-blue-400/80 overflow-hidden relative flex items-center justify-center shrink-0 ${isCompactMobile ? '' : 'cursor-pointer'} shadow-[0_3px_10px_rgba(59,130,246,0.12),inset_0_0_15px_rgba(59,130,246,0.04)]`}
-      style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s ease, border-color 0.3s ease' }}
+      style={{
+        transition: isCompactMobile ? undefined : 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s ease, border-color 0.3s ease',
+        transform: 'translateZ(0)',
+      }}
     >
       <div className={isCompactMobile ? "scale-[0.44] transition-transform duration-300" : "scale-[0.62] sm:scale-[0.7] md:scale-[0.78] lg:scale-[0.88] transition-transform duration-500"}>
-        <Visual />
+        <Visual isCompact={isCompactMobile} />
       </div>
       {/* Inner shine on hover */}
       <div className="visual-inner-shine absolute inset-0 rounded-xl bg-gradient-to-br from-white/0 to-white/0 pointer-events-none transition-all duration-300" />
@@ -633,14 +674,14 @@ const ServiceVisual = ({ index, isCompactMobile }: { index: number; isCompactMob
 };
 
 /* ─────────────────────── Lightweight CSS Bento Aura Background ─────────────────────── */
-const CardAuraBackground = ({ index }: { index: number }) => {
+const CardAuraBackground = React.memo(({ index }: { index: number }) => {
   const theme = SERVICE_THEMES[index % SERVICE_THEMES.length];
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl lg:rounded-[1.6rem] select-none z-0">
       {/* Ambient corner aura */}
       <div 
         className="absolute -top-12 -right-12 w-32 h-32 rounded-full blur-2xl opacity-0 group-hover:opacity-30 transition-opacity duration-500 pointer-events-none"
-        style={{ background: theme.accent }}
+        style={{ background: theme.accent, transform: 'translateZ(0)' }}
       />
       {/* Subtle micro dot grid */}
       <div
@@ -652,10 +693,10 @@ const CardAuraBackground = ({ index }: { index: number }) => {
       />
     </div>
   );
-};
+});
 
 /* ─────────────────────── Mobile Marquee Card (Full Content) ─────────────────────── */
-function MobileServiceMarqueeCard({
+const MobileServiceMarqueeCard = React.memo(function MobileServiceMarqueeCard({
   item,
   index,
 }: {
@@ -670,6 +711,7 @@ function MobileServiceMarqueeCard({
       className={`relative w-[300px] sm:w-[330px] min-h-[175px] sm:min-h-[185px] shrink-0 mr-3 rounded-2xl bg-white/95 border-2 border-[#d8d3c7] ${theme.hoverBg} p-3.5 sm:p-4 flex flex-col justify-between overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] select-none`}
       style={{
         '--card-glow': theme.glow,
+        transform: 'translateZ(0)',
       } as any}
     >
       {/* Decorative subtle bottom accent line */}
@@ -708,10 +750,10 @@ function MobileServiceMarqueeCard({
       </div>
     </div>
   );
-}
+});
 
 /* ─────────────────────── Desktop Bento Card with 3D Hover (Compact) ─────────────────────── */
-function BentoCard({
+const BentoCard = React.memo(function BentoCard({
   item,
   index,
 }: {
@@ -763,6 +805,7 @@ function BentoCard({
       style={{ 
         transition: 'transform 0.15s ease-out, border-color 0.4s, box-shadow 0.4s', 
         willChange: 'transform',
+        transform: 'translateZ(0)',
         '--card-glow': SERVICE_THEMES[index % SERVICE_THEMES.length].glow
       } as any}
     >
@@ -818,12 +861,13 @@ function BentoCard({
       </div>
     </motion.div>
   );
-}
+});
 
 /* ─────────────────────── Main Section ─────────────────────── */
 export function ServicesSection({ embedded }: { embedded?: boolean }) {
   const { content } = useContent();
   const { lang } = useLang();
+  const isMobile = useIsMobile();
   type ContentServices = { items?: Array<{ title?: string; desc?: string; id?: string | number; [key: string]: unknown }>; heading?: string; sub?: string };
   const t = (content[lang] as { services?: ContentServices })?.services;
   const allItems = t?.items || [];
@@ -846,14 +890,18 @@ export function ServicesSection({ embedded }: { embedded?: boolean }) {
   const row1Items = resolvedItems.slice(0, 3);
   const row2Items = resolvedItems.slice(3, 6);
 
-  // Duplicated arrays for infinite, seamless mobile marquee loop
-  const row1MarqueeItems = [...row1Items, ...row1Items, ...row1Items, ...row1Items];
-  const row2MarqueeItems = [...row2Items, ...row2Items, ...row2Items, ...row2Items];
+  // Duplicated arrays for infinite, seamless mobile marquee loop (2x duplication for 100% seamless loop)
+  const row1MarqueeItems = [...row1Items, ...row1Items];
+  const row2MarqueeItems = [...row2Items, ...row2Items];
 
   const Wrapper = embedded ? 'div' : 'section';
 
   return (
-    <Wrapper id="services" className="relative w-full overflow-visible bg-[#FAFAFA] pb-2 pt-6 md:pt-8 md:pb-4 z-10 flex flex-col items-center !border-none">
+    <Wrapper 
+      id="services" 
+      className="relative w-full overflow-visible bg-[#FAFAFA] pb-2 pt-6 md:pt-8 md:pb-4 z-10 flex flex-col items-center !border-none"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '850px' } as React.CSSProperties}
+    >
       
       {/* Background Decorators - Luxury Beige organic glows */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
@@ -892,73 +940,84 @@ export function ServicesSection({ embedded }: { embedded?: boolean }) {
           </motion.div>
         </div>
 
-        {/* ────── Mobile Marquee Rows (Mobile Only: 2 Rows of 3 Cards) ────── */}
-        <div className="block md:hidden w-full overflow-hidden space-y-3 pb-2 pt-1">
-          {/* Row 1: Cards 0, 1, 2 — Smooth Left Scroll */}
-          <div 
-            className="relative overflow-hidden w-full"
-            style={{
-              maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)'
-            }}
-          >
+        {/* ────── Viewport-Aware Conditional Rendering (Prevents dual-DOM mounting) ────── */}
+        {isMobile ? (
+          /* ────── Mobile Marquee Rows (Mobile Only: 2 Rows of 3 Cards) ────── */
+          <div className="w-full overflow-hidden space-y-3 pb-2 pt-1">
+            {/* Row 1: Cards 0, 1, 2 — Smooth Left Scroll */}
             <div 
-              className="marquee-track flex items-stretch hover:[animation-play-state:paused] active:[animation-play-state:paused]"
-              style={{ '--marquee-speed': '32s' } as React.CSSProperties}
+              className="relative overflow-hidden w-full"
+              style={{
+                maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)'
+              }}
             >
-              {row1MarqueeItems.map((item, idx) => (
-                <MobileServiceMarqueeCard
-                  key={`row1-${idx}`}
-                  item={item}
-                  index={idx % 3}
-                />
-              ))}
+              <div 
+                className="marquee-track flex items-stretch hover:[animation-play-state:paused] active:[animation-play-state:paused]"
+                style={{ 
+                  '--marquee-speed': '32s',
+                  willChange: 'transform',
+                  transform: 'translateZ(0)'
+                } as React.CSSProperties}
+              >
+                {row1MarqueeItems.map((item, idx) => (
+                  <MobileServiceMarqueeCard
+                    key={`row1-${idx}`}
+                    item={item}
+                    index={idx % 3}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Row 2: Cards 3, 4, 5 — Smooth Right Scroll (Reverse) */}
+            <div 
+              className="relative overflow-hidden w-full"
+              style={{
+                maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)'
+              }}
+            >
+              <div 
+                className="marquee-track-reverse flex items-stretch hover:[animation-play-state:paused] active:[animation-play-state:paused]"
+                style={{ 
+                  '--marquee-speed': '36s',
+                  willChange: 'transform',
+                  transform: 'translateZ(0)'
+                } as React.CSSProperties}
+              >
+                {row2MarqueeItems.map((item, idx) => (
+                  <MobileServiceMarqueeCard
+                    key={`row2-${idx}`}
+                    item={item}
+                    index={3 + (idx % 3)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
+        ) : (
+          /* ────── Desktop Dynamic Bento Grid Layout (Desktop Only: Compact 6 Cards) ────── */
+          <div className="flex flex-col gap-3.5 pb-2">
+            {Array.from({ length: Math.ceil((resolvedItems.length || 6) / 2) }).map((_, rowIndex) => {
+               const rowItems = resolvedItems.slice(rowIndex * 2, rowIndex * 2 + 2);
+               if (rowItems.length === 0) return null;
+               
+               // Alternating ratio logic: 53/47 then 47/53 then 53/47
+               const gridClass = rowIndex % 2 === 0 
+                  ? "grid-cols-2 lg:grid-cols-[53fr_47fr]" 
+                  : "grid-cols-2 lg:grid-cols-[47fr_53fr]";
 
-          {/* Row 2: Cards 3, 4, 5 — Smooth Right Scroll (Reverse) */}
-          <div 
-            className="relative overflow-hidden w-full"
-            style={{
-              maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)'
-            }}
-          >
-            <div 
-              className="marquee-track-reverse flex items-stretch hover:[animation-play-state:paused] active:[animation-play-state:paused]"
-              style={{ '--marquee-speed': '36s' } as React.CSSProperties}
-            >
-              {row2MarqueeItems.map((item, idx) => (
-                <MobileServiceMarqueeCard
-                  key={`row2-${idx}`}
-                  item={item}
-                  index={3 + (idx % 3)}
-                />
-              ))}
-            </div>
+                return (
+                 <div key={rowIndex} className={`grid ${gridClass} gap-3.5`}>
+                   {rowItems.map((item, colIndex) => (
+                     <BentoCard key={((item as any).id as string | number) || (item.title as string) || colIndex} item={item} index={rowIndex * 2 + colIndex} />
+                   ))}
+                 </div>
+               );
+            })}
           </div>
-        </div>
-
-        {/* ────── Desktop Dynamic Bento Grid Layout (Desktop Only: Compact 6 Cards) ────── */}
-        <div className="hidden md:flex flex-col gap-3.5 pb-2">
-          {Array.from({ length: Math.ceil((resolvedItems.length || 6) / 2) }).map((_, rowIndex) => {
-             const rowItems = resolvedItems.slice(rowIndex * 2, rowIndex * 2 + 2);
-             if (rowItems.length === 0) return null;
-             
-             // Alternating ratio logic: 53/47 then 47/53 then 53/47
-             const gridClass = rowIndex % 2 === 0 
-                ? "grid-cols-2 lg:grid-cols-[53fr_47fr]" 
-                : "grid-cols-2 lg:grid-cols-[47fr_53fr]";
-
-              return (
-               <div key={rowIndex} className={`grid ${gridClass} gap-3.5`}>
-                 {rowItems.map((item, colIndex) => (
-                   <BentoCard key={((item as any).id as string | number) || (item.title as string) || colIndex} item={item} index={rowIndex * 2 + colIndex} />
-                 ))}
-               </div>
-             );
-          })}
-        </div>
+        )}
         
       </div>
       <WaveDivider fill="#FDFBF7" />

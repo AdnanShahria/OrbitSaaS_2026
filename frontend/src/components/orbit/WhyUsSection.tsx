@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { RichText } from '@/components/ui/RichText';
 import { WaveDivider } from '@/components/ui/WaveDivider';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 /* ─── Precision-Engineered Visual Units ─── */
 
@@ -70,13 +71,18 @@ const ROIVisual = () => {
       </div>
 
       {/* Dynamic Animated Bars with Continuous Laser Scan Line */}
-      <div className="relative z-10 flex items-end justify-between gap-1 h-10 sm:h-12 pt-1">
-        {/* Animated Scanning Beam sweeping across bars */}
-        <motion.div 
-          animate={{ x: ['-20%', '120%'] }}
-          transition={{ duration: 2.8, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-y-0 w-3 bg-gradient-to-r from-transparent via-emerald-400/25 to-transparent pointer-events-none z-20"
-        />
+      <div className="relative z-10 flex items-end justify-between gap-1 h-10 sm:h-12 pt-1 overflow-hidden">
+        {/* Animated Scanning Beam sweeping across bars (GPU-accelerated) */}
+        <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+          <motion.div 
+            animate={{ x: ['-20%', '120%'] }}
+            transition={{ duration: 2.8, repeat: Infinity, ease: "linear" }}
+            style={{ willChange: 'transform' }}
+            className="absolute inset-y-0 left-0 w-full pointer-events-none"
+          >
+            <div className="w-3.5 h-full bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent" />
+          </motion.div>
+        </div>
 
         {bars.map((bar, i) => {
           const isPeak = i === bars.length - 1;
@@ -104,6 +110,7 @@ const ROIVisual = () => {
                   <motion.div 
                     animate={{ opacity: [0.7, 1, 0.7] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
+                    style={{ willChange: 'opacity' }}
                     className="absolute top-0 inset-x-0 h-1 bg-white/80" 
                   />
                 )}
@@ -164,17 +171,25 @@ const ScalabilityVisual = () => {
           {/* Main Bus Highway Line */}
           <div className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-blue-300/60 via-indigo-400 to-blue-300/60 top-1/2 -translate-y-1/2 z-0" />
 
-          {/* Continuous High-Speed Streaming Laser Packets */}
-          <motion.div 
-            animate={{ left: ['0%', '100%'], opacity: [0, 1, 1, 0] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500 blur-[1px] shadow-[0_0_8px_#3b82f6] z-1"
-          />
-          <motion.div 
-            animate={{ left: ['0%', '100%'], opacity: [0, 1, 1, 0] }}
-            transition={{ duration: 1.6, delay: 0.8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-indigo-400 blur-[0.5px] shadow-[0_0_6px_#6366f1] z-1"
-          />
+          {/* Continuous High-Speed Streaming Laser Packets (GPU-accelerated x transform) */}
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-0 pointer-events-none z-1">
+            <motion.div 
+              animate={{ x: ['0%', '100%'], opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+              style={{ willChange: 'transform, opacity' }}
+              className="absolute left-0 top-0 w-full"
+            >
+              <div className="w-2 h-2 -translate-y-1/2 rounded-full bg-blue-500 blur-[1px] shadow-[0_0_8px_#3b82f6]" />
+            </motion.div>
+            <motion.div 
+              animate={{ x: ['0%', '100%'], opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 1.6, delay: 0.8, repeat: Infinity, ease: "easeInOut" }}
+              style={{ willChange: 'transform, opacity' }}
+              className="absolute left-0 top-0 w-full"
+            >
+              <div className="w-1.5 h-1.5 -translate-y-1/2 rounded-full bg-indigo-400 blur-[0.5px] shadow-[0_0_6px_#6366f1]" />
+            </motion.div>
+          </div>
 
           {/* Node 1: Ingress */}
           <div className="relative z-10 w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg bg-white border border-blue-300/80 shadow-xs flex items-center justify-center text-blue-700">
@@ -182,22 +197,21 @@ const ScalabilityVisual = () => {
             <span className="absolute -bottom-2 text-[5.5px] font-mono text-zinc-500 font-semibold">INGRESS</span>
           </div>
 
-          {/* Node 2: Load Balancer (Center) */}
+          {/* Node 2: Load Balancer (Center) with GPU Compositor Pulse */}
           <div className="relative z-10 flex flex-col items-center">
-            <motion.div 
-              animate={{ 
-                boxShadow: [
-                  '0 0 0 0 rgba(59, 130, 246, 0.4)',
-                  '0 0 0 4px rgba(59, 130, 246, 0)',
-                  '0 0 0 0 rgba(59, 130, 246, 0)'
-                ]
-              }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-              className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg bg-zinc-950 text-white text-[7.5px] sm:text-[8px] font-mono font-bold shadow-xs flex items-center gap-1 border border-blue-500/40"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              <span>10M+ Req/s</span>
-            </motion.div>
+            <div className="relative flex items-center justify-center">
+              {/* GPU Compositor Pulse Ripple Layer */}
+              <motion.div 
+                animate={{ scale: [1, 1.08, 1.15], opacity: [0.6, 0.2, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                style={{ willChange: 'transform, opacity' }}
+                className="absolute -inset-0.5 rounded-md sm:rounded-lg border border-blue-500/50 bg-blue-500/20 pointer-events-none"
+              />
+              <div className="relative px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg bg-zinc-950 text-white text-[7.5px] sm:text-[8px] font-mono font-bold shadow-xs flex items-center gap-1 border border-blue-500/40">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>10M+ Req/s</span>
+              </div>
+            </div>
             <span className="text-[5.5px] font-mono text-blue-700 font-semibold mt-0.5">AUTOSCALE</span>
           </div>
 
@@ -249,12 +263,17 @@ const GrowthVisual = () => {
 
       {/* Precision Stacked Layer Visualizer with Continuous Verification Beam */}
       <div className="relative flex flex-col gap-1 my-auto max-w-[130px] sm:max-w-[142px] mx-auto w-full z-10">
-        {/* Laser Validation Scanner Sweeping vertically */}
-        <motion.div 
-          animate={{ top: ['-10%', '110%', '-10%'] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-500 to-transparent pointer-events-none z-20 shadow-[0_0_6px_#f59e0b]"
-        />
+        {/* Laser Validation Scanner Sweeping vertically (GPU-accelerated y transform) */}
+        <div className="absolute inset-0 pointer-events-none z-20 overflow-visible">
+          <motion.div 
+            animate={{ y: ['-10%', '110%', '-10%'] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            style={{ willChange: 'transform' }}
+            className="absolute inset-x-0 top-0 h-full pointer-events-none"
+          >
+            <div className="w-full h-[1.5px] bg-gradient-to-r from-transparent via-amber-500 to-transparent shadow-[0_0_6px_#f59e0b]" />
+          </motion.div>
+        </div>
 
         {/* Layer 1: Microservices */}
         <div className="px-2 py-0.5 sm:py-1 rounded-md bg-white border border-amber-200/90 shadow-xs flex items-center justify-between text-[7.5px] sm:text-[8px] font-semibold text-zinc-800 relative overflow-hidden">
@@ -338,7 +357,9 @@ const AIVisual = () => {
             transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
             className="absolute inset-0 rounded-full origin-center pointer-events-none"
             style={{
-              background: 'conic-gradient(from 0deg, rgba(168, 85, 247, 0.4) 0deg, transparent 60deg, transparent 360deg)'
+              background: 'conic-gradient(from 0deg, rgba(168, 85, 247, 0.4) 0deg, transparent 60deg, transparent 360deg)',
+              willChange: 'transform',
+              transform: 'translateZ(0)',
             }}
           />
 
@@ -346,18 +367,21 @@ const AIVisual = () => {
           <motion.div 
             animate={{ scale: [1, 1.25, 1] }}
             transition={{ duration: 2, repeat: Infinity, delay: 0 }}
+            style={{ willChange: 'transform' }}
             className="absolute -top-0.5 right-1 w-1.5 h-1.5 rounded-full bg-purple-600 shadow-[0_0_4px_#9333ea]"
           />
           {/* Orbiting Satellite Micro-Agent 2 (Executor) */}
           <motion.div 
             animate={{ scale: [1, 1.25, 1] }}
             transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
+            style={{ willChange: 'transform' }}
             className="absolute -bottom-0.5 right-1 w-1.5 h-1.5 rounded-full bg-pink-500 shadow-[0_0_4px_#ec4899]"
           />
           {/* Orbiting Satellite Micro-Agent 3 (Self-Heal) */}
           <motion.div 
             animate={{ scale: [1, 1.25, 1] }}
             transition={{ duration: 2, repeat: Infinity, delay: 1.2 }}
+            style={{ willChange: 'transform' }}
             className="absolute top-1/2 -translate-y-1/2 -left-0.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_4px_#6366f1]"
           />
 
@@ -580,6 +604,7 @@ function WhyUsMarqueeCard({ item, index }: { item: any; index: number }) {
       className={`relative w-[300px] sm:w-[340px] min-h-[175px] sm:min-h-[185px] shrink-0 mr-3.5 rounded-2xl bg-white/95 border-2 border-[#d8d3c7] hover:border-zinc-400 p-3.5 sm:p-4 flex flex-col justify-between overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.03)] select-none`}
       style={{
         '--card-glow': theme.glow,
+        transform: 'translateZ(0)',
       } as any}
     >
       {/* Subtle bottom accent line */}
@@ -701,6 +726,7 @@ function WhyUsGrid2x2Card({ item, index }: { item: any; index: number }) {
 export function WhyUsSection() {
   const { content } = useContent();
   const { lang } = useLang();
+  const isMobile = useIsMobile();
   
   // Layout toggle: 'marquee' (smooth infinite carousel) vs 'grid' (2x2 Bento grid)
   // Default to 2x2 grid on mobile (< 768px), and marquee flow on desktop
@@ -730,13 +756,14 @@ export function WhyUsSection() {
 
   if (!items.length) return null;
 
-  // Duplicated array for smooth infinite marquee looping
-  const marqueeItems = [...items, ...items, ...items, ...items];
+  // Duplicated array for smooth infinite marquee looping (2x duplication for 100% seamless loop)
+  const marqueeItems = [...items, ...items];
 
   return (
     <section 
       id="why-us" 
       className="relative bg-[#FDFBF7] text-zinc-900 pt-8 sm:pt-10 pb-12 sm:pb-16 overflow-hidden selection:bg-zinc-900 selection:text-white"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '650px' } as React.CSSProperties}
     >
       {/* Ambient Lighting Effect */}
       <div className="absolute top-0 inset-x-0 h-96 pointer-events-none overflow-hidden select-none -z-10">
@@ -845,7 +872,11 @@ export function WhyUsSection() {
               >
                 <div 
                   className="marquee-track flex items-stretch hover:[animation-play-state:paused] active:[animation-play-state:paused]"
-                  style={{ '--marquee-speed': '28s' } as React.CSSProperties}
+                  style={{ 
+                    '--marquee-speed': '28s',
+                    willChange: 'transform',
+                    transform: 'translateZ(0)',
+                  } as React.CSSProperties}
                 >
                   {marqueeItems.map((item, idx) => (
                     <WhyUsMarqueeCard
@@ -867,27 +898,29 @@ export function WhyUsSection() {
               transition={{ duration: 0.3 }}
               className="w-full"
             >
-              {/* Mobile 2x2 Grid (High-density compact layout) */}
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 md:hidden w-full">
-                {items.map((item: any, idx: number) => (
-                  <WhyUsGrid2x2Card
-                    key={`whyus-grid2x2-${idx}`}
-                    item={item}
-                    index={idx}
-                  />
-                ))}
-              </div>
-
-              {/* Desktop 2x2 Bento Grid (Spacious landscape layout) */}
-              <div className="hidden md:grid md:grid-cols-2 gap-3.5 md:gap-4 w-full">
-                {items.map((item: any, idx: number) => (
-                  <WhyUsCard 
-                    key={`whyus-bento-${idx}`} 
-                    item={item} 
-                    index={idx} 
-                  />
-                ))}
-              </div>
+              {isMobile ? (
+                /* Mobile 2x2 Grid (High-density compact layout) */
+                <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
+                  {items.map((item: any, idx: number) => (
+                    <WhyUsGrid2x2Card
+                      key={`whyus-grid2x2-${idx}`}
+                      item={item}
+                      index={idx}
+                    />
+                  ))}
+                </div>
+              ) : (
+                /* Desktop 2x2 Bento Grid (Spacious landscape layout) */
+                <div className="grid grid-cols-2 gap-3.5 md:gap-4 w-full">
+                  {items.map((item: any, idx: number) => (
+                    <WhyUsCard 
+                      key={`whyus-bento-${idx}`} 
+                      item={item} 
+                      index={idx} 
+                    />
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
