@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" width="600" height="200" fill="none">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#060E15" />
+      <stop offset="50%" stop-color="#081722" />
+      <stop offset="100%" stop-color="#03080D" />
+    </linearGradient>
+
+    <!-- Card Border Gradient -->
+    <linearGradient id="cardBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.8" />
+      <stop offset="40%" stop-color="#34D399" stop-opacity="0.3" />
+      <stop offset="80%" stop-color="#38BDF8" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0.5" />
+    </linearGradient>
+
+    <!-- Emerald Nebula Radial Glow -->
+    <radialGradient id="nebulaGlow" cx="20%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.25" />
+      <stop offset="50%" stop-color="#10B981" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Secondary Cyan Nebula Glow -->
+    <radialGradient id="cyanGlow" cx="85%" cy="80%" r="55%">
+      <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.18" />
+      <stop offset="60%" stop-color="#0EA5E9" stop-opacity="0.03" />
+      <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Grid Pattern -->
+    <pattern id="cardGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="0.75" />
+    </pattern>
+
+    <filter id="cardShadow" x="-5%" y="-10%" width="110%" height="130%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <style>
+    .card-mono {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      fill: #10B981;
+      text-transform: uppercase;
+    }
+    .card-title {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.6px;
+      fill: #FFFFFF;
+    }
+    .card-desc {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      fill: #94A3B8;
+    }
+    .card-link {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 11.5px;
+      font-weight: 600;
+      fill: #34D399;
+    }
+  </style>
+
+  <!-- Card Body -->
+  <g filter="url(#cardShadow)">
+    <rect x="1" y="1" width="598" height="198" rx="24" fill="url(#cardBg)" />
+    <!-- Grid Overlay -->
+    <rect x="1" y="1" width="598" height="198" rx="24" fill="url(#cardGrid)" />
+    <!-- Ambient Nebulae -->
+    <rect x="1" y="1" width="598" height="198" rx="24" fill="url(#nebulaGlow)" />
+    <rect x="1" y="1" width="598" height="198" rx="24" fill="url(#cyanGlow)" />
+    <!-- Glowing Border -->
+    <rect x="1" y="1" width="598" height="198" rx="24" stroke="url(#cardBorder)" stroke-width="1.3" />
+  </g>
+
+  <!-- Large Faint Background Watermark Orbit -->
+  <g transform="translate(480, 100)" opacity="0.15">
+    <ellipse cx="0" cy="0" rx="140" ry="50" fill="none" stroke="#10B981" stroke-width="3" transform="rotate(-30)" />
+    <ellipse cx="0" cy="0" rx="140" ry="50" fill="none" stroke="#38BDF8" stroke-width="2.5" transform="rotate(30)" />
+    <circle cx="0" cy="0" r="30" fill="#10B981" />
+  </g>
+
+  <!-- Pill Tag: A PRODUCT OF -->
+  <g transform="translate(36, 32)">
+    <rect x="0" y="0" width="138" height="26" rx="13" fill="#06464F" fill-opacity="0.6" stroke="#10B981" stroke-opacity="0.4" stroke-width="1" />
+    <circle cx="13" cy="13" r="3" fill="#10B981" />
+    <text x="24" y="17" class="card-mono">A PRODUCT OF</text>
+  </g>
+
+  <!-- Main Headline -->
+  <g transform="translate(36, 96)">
+    <text x="0" y="0" class="card-title">Orbit<tspan fill="#34D399">SaaS</tspan> <tspan fill="#64748B" font-weight="400" font-size="20px">&mdash; Digital Agency</tspan></text>
+  </g>
+
+  <!-- Subtitle Description -->
+  <g transform="translate(36, 126)">
+    <text x="0" y="0" class="card-desc">Bespoke Full-Stack Web Apps, AI Agent Systems &amp; Modern Cloud Architecture</text>
+    <text x="0" y="20" class="card-desc">Crafted with precision for enterprise and scaling startups worldwide.</text>
+  </g>
+
+  <!-- Bottom Link Pill -->
+  <g transform="translate(36, 162)">
+    <text x="0" y="0" class="card-link">&rarr; Explore our work at https://orbitsaas.cloud</text>
+  </g>
+
+  <!-- Right Floating Emblem with 3D Ring & Satellites -->
+  <g transform="translate(480, 95)">
+    <!-- Main Emblem Circle -->
+    <circle cx="0" cy="0" r="42" fill="#06464F" stroke="#10B981" stroke-width="1.8" />
+    <circle cx="0" cy="0" r="10" fill="#10B981" />
+    <circle cx="-2" cy="-2" r="3" fill="#A7F3D0" opacity="0.8" />
+
+    <!-- Orbits -->
+    <ellipse cx="0" cy="0" rx="30" ry="11" fill="none" stroke="#34D399" stroke-width="2" transform="rotate(-38)" stroke-linecap="round" />
+    <ellipse cx="0" cy="0" rx="30" ry="11" fill="none" stroke="#38BDF8" stroke-width="1.6" transform="rotate(38)" stroke-linecap="round" />
+
+    <!-- Orbiting Dots -->
+    <circle cx="24" cy="-14" r="4" fill="#FD9603" />
+    <circle cx="25" cy="-15" r="1.2" fill="#FFE3B3" />
+    <circle cx="-22" cy="16" r="3" fill="#F59E0B" />
+    <circle cx="2" cy="28" r="2.2" fill="#10B981" />
+  </g>
+</svg>
