@@ -515,7 +515,7 @@ export function ProjectDetailModal({ projectId, onClose }: { projectId: string |
                                 return <CollapsibleCards blocks={renderBlocks} />;
                             })()}
 
-                            {project.link && project.link !== '#' && (
+                            {!project.hideLiveLink && project.link && project.link !== '#' && (
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}

@@ -218,6 +218,7 @@ interface UnifiedProject {
     seoCover?: string; // Explicit SEO / Social banner cover alias
     hoverImages: number[]; // Indices into images[] to show on hover
     link: string;
+    hideLiveLink: boolean; // If true, external live demo button is hidden on public site
     categories: string[];
     featured: boolean;
     hidden: boolean; // If true, project is hidden from public site
@@ -244,6 +245,7 @@ const DEFAULT_PROJECT: UnifiedProject = {
     seoCover: '',
     hoverImages: [],
     link: '',
+    hideLiveLink: false,
     categories: ['SaaS'],
     featured: false,
     hidden: false,
@@ -365,7 +367,36 @@ function ProjectEditor({ item, update, categories: availableCategories, onSave }
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <TextField label="Live Link" value={item.link || ''} onChange={v => update({ ...item, link: v })} />
+                    <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-sm font-medium text-foreground">Live Link</label>
+                            <button
+                                type="button"
+                                onClick={() => update({ ...item, hideLiveLink: !item.hideLiveLink })}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer border ${
+                                    item.hideLiveLink
+                                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-500 dark:text-amber-400 hover:bg-amber-500/25'
+                                        : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25'
+                                }`}
+                                title={item.hideLiveLink ? "Live link is hidden on public project page" : "Live link is visible on public project page"}
+                            >
+                                <span className={`w-1.5 h-1.5 rounded-full ${item.hideLiveLink ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                                {item.hideLiveLink ? 'Link Hidden' : 'Link Visible'}
+                            </button>
+                        </div>
+                        <input
+                            type="text"
+                            value={item.link || ''}
+                            onChange={e => update({ ...item, link: e.target.value })}
+                            placeholder="https://example.com"
+                            className="w-full bg-secondary/60 focus:bg-card rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary border border-border transition-all shadow-xs"
+                        />
+                        {item.hideLiveLink && item.link && (
+                            <p className="text-[11px] text-amber-500 font-medium flex items-center gap-1 mt-1">
+                                <span>⚠️</span> Live preview button is hidden from public view, but link is saved.
+                            </p>
+                        )}
+                    </div>
                     <TextField label="Video URL (YouTube / Direct)" value={item.videoPreview || ''} onChange={v => update({ ...item, videoPreview: v })} />
                 </div>
             </div>
@@ -1195,6 +1226,7 @@ export default function AdminProjects() {
                 seoCover: enItem.seoCover || bnItem.seoCover || enItem.shareImage || bnItem.shareImage || '',
                 hoverImages: enItem.hoverImages || bnItem.hoverImages || [],
                 link: enItem.link || bnItem.link || '',
+                hideLiveLink: enItem.hideLiveLink ?? bnItem.hideLiveLink ?? false,
                 categories: sharedCategories,
                 featured: enItem.featured ?? bnItem.featured ?? false,
                 hidden: enItem.hidden ?? bnItem.hidden ?? false,
@@ -1241,6 +1273,7 @@ export default function AdminProjects() {
                 hoverImages: p.hoverImages || [],
                 image: p.images[0] || '',
                 link: p.link,
+                hideLiveLink: p.hideLiveLink || false,
                 categories: p.categories,
                 category: p.categories[0] || 'SaaS',
                 featured: p.featured,
@@ -1262,6 +1295,7 @@ export default function AdminProjects() {
                 hoverImages: p.hoverImages || [],
                 image: p.images[0] || '',
                 link: p.link,
+                hideLiveLink: p.hideLiveLink || false,
                 categories: p.categories,
                 category: p.categories[0] || 'SaaS',
                 featured: p.featured,
@@ -1470,6 +1504,9 @@ export default function AdminProjects() {
                                         {p.hidden && (
                                             <span className="flex-shrink-0 px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 text-[9px] font-bold uppercase tracking-wider">Hidden</span>
                                         )}
+                                        {p.hideLiveLink && p.link && (
+                                            <span className="flex-shrink-0 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 dark:text-amber-400 text-[9px] font-bold uppercase tracking-wider" title="Live link is hidden on public site">Link Hidden</span>
+                                        )}
                                     </div>
                                     <span className="text-[10px] text-muted-foreground bg-background px-1.5 py-0.5 rounded border border-border truncate max-w-full inline-block mt-0.5">
                                         {p.categories.join(', ')}
@@ -1563,6 +1600,7 @@ export default function AdminProjects() {
                                 seoCover: p.seoCover || p.shareImage || p.images[0] || '',
                                 hoverImages: p.hoverImages,
                                 link: p.link,
+                                hideLiveLink: p.hideLiveLink || false,
                                 categories: p.categories,
                                 category: p.categories[0] || 'SaaS',
                                 featured: p.featured,
@@ -1587,6 +1625,7 @@ export default function AdminProjects() {
                                 seoCover: p.seoCover || p.shareImage || p.images[0] || '',
                                 hoverImages: p.hoverImages,
                                 link: p.link,
+                                hideLiveLink: p.hideLiveLink || false,
                                 categories: p.categories,
                                 category: p.categories[0] || 'SaaS',
                                 featured: p.featured,
@@ -1630,6 +1669,7 @@ export default function AdminProjects() {
                                 seoCover: en.seoCover || bn.seoCover || en.shareImage || bn.shareImage || '',
                                 hoverImages: en.hoverImages || bn.hoverImages || [],
                                 link: en.link || bn.link || '',
+                                hideLiveLink: en.hideLiveLink ?? bn.hideLiveLink ?? false,
                                 categories: Array.isArray(importCats) ? importCats : [importCats],
                                 featured: en.featured ?? bn.featured ?? false,
                                 hidden: en.hidden ?? bn.hidden ?? false,

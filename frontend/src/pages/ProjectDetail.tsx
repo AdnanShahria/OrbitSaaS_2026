@@ -829,7 +829,7 @@ export default function ProjectDetail() {
                         })()}
 
                         {/* Live Link Button */}
-                        {project.link && project.link !== '#' && (
+                        {!project.hideLiveLink && project.link && project.link !== '#' && (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
