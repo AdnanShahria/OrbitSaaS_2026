@@ -230,6 +230,18 @@ export default function AdminInvoices() {
     const token = localStorage.getItem('admin_token') || '';
     const { isLight } = useAdminTheme();
 
+    const inputCls = isLight
+        ? "w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-colors"
+        : "w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm text-white placeholder:text-muted-foreground/60 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-colors";
+
+    const selectCls = isLight
+        ? "w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors"
+        : "w-full px-3.5 py-2.5 rounded-xl bg-card border border-border text-sm text-white focus:border-indigo-500 focus:outline-none transition-colors";
+
+    const tableInputCls = isLight
+        ? "w-full px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors"
+        : "w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm text-white placeholder:text-muted-foreground/60 focus:border-indigo-500 focus:outline-none transition-colors";
+
     // Data State
     const [invoices, setInvoices] = useState<InvoiceData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -286,10 +298,13 @@ export default function AdminInvoices() {
         status: 'draft',
         payment_instructions: DEFAULT_PAYMENT_INSTRUCTIONS,
         notes: DEFAULT_NOTES,
+        hide_status: false,
+        custom_status_label: '',
     });
 
     const [customServiceInput, setCustomServiceInput] = useState('');
     const [saving, setSaving] = useState(false);
+    const [runningAutoProcess, setRunningAutoProcess] = useState(false);
 
     // Email Composer Form
     const [emailForm, setEmailForm] = useState({
@@ -379,6 +394,8 @@ export default function AdminInvoices() {
             status: 'draft',
             payment_instructions: DEFAULT_PAYMENT_INSTRUCTIONS,
             notes: DEFAULT_NOTES,
+            hide_status: false,
+            custom_status_label: '',
         });
         setCustomServiceInput('');
         setBuilderOpen(true);
@@ -392,6 +409,8 @@ export default function AdminInvoices() {
             ...inv,
             items: items.length > 0 ? items : [{ description: '', quantity: 1, unit_price: 0, amount: 0 }],
             service_type: isCustom ? 'Custom Service' : inv.service_type,
+            hide_status: Boolean(inv.hide_status),
+            custom_status_label: inv.custom_status_label || '',
         });
         setCustomServiceInput(isCustom ? inv.service_type : '');
         setBuilderOpen(true);
@@ -456,8 +475,8 @@ export default function AdminInvoices() {
         }));
     };
 
-    // Save Invoice (Create or Update)
-    const handleSaveInvoice = async (andCompose: boolean = false) => {
+    // Save Invoice (Create or Update, optional compose or direct download)
+    const handleSaveInvoice = async (andCompose: boolean = false, andDownload: boolean = false) => {
         if (!formData.client_name.trim()) {
             toast.error('Client Name is required');
             return;
@@ -495,17 +514,61 @@ export default function AdminInvoices() {
             const data = await res.json();
             if (!res.ok || !data.success) throw new Error(data.error || 'Failed to save invoice');
 
+            const savedInv: InvoiceData = {
+                ...(data.invoice || formData),
+                service_type: effectiveServiceType,
+                items: formData.items,
+            };
+
             toast.success(isEdit ? 'Invoice updated successfully' : 'Invoice created successfully');
             setBuilderOpen(false);
             fetchInvoices();
 
-            if (andCompose) {
-                handleOpenEmailModal(data.invoice || formData);
+            if (andDownload) {
+                handleDownloadPdf(savedInv);
+            } else if (andCompose) {
+                handleOpenEmailModal(savedInv);
             }
         } catch (err: any) {
             toast.error(err.message || 'Error saving invoice');
         } finally {
             setSaving(false);
+        }
+    };
+
+    // Download Draft PDF directly without saving or sending
+    const handleDownloadBuilderDraft = () => {
+        try {
+            const effectiveServiceType = formData.service_type === 'Custom Service'
+                ? (customServiceInput.trim() || 'Custom Service')
+                : formData.service_type;
+            const draftInv: InvoiceData = {
+                ...formData,
+                service_type: effectiveServiceType,
+            };
+            handleDownloadPdf(draftInv);
+        } catch (e: any) {
+            toast.error('Failed to generate draft PDF: ' + e.message);
+        }
+    };
+
+    // Run Auto-Invoicing Cycle (transitions overdue invoices, health checks)
+    const handleRunAutoProcess = async () => {
+        setRunningAutoProcess(true);
+        const toastId = toast.loading('Running automated invoicing cycle...');
+        try {
+            const res = await fetch(`${API_BASE}/api/invoices?action=auto_process`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Auto process failed');
+            toast.success(data.message || 'Auto-invoicing cycle completed successfully!', { id: toastId });
+            fetchInvoices();
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to run auto-invoicing', { id: toastId });
+        } finally {
+            setRunningAutoProcess(false);
         }
     };
 
@@ -766,6 +829,21 @@ export default function AdminInvoices() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={handleRunAutoProcess}
+                            disabled={runningAutoProcess}
+                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                                isLight
+                                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200 shadow-xs'
+                                    : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/30 shadow-xs'
+                            }`}
+                            title="Run automated invoice check (updates overdue status according to due dates)"
+                        >
+                            <Sparkles className={`w-3.5 h-3.5 ${runningAutoProcess ? 'animate-spin' : ''}`} />
+                            <span>Auto-Invoicing Check</span>
+                        </button>
+
                         <button
                             onClick={fetchInvoices}
                             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
@@ -1142,7 +1220,7 @@ export default function AdminInvoices() {
             </div>
 
             {/* ══════════════════════════════════════════════════════════════════
-                MODAL 1: INVOICE BUILDER / EDITOR MODAL
+                MODAL 1: INVOICE BUILDER / EDITOR MODAL (Fully Light & Dark Adaptive)
                ══════════════════════════════════════════════════════════════════ */}
             <AnimatePresence>
                 {builderOpen && (
@@ -1151,7 +1229,11 @@ export default function AdminInvoices() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-card border border-border rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl p-6 md:p-8 space-y-6"
+                            className={`rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl p-6 md:p-8 space-y-6 border transition-colors ${
+                                isLight
+                                    ? 'bg-white border-zinc-200 text-zinc-900 shadow-xl'
+                                    : 'bg-[#12121a] border-border text-foreground shadow-black/80'
+                            }`}
                         >
                             {/* Modal Header */}
                             <div className="flex items-center justify-between border-b border-border pb-4">
@@ -1160,7 +1242,7 @@ export default function AdminInvoices() {
                                         <Receipt className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-bold text-foreground">
+                                        <h2 className={`text-xl font-bold ${isLight ? 'text-zinc-900' : 'text-foreground'}`}>
                                             {formData.id ? `Edit Invoice (${formData.invoice_number})` : 'Create Customer Invoice'}
                                         </h2>
                                         <p className="text-xs text-muted-foreground">
@@ -1171,15 +1253,36 @@ export default function AdminInvoices() {
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
-                                        onClick={handleBuilderPreview}
-                                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 hover:border-indigo-500/40 text-sm font-medium transition-all"
+                                        onClick={handleDownloadBuilderDraft}
+                                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium border transition-all cursor-pointer ${
+                                            isLight
+                                                ? 'bg-sky-50 hover:bg-sky-100 text-sky-700 border-sky-200'
+                                                : 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 hover:text-sky-300 border-sky-500/20'
+                                        }`}
+                                        title="Download PDF draft immediately without sending or saving"
                                     >
-                                        <Eye className="w-4 h-4" />
-                                        Preview
+                                        <Download className="w-3.5 h-3.5" />
+                                        <span>Download PDF</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleBuilderPreview}
+                                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium border transition-all cursor-pointer ${
+                                            isLight
+                                                ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+                                                : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border-indigo-500/20'
+                                        }`}
+                                    >
+                                        <Eye className="w-3.5 h-3.5" />
+                                        <span>Preview</span>
                                     </button>
                                     <button
                                         onClick={() => setBuilderOpen(false)}
-                                        className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white transition-colors"
+                                        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                                            isLight
+                                                ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-900'
+                                                : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white'
+                                        }`}
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -1202,7 +1305,7 @@ export default function AdminInvoices() {
                                             placeholder="e.g. Acme Corp / John Doe"
                                             value={formData.client_name}
                                             onChange={(e) => setFormData(f => ({ ...f, client_name: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className={inputCls}
                                         />
                                     </div>
 
@@ -1215,7 +1318,7 @@ export default function AdminInvoices() {
                                             placeholder="client@company.com"
                                             value={formData.client_email}
                                             onChange={(e) => setFormData(f => ({ ...f, client_email: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className={inputCls}
                                         />
                                     </div>
 
@@ -1228,7 +1331,7 @@ export default function AdminInvoices() {
                                             placeholder="+880 1700-000000"
                                             value={formData.client_phone || ''}
                                             onChange={(e) => setFormData(f => ({ ...f, client_phone: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className={inputCls}
                                         />
                                     </div>
                                 </div>
@@ -1241,10 +1344,10 @@ export default function AdminInvoices() {
                                         <select
                                             value={formData.service_type}
                                             onChange={(e) => setFormData(f => ({ ...f, service_type: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-card text-foreground border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className={selectCls}
                                         >
                                             {SERVICE_TYPE_OPTIONS.map(opt => (
-                                                <option key={opt} value={opt} className="bg-card text-foreground">{opt}</option>
+                                                <option key={opt} value={opt} className={isLight ? 'bg-white text-zinc-900' : 'bg-[#18181b] text-white'}>{opt}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -1259,7 +1362,7 @@ export default function AdminInvoices() {
                                                 placeholder="e.g. AI Workflow Integration"
                                                 value={customServiceInput}
                                                 onChange={(e) => setCustomServiceInput(e.target.value)}
-                                                className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                                className={inputCls}
                                             />
                                         </div>
                                     ) : (
@@ -1272,7 +1375,7 @@ export default function AdminInvoices() {
                                                 placeholder="e.g. Orbit Platform v2"
                                                 value={formData.project_name || ''}
                                                 onChange={(e) => setFormData(f => ({ ...f, project_name: e.target.value }))}
-                                                className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                                className={inputCls}
                                             />
                                         </div>
                                     )}
@@ -1286,13 +1389,13 @@ export default function AdminInvoices() {
                                             placeholder="Dhaka, Bangladesh / Global"
                                             value={formData.client_address || ''}
                                             onChange={(e) => setFormData(f => ({ ...f, client_address: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className={inputCls}
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Section 2: Invoice Metadata */}
+                            {/* Section 2: Invoice Metadata & Status Control */}
                             <div className="space-y-4 pt-2 border-t border-border">
                                 <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
                                     <Calendar className="w-4 h-4" /> 2. Invoice Dates & Currency
@@ -1307,7 +1410,7 @@ export default function AdminInvoices() {
                                             type="text"
                                             value={formData.invoice_number}
                                             onChange={(e) => setFormData(f => ({ ...f, invoice_number: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-sm font-mono focus:border-indigo-500 focus:outline-none text-white"
+                                            className={`${inputCls} font-mono`}
                                         />
                                     </div>
 
@@ -1319,7 +1422,7 @@ export default function AdminInvoices() {
                                             type="date"
                                             value={formData.issue_date}
                                             onChange={(e) => setFormData(f => ({ ...f, issue_date: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-card text-foreground border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className={inputCls}
                                         />
                                     </div>
 
@@ -1331,7 +1434,7 @@ export default function AdminInvoices() {
                                             type="date"
                                             value={formData.due_date}
                                             onChange={(e) => setFormData(f => ({ ...f, due_date: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-card text-foreground border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className={inputCls}
                                         />
                                     </div>
 
@@ -1342,13 +1445,65 @@ export default function AdminInvoices() {
                                         <select
                                             value={formData.currency}
                                             onChange={(e) => setFormData(f => ({ ...f, currency: e.target.value }))}
-                                            className="w-full px-3.5 py-2.5 rounded-xl bg-card text-foreground border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className={selectCls}
                                         >
                                             {CURRENCIES.map(c => (
-                                                <option key={c.code} value={c.code} className="bg-card text-foreground">{c.label}</option>
+                                                <option key={c.code} value={c.code} className={isLight ? 'bg-white text-zinc-900' : 'bg-[#18181b] text-white'}>{c.label}</option>
                                             ))}
                                         </select>
                                     </div>
+                                </div>
+
+                                {/* PDF Status Badge Customization (Hide word / Manual Custom Word) */}
+                                <div className={`p-4 rounded-2xl border transition-colors space-y-3 ${
+                                    isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-secondary/20 border-border'
+                                }`}>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <div>
+                                            <label className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${isLight ? 'text-indigo-600' : 'text-indigo-400'}`}>
+                                                <FileText className="w-3.5 h-3.5" /> PDF Status Badge & Watermark Control
+                                            </label>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                Control the status watermark/badge printed on the customer's PDF document.
+                                            </p>
+                                        </div>
+
+                                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={Boolean(formData.hide_status)}
+                                                onChange={(e) => setFormData(f => ({ ...f, hide_status: e.target.checked }))}
+                                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                            />
+                                            <span className={`text-xs font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>
+                                                Hide Status Badge on PDF
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                    {!formData.hide_status && (
+                                        <div className="pt-2 border-t border-border/40 grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                                                    Custom Status Badge Word (Manual Entry)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. ADVANCE, PROFORMA, OFFICIAL, TAX INVOICE"
+                                                    value={formData.custom_status_label || ''}
+                                                    onChange={(e) => setFormData(f => ({ ...f, custom_status_label: e.target.value }))}
+                                                    className={inputCls}
+                                                />
+                                            </div>
+                                            <div className="text-[11px] text-muted-foreground pt-1 sm:pt-4">
+                                                {formData.custom_status_label?.trim() ? (
+                                                    <span>Badge will print: <strong className={isLight ? 'text-zinc-900' : 'text-white'}>"{formData.custom_status_label.trim().toUpperCase()}"</strong> instead of default "{formData.status.toUpperCase()}"</span>
+                                                ) : (
+                                                    <span>Currently defaults to <strong className={isLight ? 'text-zinc-900' : 'text-white'}>"{formData.status === 'partially_paid' ? 'PARTIAL' : formData.status.toUpperCase()}"</strong>. Enter any custom word above or check "Hide".</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -1361,7 +1516,11 @@ export default function AdminInvoices() {
                                     <button
                                         type="button"
                                         onClick={addItem}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold border border-indigo-500/30 transition-all"
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                                            isLight
+                                                ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+                                                : 'bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border-indigo-500/30'
+                                        }`}
                                     >
                                         <Plus className="w-3.5 h-3.5" /> Add Row
                                     </button>
@@ -1369,14 +1528,16 @@ export default function AdminInvoices() {
 
                                 <div className="space-y-2">
                                     {(Array.isArray(formData.items) ? formData.items : []).map((item, idx) => (
-                                        <div key={idx} className="flex flex-col sm:flex-row items-center gap-2 bg-card p-2.5 rounded-xl border border-border/50">
+                                        <div key={idx} className={`flex flex-col sm:flex-row items-center gap-2 p-2.5 rounded-xl border ${
+                                            isLight ? 'bg-zinc-50/70 border-zinc-200' : 'bg-card border-border/50'
+                                        }`}>
                                             <div className="w-full sm:flex-1">
                                                 <input
                                                     type="text"
                                                     placeholder="Item / Deliverable description"
                                                     value={item.description}
                                                     onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                                                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white placeholder:text-muted-foreground/60"
+                                                    className={tableInputCls}
                                                 />
                                             </div>
                                             <div className="w-full sm:w-20">
@@ -1386,7 +1547,7 @@ export default function AdminInvoices() {
                                                     placeholder="Qty"
                                                     value={item.quantity}
                                                     onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                                                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm text-center focus:border-indigo-500 focus:outline-none text-white"
+                                                    className={`${tableInputCls} text-center`}
                                                 />
                                             </div>
                                             <div className="w-full sm:w-32">
@@ -1396,16 +1557,18 @@ export default function AdminInvoices() {
                                                     placeholder="Rate"
                                                     value={item.unit_price}
                                                     onChange={(e) => updateItem(idx, 'unit_price', e.target.value)}
-                                                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm text-right focus:border-indigo-500 focus:outline-none text-white"
+                                                    className={`${tableInputCls} text-right`}
                                                 />
                                             </div>
-                                            <div className="w-full sm:w-32 text-right font-mono font-bold text-sm text-white px-2">
+                                            <div className={`w-full sm:w-32 text-right font-mono font-bold text-sm px-2 ${
+                                                isLight ? 'text-zinc-900' : 'text-white'
+                                            }`}>
                                                 {formatCurrency(item.amount || (item.quantity * item.unit_price), formData.currency)}
                                             </div>
                                             <button
                                                 type="button"
                                                 onClick={() => removeItem(idx)}
-                                                className="p-2 rounded-lg hover:bg-rose-500/20 text-muted-foreground hover:text-rose-600 dark:text-rose-400 transition-colors"
+                                                className="p-2 rounded-lg hover:bg-rose-500/20 text-muted-foreground hover:text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"
                                                 title="Remove item"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -1473,7 +1636,11 @@ export default function AdminInvoices() {
                                             rows={4}
                                             value={formData.payment_instructions || ''}
                                             onChange={(e) => setFormData(f => ({ ...f, payment_instructions: e.target.value }))}
-                                            className="w-full p-3 rounded-xl bg-secondary border border-border text-xs focus:border-indigo-500 focus:outline-none text-white resize-none"
+                                            className={`w-full p-3 rounded-xl text-xs focus:border-indigo-500 focus:outline-none resize-none transition-colors ${
+                                                isLight
+                                                    ? 'bg-zinc-50 border border-zinc-200 text-zinc-900 focus:bg-white'
+                                                    : 'bg-secondary border border-border text-white'
+                                            }`}
                                         />
                                     </div>
 
@@ -1525,16 +1692,24 @@ export default function AdminInvoices() {
                                             rows={2}
                                             value={formData.notes || ''}
                                             onChange={(e) => setFormData(f => ({ ...f, notes: e.target.value }))}
-                                            className="w-full p-3 rounded-xl bg-secondary border border-border text-xs focus:border-indigo-500 focus:outline-none text-white resize-none"
+                                            className={`w-full p-3 rounded-xl text-xs focus:border-indigo-500 focus:outline-none resize-none transition-colors ${
+                                                isLight
+                                                    ? 'bg-zinc-50 border border-zinc-200 text-zinc-900 focus:bg-white'
+                                                    : 'bg-secondary border border-border text-white'
+                                            }`}
                                         />
                                     </div>
                                 </div>
 
                                 {/* Live Calculations Box */}
-                                <div className="p-4 rounded-2xl bg-card border border-border space-y-3">
+                                <div className={`p-4 rounded-2xl border space-y-3 transition-colors ${
+                                    isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-card border-border'
+                                }`}>
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-muted-foreground">Subtotal:</span>
-                                        <span className="font-semibold text-white">{formatCurrency(formData.subtotal, formData.currency)}</span>
+                                        <span className={`font-semibold ${isLight ? 'text-zinc-900' : 'text-white'}`}>
+                                            {formatCurrency(formData.subtotal, formData.currency)}
+                                        </span>
                                     </div>
 
                                     <div className="flex justify-between items-center text-sm">
@@ -1544,7 +1719,11 @@ export default function AdminInvoices() {
                                             min="0"
                                             value={formData.discount || 0}
                                             onChange={(e) => recalculateTotals(formData.items as InvoiceItem[], Number(e.target.value), formData.tax, formData.paid_amount)}
-                                            className="w-28 px-2 py-1 text-right rounded-lg bg-secondary border border-border text-sm text-emerald-600 dark:text-emerald-400 focus:outline-none focus:border-emerald-500"
+                                            className={`w-28 px-2 py-1 text-right rounded-lg border text-sm font-semibold focus:outline-none ${
+                                                isLight
+                                                    ? 'bg-white border-zinc-200 text-emerald-700 focus:border-emerald-500'
+                                                    : 'bg-secondary border-border text-emerald-400 focus:border-emerald-500'
+                                            }`}
                                         />
                                     </div>
 
@@ -1555,13 +1734,17 @@ export default function AdminInvoices() {
                                             min="0"
                                             value={formData.tax || 0}
                                             onChange={(e) => recalculateTotals(formData.items as InvoiceItem[], formData.discount, Number(e.target.value), formData.paid_amount)}
-                                            className="w-28 px-2 py-1 text-right rounded-lg bg-secondary border border-border text-sm text-white focus:outline-none focus:border-indigo-500"
+                                            className={`w-28 px-2 py-1 text-right rounded-lg border text-sm font-semibold focus:outline-none ${
+                                                isLight
+                                                    ? 'bg-white border-zinc-200 text-zinc-900 focus:border-indigo-500'
+                                                    : 'bg-secondary border-border text-white focus:border-indigo-500'
+                                            }`}
                                         />
                                     </div>
 
                                     <div className="border-t border-border pt-2 flex justify-between items-center">
-                                        <span className="font-bold text-white text-base">Grand Total:</span>
-                                        <span className="font-bold text-white text-lg font-mono">
+                                        <span className={`font-bold text-base ${isLight ? 'text-zinc-900' : 'text-white'}`}>Grand Total:</span>
+                                        <span className={`font-bold text-lg font-mono ${isLight ? 'text-zinc-900' : 'text-white'}`}>
                                             {formatCurrency(formData.total_amount, formData.currency)}
                                         </span>
                                     </div>
@@ -1573,12 +1756,18 @@ export default function AdminInvoices() {
                                             min="0"
                                             value={formData.paid_amount || 0}
                                             onChange={(e) => recalculateTotals(formData.items as InvoiceItem[], formData.discount, formData.tax, Number(e.target.value))}
-                                            className="w-28 px-2 py-1 text-right rounded-lg bg-secondary border border-border text-sm text-emerald-600 dark:text-emerald-400 font-semibold focus:outline-none focus:border-emerald-500"
+                                            className={`w-28 px-2 py-1 text-right rounded-lg border text-sm font-semibold focus:outline-none ${
+                                                isLight
+                                                    ? 'bg-white border-zinc-200 text-emerald-700 focus:border-emerald-500'
+                                                    : 'bg-secondary border-border text-emerald-400 focus:border-emerald-500'
+                                            }`}
                                         />
                                     </div>
 
-                                    <div className="border-t border-rose-500/30 pt-2.5 flex justify-between items-center bg-rose-500/10 p-3 rounded-xl border">
-                                        <span className="font-bold text-rose-300 text-sm">Balance Due:</span>
+                                    <div className={`border-t pt-2.5 flex justify-between items-center p-3 rounded-xl border ${
+                                        isLight ? 'bg-rose-50/70 border-rose-200' : 'bg-rose-500/10 border-rose-500/30'
+                                    }`}>
+                                        <span className={`font-bold text-sm ${isLight ? 'text-rose-800' : 'text-rose-300'}`}>Balance Due:</span>
                                         <span className="font-extrabold text-rose-600 dark:text-rose-400 text-lg font-mono">
                                             {formatCurrency(formData.due_amount, formData.currency)}
                                         </span>
@@ -1594,21 +1783,27 @@ export default function AdminInvoices() {
                                     <select
                                         value={formData.status}
                                         onChange={(e) => setFormData(f => ({ ...f, status: e.target.value as any }))}
-                                        className="px-2.5 py-1 rounded-lg bg-card text-foreground border border-border text-xs font-semibold text-white focus:outline-none"
+                                        className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold focus:outline-none ${
+                                            isLight ? 'bg-zinc-50 text-zinc-900 border-zinc-200' : 'bg-card text-white border-border'
+                                        }`}
                                     >
-                                        <option value="draft">Draft</option>
-                                        <option value="sent">Sent</option>
-                                        <option value="paid">Paid</option>
-                                        <option value="partially_paid">Partially Paid</option>
-                                        <option value="overdue">Overdue</option>
+                                        <option value="draft" className={isLight ? 'bg-white text-zinc-900' : 'bg-[#18181b] text-white'}>Draft</option>
+                                        <option value="sent" className={isLight ? 'bg-white text-zinc-900' : 'bg-[#18181b] text-white'}>Sent</option>
+                                        <option value="paid" className={isLight ? 'bg-white text-zinc-900' : 'bg-[#18181b] text-white'}>Paid</option>
+                                        <option value="partially_paid" className={isLight ? 'bg-white text-zinc-900' : 'bg-[#18181b] text-white'}>Partially Paid</option>
+                                        <option value="overdue" className={isLight ? 'bg-white text-zinc-900' : 'bg-[#18181b] text-white'}>Overdue</option>
                                     </select>
                                 </div>
 
-                                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
                                     <button
                                         type="button"
                                         onClick={() => setBuilderOpen(false)}
-                                        className="px-4 py-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-sm font-medium text-muted-foreground hover:text-white transition-colors"
+                                        className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+                                            isLight
+                                                ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'
+                                                : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white'
+                                        }`}
                                     >
                                         Cancel
                                     </button>
@@ -1616,8 +1811,12 @@ export default function AdminInvoices() {
                                     <button
                                         type="button"
                                         disabled={saving}
-                                        onClick={() => handleSaveInvoice(false)}
-                                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-sm font-semibold text-white border border-border transition-all disabled:opacity-50"
+                                        onClick={() => handleSaveInvoice(false, false)}
+                                        className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all disabled:opacity-50 cursor-pointer ${
+                                            isLight
+                                                ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-zinc-300 shadow-xs'
+                                                : 'bg-white/10 hover:bg-white/15 text-white border-border'
+                                        }`}
                                     >
                                         {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
                                         {saving ? 'Saving...' : 'Save Invoice'}
@@ -1626,8 +1825,23 @@ export default function AdminInvoices() {
                                     <button
                                         type="button"
                                         disabled={saving}
-                                        onClick={() => handleSaveInvoice(true)}
-                                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50"
+                                        onClick={() => handleSaveInvoice(false, true)}
+                                        className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all disabled:opacity-50 cursor-pointer ${
+                                            isLight
+                                                ? 'bg-sky-50 hover:bg-sky-100 text-sky-800 border-sky-200 shadow-xs'
+                                                : 'bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border-sky-500/30'
+                                        }`}
+                                        title="Save invoice and immediately download PDF without sending an email"
+                                    >
+                                        {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                        <span>Save & Download PDF</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={saving}
+                                        onClick={() => handleSaveInvoice(true, false)}
+                                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50 cursor-pointer"
                                     >
                                         {saving ? (
                                             <>
@@ -1659,18 +1873,28 @@ export default function AdminInvoices() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-card border border-border rounded-3xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden"
+                            className={`rounded-3xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden border transition-colors ${
+                                isLight
+                                    ? 'bg-white border-zinc-200 text-zinc-900 shadow-xl'
+                                    : 'bg-[#12121a] border-border text-foreground shadow-black/80'
+                            }`}
                         >
                             {/* Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-secondary/20">
+                            <div className={`flex items-center justify-between px-6 py-4 border-b ${
+                                isLight ? 'border-zinc-200 bg-zinc-50' : 'border-border bg-secondary/20'
+                            }`}>
                                 <div className="flex items-center gap-3">
                                     <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white">
                                         <Mail className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                                        <h2 className={`text-lg font-bold flex items-center gap-2 ${isLight ? 'text-zinc-900' : 'text-foreground'}`}>
                                             Send Invoice {selectedInvoice.invoice_number}
-                                            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                                isLight
+                                                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                                    : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                                            }`}>
                                                 To: {selectedInvoice.client_name}
                                             </span>
                                         </h2>
@@ -1681,7 +1905,11 @@ export default function AdminInvoices() {
                                 </div>
                                 <button
                                     onClick={() => setEmailModalOpen(false)}
-                                    className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white transition-colors"
+                                    className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                                        isLight
+                                            ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-900'
+                                            : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white'
+                                    }`}
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
@@ -1691,7 +1919,9 @@ export default function AdminInvoices() {
                             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
                                 
                                 {/* LEFT: Email Composer Form (5 cols) */}
-                                <div className="lg:col-span-5 p-6 border-r border-border overflow-y-auto space-y-4 bg-secondary/20">
+                                <div className={`lg:col-span-5 p-6 border-r overflow-y-auto space-y-4 ${
+                                    isLight ? 'bg-zinc-50/70 border-zinc-200' : 'bg-secondary/20 border-border'
+                                }`}>
                                     <div>
                                         <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
                                             Recipient Email
@@ -1700,7 +1930,7 @@ export default function AdminInvoices() {
                                             type="email"
                                             value={emailForm.recipient}
                                             onChange={(e) => setEmailForm(f => ({ ...f, recipient: e.target.value }))}
-                                            className="w-full px-3.5 py-2 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white font-mono"
+                                            className={`${inputCls} font-mono`}
                                         />
                                     </div>
 
@@ -1712,7 +1942,7 @@ export default function AdminInvoices() {
                                             type="text"
                                             value={emailForm.subject}
                                             onChange={(e) => setEmailForm(f => ({ ...f, subject: e.target.value }))}
-                                            className="w-full px-3.5 py-2 rounded-xl bg-secondary border border-border text-sm focus:border-indigo-500 focus:outline-none text-white"
+                                            className={inputCls}
                                         />
                                     </div>
 
@@ -1721,31 +1951,39 @@ export default function AdminInvoices() {
                                             <label className="text-xs font-semibold text-muted-foreground">
                                                 Personal Message / Composal Body
                                             </label>
-                                            <span className="text-[11px] text-indigo-600 dark:text-indigo-400">Renders directly in email body</span>
+                                            <span className={`text-[11px] ${isLight ? 'text-indigo-600 font-medium' : 'text-indigo-400'}`}>
+                                                Renders directly in email body
+                                            </span>
                                         </div>
                                         <textarea
                                             rows={8}
                                             value={emailForm.message}
                                             onChange={(e) => setEmailForm(f => ({ ...f, message: e.target.value }))}
                                             placeholder="Write a custom note or payment instructions to the customer..."
-                                            className="w-full p-3.5 rounded-xl bg-secondary border border-border text-xs font-sans leading-relaxed focus:border-indigo-500 focus:outline-none text-white resize-none"
+                                            className={`w-full p-3.5 rounded-xl text-xs font-sans leading-relaxed focus:border-indigo-500 focus:outline-none resize-none transition-colors ${
+                                                isLight
+                                                    ? 'bg-white border border-zinc-200 text-zinc-900 focus:bg-white'
+                                                    : 'bg-secondary border border-border text-white'
+                                            }`}
                                         />
                                     </div>
 
                                     {/* Attachment Toggle */}
-                                    <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between">
+                                    <div className={`p-3.5 rounded-xl border flex items-center justify-between ${
+                                        isLight ? 'bg-indigo-50/80 border-indigo-200' : 'bg-indigo-500/10 border-indigo-500/20'
+                                    }`}>
                                         <div className="flex items-center gap-2.5">
-                                            <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                            <FileText className={`w-5 h-5 ${isLight ? 'text-indigo-600' : 'text-indigo-400'}`} />
                                             <div>
-                                                <div className="text-xs font-bold text-white">Attach High-Res PDF</div>
-                                                <div className="text-[11px] text-indigo-300/80">{selectedInvoice.invoice_number}.pdf</div>
+                                                <div className={`text-xs font-bold ${isLight ? 'text-zinc-900' : 'text-white'}`}>Attach High-Res PDF</div>
+                                                <div className={`text-[11px] ${isLight ? 'text-indigo-700' : 'text-indigo-300/80'}`}>{selectedInvoice.invoice_number}.pdf</div>
                                             </div>
                                         </div>
                                         <input
                                             type="checkbox"
                                             checked={emailForm.attachPdf}
                                             onChange={(e) => setEmailForm(f => ({ ...f, attachPdf: e.target.checked }))}
-                                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-white/20 bg-white/10"
+                                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                                         />
                                     </div>
 
@@ -1755,7 +1993,7 @@ export default function AdminInvoices() {
                                             type="button"
                                             disabled={emailSending}
                                             onClick={handleSendInvoiceEmail}
-                                            className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 transition-all disabled:opacity-50"
+                                            className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 transition-all disabled:opacity-50 cursor-pointer"
                                         >
                                             {emailSending ? (
                                                 <>
@@ -1773,17 +2011,23 @@ export default function AdminInvoices() {
                                 </div>
 
                                 {/* RIGHT: Live Interactive Preview (7 cols) */}
-                                <div className="lg:col-span-7 flex flex-col h-full bg-secondary/30">
+                                <div className={`lg:col-span-7 flex flex-col h-full ${
+                                    isLight ? 'bg-zinc-100/70' : 'bg-secondary/30'
+                                }`}>
                                     
                                     {/* Preview Tab Selector */}
-                                    <div className="flex items-center justify-between px-6 py-2.5 border-b border-border bg-card">
+                                    <div className={`flex items-center justify-between px-6 py-2.5 border-b ${
+                                        isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-card border-border'
+                                    }`}>
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => setActiveEmailTab('html')}
-                                                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                                                     activeEmailTab === 'html'
                                                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                                                        : 'text-muted-foreground hover:text-white'
+                                                        : isLight
+                                                            ? 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                                                            : 'text-muted-foreground hover:text-white'
                                                 }`}
                                             >
                                                 <Mail className="w-3.5 h-3.5" />
@@ -1792,10 +2036,12 @@ export default function AdminInvoices() {
 
                                             <button
                                                 onClick={() => setActiveEmailTab('pdf')}
-                                                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                                                     activeEmailTab === 'pdf'
                                                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                                                        : 'text-muted-foreground hover:text-white'
+                                                        : isLight
+                                                            ? 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                                                            : 'text-muted-foreground hover:text-white'
                                                 }`}
                                             >
                                                 <FileText className="w-3.5 h-3.5" />
@@ -1809,14 +2055,22 @@ export default function AdminInvoices() {
                                                     href={pdfPreviewUrl}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-medium text-muted-foreground hover:text-white transition-all"
+                                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium border transition-all ${
+                                                        isLight
+                                                            ? 'bg-white hover:bg-zinc-100 text-zinc-700 border-zinc-200'
+                                                            : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white border-border'
+                                                    }`}
                                                 >
                                                     <ExternalLink className="w-3.5 h-3.5" /> Open Tab
                                                 </a>
                                             )}
                                             <button
                                                 onClick={() => handleDownloadPdf(selectedInvoice)}
-                                                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-medium text-muted-foreground hover:text-white transition-all"
+                                                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                                                    isLight
+                                                        ? 'bg-sky-50 hover:bg-sky-100 text-sky-800 border-sky-200 shadow-xs'
+                                                        : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white border-border'
+                                                }`}
                                             >
                                                 <Download className="w-3.5 h-3.5" /> Download PDF
                                             </button>
@@ -1826,7 +2080,9 @@ export default function AdminInvoices() {
                                     {/* Preview Container */}
                                     <div className="flex-1 p-4 overflow-y-auto flex items-center justify-center">
                                         {activeEmailTab === 'html' ? (
-                                            <div className="w-full h-full rounded-2xl overflow-hidden border border-border bg-secondary/20 shadow-inner">
+                                            <div className={`w-full h-full rounded-2xl overflow-hidden border shadow-inner ${
+                                                isLight ? 'bg-white border-zinc-200' : 'bg-secondary/20 border-border'
+                                            }`}>
                                                 <iframe
                                                     title="Email Preview"
                                                     srcDoc={emailPreviewHtml}
@@ -1834,7 +2090,9 @@ export default function AdminInvoices() {
                                                 />
                                             </div>
                                         ) : (
-                                            <div className="w-full h-full rounded-2xl overflow-hidden border border-border bg-secondary/20 shadow-inner">
+                                            <div className={`w-full h-full rounded-2xl overflow-hidden border shadow-inner ${
+                                                isLight ? 'bg-white border-zinc-200' : 'bg-secondary/20 border-border'
+                                            }`}>
                                                 {pdfPreviewUrl ? (
                                                     <iframe
                                                         title="PDF Preview"
@@ -1868,18 +2126,28 @@ export default function AdminInvoices() {
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="bg-card border border-border rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden"
+                            className={`rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden border transition-colors ${
+                                isLight
+                                    ? 'bg-white border-zinc-200 text-zinc-900 shadow-xl'
+                                    : 'bg-[#12121a] border-border text-foreground'
+                            }`}
                         >
                             {/* Preview Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
+                            <div className={`flex items-center justify-between px-6 py-4 border-b ${
+                                isLight ? 'border-zinc-200 bg-zinc-50' : 'border-border bg-card'
+                            }`}>
                                 <div className="flex items-center gap-3">
                                     <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white">
                                         <Eye className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                                        <h2 className={`text-lg font-bold flex items-center gap-2 ${isLight ? 'text-zinc-900' : 'text-foreground'}`}>
                                             Invoice Preview
-                                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                                isLight
+                                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                            }`}>
                                                 Unsaved Draft
                                             </span>
                                         </h2>
@@ -1894,7 +2162,11 @@ export default function AdminInvoices() {
                                             href={builderPreviewUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-sm font-medium text-muted-foreground hover:text-white border border-border transition-all"
+                                            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium border transition-all ${
+                                                isLight
+                                                    ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border-zinc-200'
+                                                    : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white border-border'
+                                            }`}
                                         >
                                             <ExternalLink className="w-3.5 h-3.5" /> Open Tab
                                         </a>
@@ -1907,13 +2179,21 @@ export default function AdminInvoices() {
                                                 : formData.service_type;
                                             handleDownloadPdf({ ...formData, service_type: effectiveServiceType });
                                         }}
-                                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-sm font-medium text-muted-foreground hover:text-white border border-border transition-all"
+                                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium border transition-all cursor-pointer ${
+                                            isLight
+                                                ? 'bg-sky-50 hover:bg-sky-100 text-sky-800 border-sky-200 shadow-xs'
+                                                : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white border-border'
+                                        }`}
                                     >
                                         <Download className="w-3.5 h-3.5" /> Download PDF
                                     </button>
                                     <button
                                         onClick={() => setBuilderPreviewOpen(false)}
-                                        className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white transition-colors"
+                                        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                                            isLight
+                                                ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-900'
+                                                : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white'
+                                        }`}
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -1922,7 +2202,9 @@ export default function AdminInvoices() {
 
                             {/* PDF Embed */}
                             <div className="flex-1 p-4 overflow-hidden">
-                                <div className="w-full h-full rounded-2xl overflow-hidden border border-border bg-secondary/20 shadow-inner">
+                                <div className={`w-full h-full rounded-2xl overflow-hidden border shadow-inner ${
+                                    isLight ? 'bg-white border-zinc-200' : 'bg-secondary/20 border-border'
+                                }`}>
                                     {builderPreviewUrl ? (
                                         <iframe
                                             title="Invoice PDF Preview"
@@ -1952,29 +2234,37 @@ export default function AdminInvoices() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-card border border-rose-500/20 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4"
+                            className={`rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 border ${
+                                isLight
+                                    ? 'bg-white border-zinc-200 text-zinc-900'
+                                    : 'bg-card border-rose-500/20 text-foreground'
+                            }`}
                         >
                             <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
                                 <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
                                     <ShieldAlert className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-lg font-bold text-foreground">Delete Invoice?</h3>
+                                <h3 className={`text-lg font-bold ${isLight ? 'text-zinc-900' : 'text-foreground'}`}>Delete Invoice?</h3>
                             </div>
 
                             <p className="text-sm text-muted-foreground">
-                                Are you sure you want to delete invoice <strong className="text-white font-mono">{invoiceToDelete.invoice_number}</strong> for <strong className="text-white">{invoiceToDelete.client_name}</strong>? This action cannot be undone.
+                                Are you sure you want to delete invoice <strong className={`font-mono ${isLight ? 'text-zinc-900' : 'text-white'}`}>{invoiceToDelete.invoice_number}</strong> for <strong className={isLight ? 'text-zinc-900' : 'text-white'}>{invoiceToDelete.client_name}</strong>? This action cannot be undone.
                             </p>
 
                             <div className="flex items-center justify-end gap-3 pt-2">
                                 <button
                                     onClick={() => setDeleteModalOpen(false)}
-                                    className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-sm font-medium text-muted-foreground hover:text-white"
+                                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+                                        isLight
+                                            ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'
+                                            : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white'
+                                    }`}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleDeleteInvoice}
-                                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-sm font-bold text-white shadow-lg shadow-rose-600/30"
+                                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-sm font-bold text-white shadow-lg shadow-rose-600/30 cursor-pointer"
                                 >
                                     Yes, Delete
                                 </button>

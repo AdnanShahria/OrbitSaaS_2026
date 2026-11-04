@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Menu, X, ChevronDown, ArrowLeft, Search } from 'lucide-react';
+import { UniversalSearchModal } from '@/components/search/UniversalSearchModal';
 import { useContent } from '@/contexts/ContentContext';
 import { useLang } from '@/contexts/LanguageContext';
 import React, { useState, useEffect, useRef, useTransition } from 'react';
@@ -58,6 +59,23 @@ export function Navbar() {
   const [isPending, startTransition] = useTransition();
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Global Command Palette Shortcut for Visitors (⌘K / Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   const [scrolled, setScrolled] = useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -404,6 +422,27 @@ export function Navbar() {
                 </motion.div>
               )}
 
+              {/* Universal Search Button */}
+              <motion.button
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.72, ease: [0.22, 1, 0.36, 1] }}
+                onClick={() => setSearchOpen(true)}
+                className={`flex items-center gap-1.5 sm:gap-2 h-7 sm:h-8 px-2 sm:px-3 rounded-full border text-[11px] font-medium transition-all duration-300 shadow-xs active:scale-95 cursor-pointer ${
+                  isLightMode
+                    ? 'border-zinc-200/90 bg-white/90 text-zinc-700 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700'
+                    : 'border-white/10 bg-white/[0.06] text-zinc-200 hover:bg-white/[0.12] hover:border-white/20'
+                }`}
+                title="Universal Search (⌘K)"
+                aria-label="Universal Search"
+              >
+                <Search className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span className="hidden md:inline text-[10px] font-bold tracking-tight uppercase">Search</span>
+                <kbd className={`hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold leading-none ${
+                  isLightMode ? 'bg-black/[0.06] text-zinc-600' : 'bg-white/[0.1] text-zinc-300'
+                }`}>⌘K</kbd>
+              </motion.button>
+
               {/* Language Switcher - Premium Toggle */}
               <motion.button
                 initial={{ opacity: 0, x: -10 }}
@@ -645,6 +684,13 @@ export function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Universal Search Modal (Visitor Mode) */}
+      <UniversalSearchModal
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        mode="visitor"
+      />
     </>
   );
 }

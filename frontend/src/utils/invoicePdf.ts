@@ -30,6 +30,8 @@ export interface InvoiceData {
     status?: 'draft' | 'sent' | 'paid' | 'partially_paid' | 'overdue' | 'cancelled';
     payment_instructions?: string;
     notes?: string;
+    hide_status?: boolean | number;
+    custom_status_label?: string;
     created_at?: string;
 }
 
@@ -206,23 +208,27 @@ export function generateInvoicePdf(invoice: InvoiceData, logoBase64?: string | n
     doc.setTextColor(...C.brand);
     doc.text(invoice.invoice_number || 'INV-0000', pw - m, y + 6, { align: 'right' });
 
-    // Status Pill
-    const rawStatus = invoice.status || 'draft';
-    const statusText = rawStatus === 'partially_paid' ? 'PARTIAL' : rawStatus.toUpperCase();
-    let statusStyle = C.statusDraft;
-    if (rawStatus === 'paid') statusStyle = C.statusPaid;
-    else if (rawStatus === 'partially_paid') statusStyle = C.statusPartiallyPaid;
-    else if (rawStatus === 'sent') statusStyle = C.statusSent;
-    else if (rawStatus === 'overdue') statusStyle = C.statusOverdue;
+    // Status Pill (Optional - can be hidden or manually customized)
+    const shouldHideStatus = invoice.hide_status === true || invoice.hide_status === 1 || String(invoice.hide_status) === 'true';
+    if (!shouldHideStatus) {
+        const rawStatus = invoice.status || 'draft';
+        const customText = invoice.custom_status_label?.trim();
+        const statusText = customText ? customText.toUpperCase() : (rawStatus === 'partially_paid' ? 'PARTIAL' : rawStatus.toUpperCase());
+        let statusStyle = C.statusDraft;
+        if (rawStatus === 'paid') statusStyle = C.statusPaid;
+        else if (rawStatus === 'partially_paid') statusStyle = C.statusPartiallyPaid;
+        else if (rawStatus === 'sent') statusStyle = C.statusSent;
+        else if (rawStatus === 'overdue') statusStyle = C.statusOverdue;
 
-    const pillW = Math.max(doc.getTextWidth(statusText) + 8, 22);
-    const pillX = pw - m - pillW;
-    doc.setFillColor(statusStyle.bg[0], statusStyle.bg[1], statusStyle.bg[2]);
-    doc.roundedRect(pillX, y + 9, pillW, 5.5, 2, 2, 'F');
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(statusStyle.text[0], statusStyle.text[1], statusStyle.text[2]);
-    doc.text(statusText, pillX + pillW / 2, y + 13, { align: 'center' });
+        const pillW = Math.max(doc.getTextWidth(statusText) + 8, 22);
+        const pillX = pw - m - pillW;
+        doc.setFillColor(statusStyle.bg[0], statusStyle.bg[1], statusStyle.bg[2]);
+        doc.roundedRect(pillX, y + 9, pillW, 5.5, 2, 2, 'F');
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(statusStyle.text[0], statusStyle.text[1], statusStyle.text[2]);
+        doc.text(statusText, pillX + pillW / 2, y + 13, { align: 'center' });
+    }
 
     // ─── Divider ───
     y = 36;

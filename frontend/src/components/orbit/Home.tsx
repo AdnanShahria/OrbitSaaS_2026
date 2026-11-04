@@ -14,6 +14,7 @@ import {
   Eye, Palette, Brain, Wrench, LucideIcon
 } from 'lucide-react';
 import { WaveDivider } from '@/components/ui/WaveDivider';
+import { HeroLiveSpotlight } from '@/components/orbit/HeroLiveSpotlight';
 
 /* ─── Mobile detection ────────────────────────────────────────── */
 function useIsMobile() {
@@ -709,8 +710,12 @@ export function Home() {
           </div>
 
           {/* ────────────────── RIGHT: open visual canvas showcasing hero banner ────────────────── */}
-          <div className="lg:col-span-5 xl:col-span-5 hidden lg:flex items-center justify-center min-h-[460px] pointer-events-none" aria-hidden="true">
-            {/* Visual spacer allowing the background robot + human hand connection to shine through unobstructed */}
+          <div className="lg:col-span-5 xl:col-span-5 hidden lg:flex flex-col justify-end items-end min-h-[460px] pointer-events-none pb-3 pr-1">
+            <div className="flex-1" />
+            <div className="pointer-events-auto w-full max-w-[360px]">
+              <HeroLiveSpotlight />
+            </div>
+
           </div>
         </div>
       </div>

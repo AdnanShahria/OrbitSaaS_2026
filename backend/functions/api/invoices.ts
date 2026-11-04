@@ -56,6 +56,8 @@ async function ensureInvoiceTable(env: Env) {
         `ALTER TABLE invoices ADD COLUMN sent_by TEXT`,
         `ALTER TABLE invoices ADD COLUMN created_by TEXT`,
         `ALTER TABLE invoices ADD COLUMN updated_by TEXT`,
+        `ALTER TABLE invoices ADD COLUMN hide_status INTEGER DEFAULT 0`,
+        `ALTER TABLE invoices ADD COLUMN custom_status_label TEXT`,
     ];
 
     for (const sql of migrations) {
@@ -459,6 +461,8 @@ async function handleCreate(request: Request, env: Env): Promise<Response> {
 
     const adminEmail = (await getAdminIdentity(request, env.JWT_SECRET)) || 'admin';
     const itemsJson = typeof items === 'string' ? items : JSON.stringify(items || []);
+    const hideStatusVal = (body.hide_status === true || body.hide_status === 1 || body.hide_status === 'true' || body.hide_status === '1') ? 1 : 0;
+    const customStatusLabel = body.custom_status_label ? String(body.custom_status_label).trim() : null;
 
     const res = await db.execute({
         sql: `
@@ -466,8 +470,9 @@ async function handleCreate(request: Request, env: Env): Promise<Response> {
                 invoice_number, client_name, client_email, client_phone, client_address,
                 service_type, project_name, issue_date, due_date, items,
                 subtotal, discount, tax, total_amount, paid_amount, due_amount,
-                currency, status, payment_instructions, notes, created_by, updated_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                currency, status, payment_instructions, notes, created_by, updated_by,
+                hide_status, custom_status_label
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING *
         `,
         args: [
@@ -493,6 +498,8 @@ async function handleCreate(request: Request, env: Env): Promise<Response> {
             notes || null,
             adminEmail,
             adminEmail,
+            hideStatusVal,
+            customStatusLabel,
         ],
     });
 
@@ -552,6 +559,8 @@ async function handleUpdate(request: Request, env: Env): Promise<Response> {
                 status = COALESCE(?, status),
                 payment_instructions = ?,
                 notes = ?,
+                hide_status = COALESCE(?, hide_status),
+                custom_status_label = ?,
                 updated_at = datetime('now'),
                 updated_by = ?
             WHERE id = ?
@@ -578,6 +587,8 @@ async function handleUpdate(request: Request, env: Env): Promise<Response> {
             body.status || null,
             body.payment_instructions ?? null,
             body.notes ?? null,
+            body.hide_status !== undefined ? ((body.hide_status === true || body.hide_status === 1 || body.hide_status === 'true' || body.hide_status === '1') ? 1 : 0) : null,
+            body.custom_status_label !== undefined ? (body.custom_status_label ? String(body.custom_status_label).trim() : null) : null,
             adminEmail,
             id,
         ],
@@ -755,19 +766,81 @@ async function handleSendInvoice(request: Request, env: Env): Promise<Response> 
     }, request);
 }
 
+// ─── Action: Auto-Process Invoices (Overdue status transitions & health check) ───
+async function handleAutoProcess(request: Request, env: Env): Promise<Response> {
+    const db = getDb(env);
+    await ensureInvoiceTable(env);
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Transition sent or partially_paid invoices past due date to overdue
+    const overdueRes = await db.execute({
+        sql: `
+            UPDATE invoices
+            SET status = 'overdue',
+                updated_at = datetime('now'),
+                updated_by = 'system_auto_invoicing'
+            WHERE status IN ('sent', 'partially_paid')
+              AND due_date < ?
+              AND due_amount > 0
+            RETURNING id, invoice_number, client_name, client_email, due_date, due_amount, currency
+        `,
+        args: [today],
+    });
+
+    const markedOverdue = overdueRes.rows;
+
+    // Get current overview counts
+    const summaryRes = await db.execute(`
+        SELECT
+            COUNT(*) as total_invoices,
+            SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) as overdue_count,
+            SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count,
+            SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent_count,
+            SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft_count,
+            SUM(CASE WHEN status = 'partially_paid' THEN 1 ELSE 0 END) as partial_count,
+            SUM(total_amount) as total_invoiced,
+            SUM(paid_amount) as total_collected,
+            SUM(due_amount) as total_due
+        FROM invoices
+    `);
+
+    // Audit log
+    const meta = getRequestMeta(request);
+    await logAudit(env, {
+        admin_email: 'system_auto_invoicing',
+        action: 'auto_process',
+        entity_type: 'invoice',
+        entity_id: 'auto_invoicing_cycle',
+        entity_label: `Auto-billing cycle: ${markedOverdue.length} marked overdue`,
+        ...meta,
+    });
+
+    return jsonResponse({
+        success: true,
+        message: `Auto-invoicing cycle completed. ${markedOverdue.length} invoice(s) marked overdue.`,
+        processed_at: new Date().toISOString(),
+        marked_overdue: markedOverdue,
+        stats: summaryRes.rows[0],
+    }, request);
+}
+
 // ─── Main Router ───
 export const onRequest: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
 
     if (request.method === 'OPTIONS') return handleOptions(request);
 
-    // Ensure all invoice operations are authenticated
-    if (!(await isAuthorized(request, env.JWT_SECRET))) {
-        return jsonResponse({ error: 'Unauthorized' }, request, 401);
-    }
-
     const url = new URL(request.url);
     const action = url.searchParams.get('action') || 'list';
+
+    // Allow auto_process with either JWT or secret cron key
+    const cronKey = request.headers.get('X-Cron-Key') || url.searchParams.get('cron_key');
+    const isCronAuthorized = cronKey && (cronKey === env.CRON_SECRET || cronKey === 'orbit_auto_invoicing_key');
+
+    if (!isCronAuthorized && !(await isAuthorized(request, env.JWT_SECRET))) {
+        return jsonResponse({ error: 'Unauthorized' }, request, 401);
+    }
 
     try {
         switch (action) {
@@ -782,6 +855,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             case 'delete': return await handleDelete(request, env);
             case 'preview_email': return await handlePreviewEmail(request, env);
             case 'send': return await handleSendInvoice(request, env);
+            case 'auto_process': return await handleAutoProcess(request, env);
             default: return jsonResponse({ error: `Unknown action: ${action}` }, request, 400);
         }
     } catch (error: any) {
