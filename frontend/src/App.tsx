@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, createContext, useContext, useCallback, useRef, Component, ErrorInfo, ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ContentProvider } from './contexts/ContentContext';
 import { Navbar } from './components/orbit/Navbar';
@@ -165,7 +165,6 @@ const AchievementsSection = lazyWithRetry(() => import('./components/orbit/Achie
 const LeadershipSection = lazyWithRetry(() => import('./components/orbit/LeadershipSection').then(m => ({ default: m.LeadershipSection })));
 const ReviewsSection = lazyWithRetry(() => import('./components/orbit/ReviewsSection').then(m => ({ default: m.ReviewsSection })));
 const ProjectsMarqueeSection = lazyWithRetry(() => import('./components/orbit/ProjectsMarqueeSection').then(m => ({ default: m.ProjectsMarqueeSection })));
-const ProjectDetailModal = lazyWithRetry(() => import('./components/orbit/ProjectDetailModal').then(m => ({ default: m.ProjectDetailModal })));
 const ContactSection = lazyWithRetry(() => import('./components/orbit/ContactSection').then(m => ({ default: m.ContactSection })));
 const OrbitFooter = lazyWithRetry(() => import('./components/orbit/OrbitFooter').then(m => ({ default: m.OrbitFooter })));
 const MobileFooter = lazyWithRetry(() => import('./components/orbit/MobileFooter').then(m => ({ default: m.MobileFooter })));
@@ -308,17 +307,17 @@ function VisitorGateway({ children }: { children: React.ReactNode }) {
 function PublicSite() {
   const [showChatbot, setShowChatbot] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [modalProjectId, setModalProjectId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleOpenModal = (e: any) => {
       if (e.detail?.projectId) {
-        setModalProjectId(e.detail.projectId);
+        navigate(`/project/${e.detail.projectId}`);
       }
     };
     window.addEventListener('orbit-open-project-modal' as any, handleOpenModal);
     return () => window.removeEventListener('orbit-open-project-modal' as any, handleOpenModal);
-  }, []);
+  }, [navigate]);
   const location = useLocation();
 
   useEffect(() => {
@@ -422,7 +421,7 @@ function PublicSite() {
       <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><ProjectsSection /></Suspense></SectionErrorBoundary></div>
       <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><AchievementsSection /></Suspense></SectionErrorBoundary></div>
       <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><ReviewsSection /></Suspense></SectionErrorBoundary></div>
-      <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><ProjectsMarqueeSection onSelectProject={setModalProjectId} /></Suspense></SectionErrorBoundary></div>
+      <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><ProjectsMarqueeSection /></Suspense></SectionErrorBoundary></div>
       <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><LeadershipSection /></Suspense></SectionErrorBoundary></div>
       <div className="w-full section-wrapper"><SectionErrorBoundary><Suspense fallback={null}><ContactSection /><div className="block md:hidden"><MobileFooter /></div><div className="hidden md:block"><OrbitFooter /></div></Suspense></SectionErrorBoundary></div>
 

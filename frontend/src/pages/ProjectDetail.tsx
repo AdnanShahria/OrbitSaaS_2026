@@ -16,6 +16,7 @@ import { RichText } from '@/components/ui/RichText';
 import { toast } from 'sonner';
 import { getImageUrl, getFallbackUrl } from '@/lib/imageUrl';
 import { ZoomableLightbox } from '@/components/orbit/ZoomableLightbox';
+import { BASELINE_SHOWCASE_METADATA } from '@/data/projectShowcaseData';
 
 type MediaItem = { type: 'image'; url: string } | { type: 'video'; url: string };
 
@@ -301,11 +302,10 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                                         }}
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
-                                        className={`relative flex-shrink-0 rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 cursor-pointer ${
-                                            isActive
+                                        className={`relative flex-shrink-0 rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 cursor-pointer ${isActive
                                                 ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#FDFBF7] shadow-md scale-105 opacity-100'
                                                 : 'opacity-50 hover:opacity-90 border border-zinc-200/80 bg-zinc-100 hover:border-zinc-300'
-                                        }`}
+                                            }`}
                                         style={{
                                             width: '58px',
                                             height: '38px',
@@ -329,9 +329,8 @@ function ImageGallery({ images, title, videoUrl, onLightboxChange }: { images: s
                                             />
                                         )}
                                         {/* Slide Number Badge */}
-                                        <div className={`absolute bottom-0.5 right-0.5 text-[8px] font-bold px-1 rounded tabular-nums ${
-                                            isActive ? 'bg-emerald-600 text-white' : 'bg-black/60 text-white'
-                                        }`}>
+                                        <div className={`absolute bottom-0.5 right-0.5 text-[8px] font-bold px-1 rounded tabular-nums ${isActive ? 'bg-emerald-600 text-white' : 'bg-black/60 text-white'
+                                            }`}>
                                             {idx + 1}
                                         </div>
                                     </motion.button>
@@ -451,11 +450,10 @@ function CollapsibleCards({ blocks }: { blocks: string[] }) {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.2 + i * 0.06 }}
-                        className={`p-[1.5px] rounded-2xl sm:rounded-3xl transition-all duration-300 mb-4 sm:mb-5 group/card bg-gradient-to-r ${
-                            isExpanded
+                        className={`p-[1.5px] rounded-2xl sm:rounded-3xl transition-all duration-300 mb-4 sm:mb-5 group/card bg-gradient-to-r ${isExpanded
                                 ? `${palette.border} ${palette.glow}`
                                 : `${palette.borderIdle} hover:${palette.border} shadow-2xs hover:shadow-md`
-                        }`}
+                            }`}
                     >
                         <div className="rounded-[calc(1rem-1.5px)] sm:rounded-[calc(1.5rem-1.5px)] bg-white overflow-hidden">
                             {/* Clickable heading bar */}
@@ -517,7 +515,7 @@ function CollapsibleCards({ blocks }: { blocks: string[] }) {
 function SuggestedProjectCard({ item, routeId }: { item: any, routeId: string }) {
     const coverImage = item.images?.[0] || item.image || '/placeholder.webp';
     const itemCats: string[] = item.categories || (item.category ? [item.category] : []);
-    
+
     const [isHovered, setIsHovered] = useState(false);
 
     // Ported Hover Cycling Logic
@@ -763,7 +761,7 @@ export default function ProjectDetail() {
                                         <span>All Projects</span>
                                     </Link>
 
-                                    <button 
+                                    <button
                                         onClick={async () => {
                                             const url = currentUrl;
                                             if (navigator.share) {
@@ -829,130 +827,138 @@ export default function ProjectDetail() {
                         })()}
 
                         {/* Live Link Button */}
-                        {!project.hideLiveLink && project.link && project.link !== '#' && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: 0.4 }}
-                                className="mt-8 flex justify-start"
-                            >
-                                <a
-                                    href={ensureAbsoluteUrl(project.link)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-sm shadow-[0_10px_25px_-5px_rgba(0,0,0,0.2)] hover:shadow-lg transition-all active:scale-95 group"
-                                >
-                                    <span>Visit Live Project</span>
-                                    <ExternalLink className="w-4 h-4 text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                                </a>
-                            </motion.div>
-                        )}
-                    </div>
-
-                    {/* Right: Suggested Projects Sidebar */}
-                    {(() => {
-                        const buildItem = (enItem: any, i: number) => {
-                            return {
-                                ...enItem,
-                                _id: enItem.id || '',
-                                _originalIndex: i,
-                                title: isBn && enItem.bn?.title?.trim() ? enItem.bn.title : enItem.title || enItem.en?.title || '',
-                                desc: isBn && enItem.bn?.description?.trim() ? enItem.bn.description : enItem.desc || enItem.en?.description || ''
-                            };
-                        };
-
-                        const suggested = enItems
-                            .map((enItem: any, i: number) => {
-                                if (i === idx) return null;
-                                if (enItem.hidden) return null; // Exclude hidden projects
-                                return buildItem(enItem, i);
-                            })
-                            .filter(Boolean)
-                            .slice(0, 8);
-
-                        if (suggested.length === 0) return null;
-
-                        return (
-                            <motion.div
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.6, delay: 0.3 }}
-                                className="w-full lg:w-[380px] flex-shrink-0"
-                            >
-                                <div className="lg:sticky lg:top-24">
-                                    {/* Project Reviews — Redesigned with Glassmorphism */}
                                     {(() => {
-                                        const reviewsData = (content.en as any).reviews;
-                                        const reviewItems: any[] = reviewsData?.items || [];
-                                        const projectSlug = baseItem?.id || String(idx);
-                                        const projectReviews = reviewItems.filter((r: any) => r.projectId === projectSlug && !r.hidden);
-                                        if (projectReviews.length === 0) return null;
+                                        const effectiveLink = project.link && project.link !== '#'
+                                            ? project.link
+                                            : (id ? BASELINE_SHOWCASE_METADATA[id]?.defaultLink : undefined);
+
+                                        if (project.hideLiveLink || !effectiveLink || effectiveLink === '#') return null;
+
                                         return (
-                                            <div className="mb-2">
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    <div className="w-6 h-[2px] bg-emerald-500 rounded-full" />
-                                                    <h2 className="font-display text-lg font-bold text-zinc-950">Client Reviews</h2>
-                                                </div>
-                                                <div className="flex flex-col gap-4">
-                                                    {projectReviews.map((review: any, ri: number) => (
-                                                        <motion.div 
-                                                            key={ri}
-                                                            initial={{ opacity: 0, y: 10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            transition={{ delay: 0.1 * ri }}
-                                                            className="relative group p-[1.5px] rounded-2xl bg-gradient-to-r from-amber-400/35 via-emerald-400/30 to-teal-400/35 hover:from-amber-500/70 hover:via-emerald-500/60 hover:to-teal-500/70 transition-all duration-300 shadow-2xs hover:shadow-md"
-                                                        >
-                                                            <div className="p-5 rounded-[calc(1rem-1.5px)] bg-white overflow-hidden">
-                                                                {/* Top row: Stars */}
-                                                                <div className="flex gap-1 mb-3">
-                                                                    {Array.from({ length: 5 }).map((_, si) => (
-                                                                        <Star key={si} className={`w-3.5 h-3.5 ${si < (review.rating || 5) ? 'text-amber-500 fill-amber-500' : 'text-zinc-200'}`} />
-                                                                    ))}
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.5, delay: 0.4 }}
+                                                className="mt-8 flex justify-start"
+                                            >
+                        <a
+                            href={ensureAbsoluteUrl(effectiveLink)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-sm shadow-[0_10px_25px_-5px_rgba(0,0,0,0.2)] hover:shadow-lg transition-all active:scale-95 group"
+                        >
+                            <span>Visit Live Project</span>
+                            <ExternalLink className="w-4 h-4 text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                        </a>
+                    </motion.div>
+                    );
+                        })()}
+                </div>
+
+                {/* Right: Suggested Projects Sidebar */}
+                {(() => {
+                    const buildItem = (enItem: any, i: number) => {
+                        return {
+                            ...enItem,
+                            _id: enItem.id || '',
+                            _originalIndex: i,
+                            title: isBn && enItem.bn?.title?.trim() ? enItem.bn.title : enItem.title || enItem.en?.title || '',
+                            desc: isBn && enItem.bn?.description?.trim() ? enItem.bn.description : enItem.desc || enItem.en?.description || ''
+                        };
+                    };
+
+                    const suggested = enItems
+                        .map((enItem: any, i: number) => {
+                            if (i === idx) return null;
+                            if (enItem.hidden) return null; // Exclude hidden projects
+                            return buildItem(enItem, i);
+                        })
+                        .filter(Boolean)
+                        .slice(0, 8);
+
+                    if (suggested.length === 0) return null;
+
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.6, delay: 0.3 }}
+                            className="w-full lg:w-[380px] flex-shrink-0"
+                        >
+                            <div className="lg:sticky lg:top-24">
+                                {/* Project Reviews — Redesigned with Glassmorphism */}
+                                {(() => {
+                                    const reviewsData = (content.en as any).reviews;
+                                    const reviewItems: any[] = reviewsData?.items || [];
+                                    const projectSlug = baseItem?.id || String(idx);
+                                    const projectReviews = reviewItems.filter((r: any) => r.projectId === projectSlug && !r.hidden);
+                                    if (projectReviews.length === 0) return null;
+                                    return (
+                                        <div className="mb-2">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <div className="w-6 h-[2px] bg-emerald-500 rounded-full" />
+                                                <h2 className="font-display text-lg font-bold text-zinc-950">Client Reviews</h2>
+                                            </div>
+                                            <div className="flex flex-col gap-4">
+                                                {projectReviews.map((review: any, ri: number) => (
+                                                    <motion.div
+                                                        key={ri}
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: 0.1 * ri }}
+                                                        className="relative group p-[1.5px] rounded-2xl bg-gradient-to-r from-amber-400/35 via-emerald-400/30 to-teal-400/35 hover:from-amber-500/70 hover:via-emerald-500/60 hover:to-teal-500/70 transition-all duration-300 shadow-2xs hover:shadow-md"
+                                                    >
+                                                        <div className="p-5 rounded-[calc(1rem-1.5px)] bg-white overflow-hidden">
+                                                            {/* Top row: Stars */}
+                                                            <div className="flex gap-1 mb-3">
+                                                                {Array.from({ length: 5 }).map((_, si) => (
+                                                                    <Star key={si} className={`w-3.5 h-3.5 ${si < (review.rating || 5) ? 'text-amber-500 fill-amber-500' : 'text-zinc-200'}`} />
+                                                                ))}
+                                                            </div>
+
+                                                            <blockquote className="relative">
+                                                                <p className="text-zinc-600 text-sm leading-relaxed mb-4 italic font-normal">
+                                                                    "{review.text}"
+                                                                </p>
+                                                            </blockquote>
+
+                                                            <div className="flex items-center gap-3 pt-3.5 border-t border-zinc-100">
+                                                                <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs flex items-center justify-center">
+                                                                    {review.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                                                                 </div>
-
-                                                                <blockquote className="relative">
-                                                                    <p className="text-zinc-600 text-sm leading-relaxed mb-4 italic font-normal">
-                                                                        "{review.text}"
-                                                                    </p>
-                                                                </blockquote>
-
-                                                                <div className="flex items-center gap-3 pt-3.5 border-t border-zinc-100">
-                                                                    <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs flex items-center justify-center">
-                                                                        {review.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
-                                                                    </div>
-                                                                    <div className="min-w-0">
-                                                                        <span className="font-bold text-zinc-950 text-sm block truncate">{review.name}</span>
-                                                                        <span className="text-emerald-700 text-[11px] font-semibold uppercase tracking-wider">{review.role}</span>
-                                                                    </div>
+                                                                <div className="min-w-0">
+                                                                    <span className="font-bold text-zinc-950 text-sm block truncate">{review.name}</span>
+                                                                    <span className="text-emerald-700 text-[11px] font-semibold uppercase tracking-wider">{review.role}</span>
                                                                 </div>
                                                             </div>
-                                                        </motion.div>
-                                                    ))}
-                                                </div>
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
                                             </div>
-                                        );
-                                    })()}
-                                    <h2 className="font-display text-lg font-bold text-zinc-950 mb-4 mt-8">More Projects</h2>
-                                    <div className="flex flex-col gap-3">
-                                        {suggested.map((item: any) => {
-                                            const routeId = item._id || item._originalIndex;
-                                            const coverImage = item.images?.[0] || item.image || '/placeholder.webp';
-                                            const itemCats: string[] = item.categories || (item.category ? [item.category] : []);
+                                        </div>
+                                    );
+                                })()}
+                                <h2 className="font-display text-lg font-bold text-zinc-950 mb-4 mt-8">More Projects</h2>
+                                <div className="flex flex-col gap-3">
+                                    {suggested.map((item: any) => {
+                                        const routeId = item._id || item._originalIndex;
+                                        const coverImage = item.images?.[0] || item.image || '/placeholder.webp';
+                                        const itemCats: string[] = item.categories || (item.category ? [item.category] : []);
 
-                                            return (
-                                                <SuggestedProjectCard key={routeId} item={item} routeId={routeId} />
-                                            );
-                                        })}
-                                    </div>
+                                        return (
+                                            <SuggestedProjectCard key={routeId} item={item} routeId={routeId} />
+                                        );
+                                    })}
                                 </div>
-                            </motion.div>
-                        );
-                    })()}
-                </div>
-            </main>
+                            </div>
+                        </motion.div>
+                    );
+                })()}
+        </div>
+            </main >
             <div className="block md:hidden"><MobileFooter /></div>
             <div className="hidden md:block"><OrbitFooter /></div>
             <Chatbot />
-        </div>
+        </div >
     );
 }

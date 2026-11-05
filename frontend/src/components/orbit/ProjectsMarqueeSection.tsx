@@ -1,31 +1,37 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUpRight, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useContent } from '@/contexts/ContentContext';
 import { useLang } from '@/contexts/LanguageContext';
-import { 
-    getShowcaseProjects, 
-    openProjectModal, 
-    type ShowcaseProjectItem 
+import {
+    getShowcaseProjects,
+    type ShowcaseProjectItem
 } from '@/data/projectShowcaseData';
 import { WaveDivider } from '@/components/ui/WaveDivider';
 
 /* ─── Ultra-Sleek Modern Animated Brand Badge ─── */
-const CompactClientBadge = React.memo(({ 
-    item, 
-    onCardClick 
-}: { 
-    item: ShowcaseProjectItem; 
-    onCardClick: (id: string) => void;
+const CompactClientBadge = React.memo(({
+    item,
+    onCardClick
+}: {
+    item: ShowcaseProjectItem;
+    onCardClick?: (id: string) => void;
 }) => {
     const IconComponent = item.icon;
     const isClient = item.type === 'client';
 
     return (
-        <div
-            onClick={() => onCardClick(item.id)}
-            className="group relative flex items-center gap-3 h-[48px] sm:h-[52px] px-3.5 sm:px-4 rounded-full bg-white/95 hover:bg-white backdrop-blur-md border border-zinc-200/90 hover:border-emerald-500/50 shadow-[0_2px_10px_-2px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_24px_-4px_rgba(16,185,129,0.16)] transition-all duration-300 hover:-translate-y-0.5 cursor-pointer select-none shrink-0 overflow-hidden"
-            title={`${item.title} — Click to inspect project`}
+        <Link
+            to={`/project/${item.id}`}
+            onClick={(e) => {
+                if (onCardClick) {
+                    e.preventDefault();
+                    onCardClick(item.id);
+                }
+            }}
+            className="group relative flex items-center gap-3 h-[48px] sm:h-[52px] px-3.5 sm:px-4 rounded-full bg-white/95 hover:bg-white backdrop-blur-md border border-zinc-200/90 hover:border-emerald-500/50 shadow-[0_2px_10px_-2px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_24px_-4px_rgba(16,185,129,0.16)] transition-all duration-300 hover:-translate-y-0.5 cursor-pointer select-none shrink-0 overflow-hidden text-inherit no-underline"
+            title={`${item.title} — Click to explore project details`}
         >
             {/* Top specular hairline edge */}
             <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-zinc-200 to-transparent pointer-events-none group-hover:via-emerald-400/60 transition-colors" />
@@ -83,7 +89,7 @@ const CompactClientBadge = React.memo(({
                         : 'linear-gradient(90deg, transparent, #818cf8, transparent)'
                 }}
             />
-        </div>
+        </Link >
     );
 });
 
@@ -98,14 +104,8 @@ export function ProjectsMarqueeSection({ onSelectProject }: { onSelectProject?: 
     const rawProjects = (content[lang] as any)?.projects?.items || (content.en as any)?.projects?.items || [];
     const allItems = useMemo(() => getShowcaseProjects(rawProjects, lang), [rawProjects, lang]);
 
-    // Handle project card click
-    const handleCardClick = (id: string) => {
-        if (onSelectProject) {
-            onSelectProject(id);
-        } else {
-            openProjectModal(id);
-        }
-    };
+    // Handle project card click (only if parent explicitly provides onSelectProject callback)
+    const handleCardClick = onSelectProject ? (id: string) => onSelectProject(id) : undefined;
 
     // Filter items
     const inHouseItems = useMemo(() => allItems.filter(p => p.type === 'in-house'), [allItems]);
@@ -130,8 +130,8 @@ export function ProjectsMarqueeSection({ onSelectProject }: { onSelectProject?: 
     const track2Duplicated = useMemo(() => [...track2Items, ...track2Items, ...track2Items, ...track2Items], [track2Items]);
 
     return (
-        <section 
-            id="live-ecosystem" 
+        <section
+            id="live-ecosystem"
             className="relative py-10 sm:py-14 bg-[#FDFBF7] text-zinc-900 overflow-hidden select-none border-t border-zinc-200/50"
         >
             {/* Ambient soft background glows */}
@@ -176,7 +176,7 @@ export function ProjectsMarqueeSection({ onSelectProject }: { onSelectProject?: 
                         transition={{ duration: 0.4, delay: 0.1 }}
                         className="text-xs sm:text-[13px] text-zinc-500 mt-2 font-sans"
                     >
-                        {isBn 
+                        {isBn
                             ? 'উৎপাদন-প্রস্তুত প্ল্যাটফর্ম ও এআই সিস্টেম — যেকোনো কার্ডে ক্লিক করে লাইভ প্রিভিউ দেখুন।'
                             : 'Click any client or in-house platform to explore its architecture and live deployment.'}
                     </motion.p>
@@ -185,32 +185,29 @@ export function ProjectsMarqueeSection({ onSelectProject }: { onSelectProject?: 
                     <div className="inline-flex items-center gap-1 p-1 mt-4 rounded-full bg-zinc-100/90 border border-zinc-200/80">
                         <button
                             onClick={() => setActiveFilter('all')}
-                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                                activeFilter === 'all'
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${activeFilter === 'all'
                                     ? 'bg-white text-zinc-900 shadow-2xs'
                                     : 'text-zinc-500 hover:text-zinc-800'
-                            }`}
+                                }`}
                         >
                             {isBn ? 'সবগুলো' : 'All'} ({allItems.length})
                         </button>
                         <button
                             onClick={() => setActiveFilter('client')}
-                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                                activeFilter === 'client'
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeFilter === 'client'
                                     ? 'bg-white text-emerald-700 shadow-2xs'
                                     : 'text-zinc-500 hover:text-zinc-800'
-                            }`}
+                                }`}
                         >
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                             {isBn ? 'ক্লায়েন্ট প্রজেক্টস' : 'Clients'} ({clientItems.length})
                         </button>
                         <button
                             onClick={() => setActiveFilter('in-house')}
-                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                                activeFilter === 'in-house'
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeFilter === 'in-house'
                                     ? 'bg-white text-indigo-700 shadow-2xs'
                                     : 'text-zinc-500 hover:text-zinc-800'
-                            }`}
+                                }`}
                         >
                             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                             {isBn ? 'ইন-হাউস প্রোডাক্টস' : 'In-House'} ({inHouseItems.length})
@@ -220,7 +217,7 @@ export function ProjectsMarqueeSection({ onSelectProject }: { onSelectProject?: 
             </div>
 
             {/* ── Infinite Marquee Stream with Edge Blur Mask ── */}
-            <div 
+            <div
                 className="w-full relative py-1.5 space-y-3 group/marquee"
                 style={{
                     WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)',
@@ -228,29 +225,29 @@ export function ProjectsMarqueeSection({ onSelectProject }: { onSelectProject?: 
                 }}
             >
                 {/* ── ROW 1: Forward Track (Glides Left) ── */}
-                <div 
-                    className="flex gap-3 w-max marquee-track group-hover/marquee:[animation-play-state:paused]" 
+                <div
+                    className="flex gap-3 w-max marquee-track group-hover/marquee:[animation-play-state:paused]"
                     style={{ '--marquee-speed': '32s' } as any}
                 >
                     {track1Duplicated.map((project, idx) => (
-                        <CompactClientBadge 
-                            key={`row1-${project.id}-${idx}`} 
-                            item={project} 
-                            onCardClick={handleCardClick} 
+                        <CompactClientBadge
+                            key={`row1-${project.id}-${idx}`}
+                            item={project}
+                            onCardClick={handleCardClick}
                         />
                     ))}
                 </div>
 
                 {/* ── ROW 2: Reverse Track (Glides Right) ── */}
-                <div 
-                    className="flex gap-3 w-max marquee-track-reverse group-hover/marquee:[animation-play-state:paused]" 
+                <div
+                    className="flex gap-3 w-max marquee-track-reverse group-hover/marquee:[animation-play-state:paused]"
                     style={{ '--marquee-speed': '36s' } as any}
                 >
                     {track2Duplicated.map((project, idx) => (
-                        <CompactClientBadge 
-                            key={`row2-${project.id}-${idx}`} 
-                            item={project} 
-                            onCardClick={handleCardClick} 
+                        <CompactClientBadge
+                            key={`row2-${project.id}-${idx}`}
+                            item={project}
+                            onCardClick={handleCardClick}
                         />
                     ))}
                 </div>
@@ -260,8 +257,8 @@ export function ProjectsMarqueeSection({ onSelectProject }: { onSelectProject?: 
             <div className="max-w-[1400px] mx-auto px-5 sm:px-6 lg:px-8 mt-5 flex items-center justify-center text-[10.5px] text-zinc-600 gap-2 font-mono">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 <span>
-                    {isBn 
-                        ? 'কার্ডে হোভার করে থামান • ক্লিক করে আর্কিটেকচার ও লাইভ ডেমো দেখুন' 
+                    {isBn
+                        ? 'কার্ডে হোভার করে থামান • ক্লিক করে আর্কিটেকচার ও লাইভ ডেমো দেখুন'
                         : 'Hover to pause • Click any card for interactive live demo & case study'}
                 </span>
             </div>
