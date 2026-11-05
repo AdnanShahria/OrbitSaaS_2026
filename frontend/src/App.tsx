@@ -435,14 +435,6 @@ function PublicSite() {
           <Chatbot />
         </Suspense>
       )}
-      {modalProjectId && (
-        <Suspense fallback={null}>
-          <ProjectDetailModal
-            projectId={modalProjectId}
-            onClose={() => setModalProjectId(null)}
-          />
-        </Suspense>
-      )}
     </main>
   );
 }

@@ -620,9 +620,11 @@ function SuggestedProjectCard({ item, routeId }: { item: any, routeId: string })
 export default function ProjectDetail() {
     const { id } = useParams<{ id: string }>();
     const { lang } = useLang();
-    const { content } = useContent();
+    const { content, loading } = useContent();
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
+
+    const isBn = lang === 'bn';
 
     // Data with Fallback Logic
     const enData = (content.en as any).projects || {};
@@ -630,9 +632,10 @@ export default function ProjectDetail() {
     const enItems: any[] = Array.isArray(enData.items) ? enData.items : [];
     const bnItems: any[] = Array.isArray(bnData.items) ? bnData.items : [];
 
-    // Try slug-based lookup first, then fall back to numeric index
+    // Try slug-based lookup first (case-insensitive), then fall back to numeric index
+    const normalizedId = id?.toLowerCase().trim();
     let idx = -1;
-    const slugIndex = enItems.findIndex((item: any) => item.id && item.id === id);
+    const slugIndex = enItems.findIndex((item: any) => item.id && item.id.toLowerCase().trim() === normalizedId);
     if (slugIndex >= 0) {
         idx = slugIndex;
     } else {
@@ -642,9 +645,36 @@ export default function ProjectDetail() {
         }
     }
 
+    // Baseline metadata fallback if project hasn't loaded or is one of the baseline showcase projects
+    const baselineMeta = normalizedId ? BASELINE_SHOWCASE_METADATA[normalizedId] : undefined;
+    const fallbackBaseItem = baselineMeta ? {
+        id: normalizedId,
+        title: baselineMeta.name,
+        desc: isBn ? baselineMeta.taglineBn : baselineMeta.taglineEn,
+        category: isBn ? baselineMeta.categoryBn : baselineMeta.categoryEn,
+        categories: [isBn ? baselineMeta.categoryBn : baselineMeta.categoryEn],
+        link: baselineMeta.defaultLink,
+        images: ['/placeholder.webp'],
+        image: '/placeholder.webp',
+        tags: [baselineMeta.type === 'in-house' ? 'Orbit In-House' : 'Client Project'],
+    } : undefined;
+
     // Get potential projects
-    const baseItem = idx >= 0 ? enItems[idx] : undefined;
-    const isBn = lang === 'bn';
+    const baseItem = idx >= 0 ? enItems[idx] : fallbackBaseItem;
+
+    // While loading API data without a resolved base item, show preloader rather than 404
+    if (loading && !baseItem) {
+        return (
+            <div className="min-h-[100dvh] bg-[#FDFBF7] flex flex-col justify-between">
+                <Navbar />
+                <div className="flex flex-col items-center justify-center py-40">
+                    <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="mt-4 text-xs font-bold uppercase tracking-widest text-zinc-400">Loading Project Details...</p>
+                </div>
+                <OrbitFooter />
+            </div>
+        );
+    }
 
     const project = baseItem ? {
         ...baseItem,
@@ -652,7 +682,7 @@ export default function ProjectDetail() {
         desc: isBn && baseItem.bn?.description?.trim() ? baseItem.bn.description : baseItem.desc || baseItem.en?.description || ''
     } : undefined;
 
-    if (!project || idx < 0 || baseItem?.hidden) {
+    if (!project || (!baseItem && idx < 0) || baseItem?.hidden) {
         return (
             <div className="min-h-[100dvh] bg-[#FDFBF7] text-zinc-900">
                 <Navbar />

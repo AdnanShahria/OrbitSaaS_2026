@@ -2,14 +2,16 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Search, X, ArrowRight, CornerDownLeft, FileText, ShoppingCart,
+    Search, X, CornerDownLeft, FileText, ShoppingCart,
     FolderOpen, Users, Trophy, Phone, Shield, Sparkles, Receipt,
     Wallet, Database, Cpu, Lightbulb, Star, BarChart3, MessageCircle,
-    Globe, Sun, Moon, CheckCircle2, ChevronRight, Hash, Compass,
-    ExternalLink
+    Globe, Sun, Moon, Compass, Brain, Layers, ExternalLink
 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { useAdminTheme } from '@/contexts/AdminThemeContext';
+import { useContent } from '@/contexts/ContentContext';
+import { BASELINE_SHOWCASE_METADATA } from '@/data/projectShowcaseData';
+import { getImageUrl } from '@/lib/imageUrl';
 
 export interface SearchItem {
     id: string;
@@ -21,6 +23,8 @@ export interface SearchItem {
     action?: () => void;
     keywords?: string[];
     badge?: string;
+    badgeColor?: string;
+    image?: string;
 }
 
 interface UniversalSearchModalProps {
@@ -33,24 +37,177 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
     const navigate = useNavigate();
     const { lang, toggleLang } = useLang();
     const { isLight, toggleTheme } = useAdminTheme();
+    const { content, refreshContent } = useContent();
+
     const [query, setQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [liveProjects, setLiveProjects] = useState<any[]>([]);
+    const [isFetchingRealtime, setIsFetchingRealtime] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Focus input whenever opened
+    // Real-time synchronization when modal opens
     useEffect(() => {
         if (open) {
             setQuery('');
             setSelectedIndex(0);
             setTimeout(() => inputRef.current?.focus(), 50);
-        }
-    }, [open]);
 
-    // Build Search Items based on mode
+            // Trigger real-time background refresh from ContentContext
+            refreshContent?.().catch(() => {});
+
+            // Direct real-time fetch failsafe to guarantee freshest DB data
+            setIsFetchingRealtime(true);
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            fetch(`${API_BASE}/api/content?lang=${lang}`)
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data?.content?.projects?.items && Array.isArray(data.content.projects.items)) {
+                        setLiveProjects(data.content.projects.items);
+                    }
+                })
+                .catch(err => console.debug('[Search] Realtime fetch error:', err))
+                .finally(() => setIsFetchingRealtime(false));
+        }
+    }, [open, lang, refreshContent]);
+
+    // Build Search Items based on mode and real-time live content
     const searchItems: SearchItem[] = useMemo(() => {
+        const isBn = lang === 'bn';
+
+        // 1. Ingest real-time projects
+        const rawContentProjects = 
+            liveProjects.length > 0 
+                ? liveProjects 
+                : ((content[lang] as any)?.projects?.items || (content.en as any)?.projects?.items || []);
+
+        const projectMap = new Map<string, any>();
+
+        // Seed with baseline showcase metadata (guarantees lifesolver, unimind, etc. always exist)
+        Object.entries(BASELINE_SHOWCASE_METADATA).forEach(([id, meta]) => {
+            projectMap.set(id.toLowerCase(), {
+                id,
+                title: meta.name,
+                name: meta.name,
+                subtitle: isBn ? meta.taglineBn : meta.taglineEn,
+                category: isBn ? meta.categoryBn : meta.categoryEn,
+                type: meta.type,
+                typeLabel: isBn ? meta.typeLabelBn : meta.typeLabelEn,
+                icon: meta.icon,
+                image: '',
+                link: meta.defaultLink,
+                badgeBg: meta.badgeBg,
+                badgeColor: meta.badgeColor,
+            });
+        });
+
+        // Overlay with live database projects
+        if (Array.isArray(rawContentProjects)) {
+            rawContentProjects.forEach((proj: any, idx: number) => {
+                const id = (proj.id || String(idx)).toLowerCase();
+                const existing = projectMap.get(id);
+                const title = isBn && proj.bn?.title?.trim() ? proj.bn.title : (proj.title || existing?.title || 'Project');
+                const rawDesc = isBn && proj.bn?.description?.trim() 
+                    ? proj.bn.description 
+                    : (proj.desc || proj.subtitle || existing?.subtitle || '');
+                const cleanDesc = rawDesc.replace(/<[^>]*>?/gm, '').slice(0, 95);
+                const primaryImage = proj.images?.[0] || proj.image || existing?.image || '';
+
+                projectMap.set(id, {
+                    id: proj.id || id,
+                    title,
+                    name: existing?.name || title.split(/[:—–\-(_]/)[0].trim(),
+                    subtitle: cleanDesc || existing?.subtitle || 'Orbit Production-Ready Platform',
+                    category: proj.category || existing?.category || (isBn ? 'স্যাস' : 'SaaS'),
+                    type: existing?.type || (idx % 2 !== 0 ? 'client' : 'in-house'),
+                    typeLabel: existing?.typeLabel || (proj.type === 'in-house' ? (isBn ? 'অরবিট ইন-হাউস' : 'Orbit In-House') : (isBn ? 'ক্লায়েন্ট প্রজেক্ট' : 'Client Project')),
+                    icon: existing?.icon || FolderOpen,
+                    image: primaryImage,
+                    link: proj.link || existing?.link,
+                    badgeColor: existing?.badgeColor || '#10b981',
+                    tags: Array.isArray(proj.tags) ? proj.tags : [],
+                    hidden: !!proj.hidden,
+                });
+            });
+        }
+
+        const projectItems: SearchItem[] = Array.from(projectMap.values())
+            .filter(p => !p.hidden)
+            .map((p) => {
+                const isClient = p.type === 'client';
+                return {
+                    id: `proj-${p.id}`,
+                    title: p.title,
+                    subtitle: p.subtitle,
+                    category: 'Projects',
+                    icon: p.icon || FolderOpen,
+                    badge: isClient ? (isBn ? 'ক্লায়েন্ট' : 'Client') : (isBn ? 'ইন-হাউস' : 'In-House'),
+                    badgeColor: p.badgeColor,
+                    image: p.image,
+                    path: mode === 'admin' ? '/admin/project' : `/project/${p.id}`,
+                    keywords: [
+                        p.id,
+                        p.title,
+                        p.name || '',
+                        p.subtitle || '',
+                        p.category || '',
+                        ...(p.tags || []),
+                        'lifesolver',
+                        'project',
+                        'portfolio',
+                        'case study',
+                        'saas',
+                        'app',
+                    ],
+                };
+            });
+
+        // 2. Ingest real-time services
+        const rawServices = (content[lang] as any)?.services?.items || (content.en as any)?.services?.items || [];
+        const liveServiceItems: SearchItem[] = Array.isArray(rawServices) && rawServices.length > 0
+            ? rawServices.map((srv: any, idx: number) => ({
+                id: `srv-live-${idx}`,
+                title: srv.title || (isBn ? 'সার্ভিস' : 'Service'),
+                subtitle: srv.desc ? srv.desc.replace(/<[^>]*>?/gm, '').slice(0, 90) : (isBn ? 'অরবিট সফটওয়্যার সেবা' : 'Orbit Software Engineering Service'),
+                category: 'Services',
+                icon: ShoppingCart,
+                badge: srv.badge || (isBn ? 'সার্ভিস' : 'Core Service'),
+                path: mode === 'admin' ? '/admin/services' : '/services',
+                keywords: [srv.title || '', srv.desc || '', ...(srv.features || []), 'service', 'solution'],
+            }))
+            : [];
+
+        // 3. Ingest real-time achievements
+        const rawAchievements = (content[lang] as any)?.achievements?.items || (content.en as any)?.achievements?.items || [];
+        const liveAchievementItems: SearchItem[] = Array.isArray(rawAchievements)
+            ? rawAchievements.map((ach: any, idx: number) => ({
+                id: `ach-live-${ach.id || idx}`,
+                title: ach.title || (isBn ? 'অর্জন ও মাইলস্টোন' : 'Achievement & Milestone'),
+                subtitle: ach.desc ? ach.desc.replace(/<[^>]*>?/gm, '').slice(0, 85) : '',
+                category: 'Pages',
+                icon: Trophy,
+                badge: ach.category || (isBn ? 'অর্জন' : 'Award'),
+                path: mode === 'admin' ? '/admin/achievements' : (ach.id ? `/achievement/${ach.id}` : '/achievements'),
+                keywords: [ach.id || '', ach.title || '', ach.desc || '', 'achievement', 'milestone', 'award', 'trophy'],
+            }))
+            : [];
+
+        // 4. Ingest real-time leadership members
+        const rawLeadership = (content[lang] as any)?.leadership?.members || (content.en as any)?.leadership?.members || [];
+        const liveLeadershipItems: SearchItem[] = Array.isArray(rawLeadership)
+            ? rawLeadership.map((member: any, idx: number) => ({
+                id: `lead-live-${idx}`,
+                title: member.name || (isBn ? 'টিম মেম্বার' : 'Team Member'),
+                subtitle: `${member.role || 'Leader'} ${member.bio ? '— ' + member.bio.slice(0, 60) : ''}`,
+                category: 'Pages',
+                icon: Users,
+                badge: member.role || (isBn ? 'লিডারশিপ' : 'Leadership'),
+                path: mode === 'admin' ? '/admin/leadership' : '/leadership',
+                keywords: [member.name || '', member.role || '', 'team', 'founder', 'engineer', 'leader'],
+            }))
+            : [];
+
         if (mode === 'admin') {
-            return [
-                // Quick Admin Actions
+            const adminActions: SearchItem[] = [
                 {
                     id: 'act-invoice',
                     title: 'Create Customer Invoice',
@@ -111,8 +268,7 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
                     path: '/admin/backup',
                     keywords: ['backup', 'database', 'restore', 'snapshot', 'sql'],
                 },
-
-                // Admin Modules & Navigation
+                // Admin Modules
                 {
                     id: 'mod-invoices',
                     title: 'Invoices & Billing Hub',
@@ -138,7 +294,7 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
                     category: 'Pages',
                     icon: FolderOpen,
                     path: '/admin/project',
-                    keywords: ['project', 'portfolio', 'case study', 'work', 'client'],
+                    keywords: ['project', 'portfolio', 'case study', 'work', 'client', 'lifesolver'],
                 },
                 {
                     id: 'mod-services',
@@ -231,15 +387,16 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
                     keywords: ['images', 'r2', 'photos', 'cdn', 'optimizer'],
                 },
             ];
+
+            return [...adminActions, ...projectItems, ...liveServiceItems];
         }
 
         // Visitor Mode Items
-        return [
-            // Core Navigation Pages
+        const visitorPages: SearchItem[] = [
             {
                 id: 'vis-home',
-                title: lang === 'bn' ? 'হোম পেজ' : 'Home',
-                subtitle: 'Digital product engineering & enterprise software',
+                title: isBn ? 'হোম পেজ' : 'Home',
+                subtitle: isBn ? 'ডিজিটাল প্রোডাক্ট ইঞ্জিনিয়ারিং ও এন্টারপ্রাইজ সফটওয়্যার' : 'Digital product engineering & enterprise software',
                 category: 'Pages',
                 icon: Compass,
                 path: '/',
@@ -247,8 +404,8 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
             },
             {
                 id: 'vis-services',
-                title: lang === 'bn' ? 'আমাদের সেবাসমূহ' : 'Services & Solutions',
-                subtitle: 'Full-stack web, mobile apps, AI automation, and cloud systems',
+                title: isBn ? 'আমাদের সেবাসমূহ' : 'Services & Solutions',
+                subtitle: isBn ? 'ফুল-স্ট্যাক ওয়েব, মোবাইল অ্যাপ, এআই অটোমেশন ও ক্লাউড সিস্টেম' : 'Full-stack web, mobile apps, AI automation, and cloud systems',
                 category: 'Pages',
                 icon: ShoppingCart,
                 path: '/services',
@@ -256,8 +413,8 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
             },
             {
                 id: 'vis-projects',
-                title: lang === 'bn' ? 'প্রোজেক্ট পোর্টফোলিও' : 'Featured Projects',
-                subtitle: 'Explore our latest client deliverables and case studies',
+                title: isBn ? 'প্রোজেক্ট পোর্টফোলিও' : 'Featured Projects',
+                subtitle: isBn ? 'আমাদের ক্লায়েন্ট ডেলিভারেবল ও কেস স্টাডি দেখুন' : 'Explore our latest client deliverables and case studies',
                 category: 'Pages',
                 icon: FolderOpen,
                 path: '/proj',
@@ -265,8 +422,8 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
             },
             {
                 id: 'vis-leadership',
-                title: lang === 'bn' ? 'টিম ও লিডারশিপ' : 'Leadership & Engineering Team',
-                subtitle: 'Meet the architects, developers, and founders behind Orbit SaaS',
+                title: isBn ? 'টিম ও লিডারশিপ' : 'Leadership & Engineering Team',
+                subtitle: isBn ? 'অরবিট স্যাস-এর আর্কিটেক্ট, ডেভেলপার ও প্রতিষ্ঠাতাবৃন্দ' : 'Meet the architects, developers, and founders behind Orbit SaaS',
                 category: 'Pages',
                 icon: Users,
                 path: '/leadership',
@@ -274,8 +431,8 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
             },
             {
                 id: 'vis-achievements',
-                title: lang === 'bn' ? 'অর্জন ও মাইলস্টোন' : 'Achievements & Milestones',
-                subtitle: 'Company records, growth milestones, and global recognition',
+                title: isBn ? 'অর্জন ও মাইলস্টোন' : 'Achievements & Milestones',
+                subtitle: isBn ? 'কোম্পানি রেকর্ড, আন্তর্জাতিক অ্যাওয়ার্ড ও গ্রোথ মাইলস্টোন' : 'Company records, growth milestones, and global recognition',
                 category: 'Pages',
                 icon: Trophy,
                 path: '/achievements',
@@ -283,15 +440,34 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
             },
             {
                 id: 'vis-contact',
-                title: lang === 'bn' ? 'যোগাযোগ ও কনসাল্টেশন' : 'Contact & Free Consultation',
-                subtitle: 'Discuss your project vision with our technical team',
+                title: isBn ? 'যোগাযোগ ও কনসাল্টেশন' : 'Contact & Free Consultation',
+                subtitle: isBn ? 'আমাদের টেকনিক্যাল টিমের সাথে আপনার প্রজেক্ট নিয়ে আলোচনা করুন' : 'Discuss your project vision with our technical team',
                 category: 'Pages',
                 icon: Phone,
                 path: '/contact',
                 keywords: ['contact', 'hire', 'quote', 'meeting', 'consultation'],
             },
+            {
+                id: 'vis-privacy',
+                title: isBn ? 'গোপনীয়তা নীতি' : 'Privacy Policy',
+                subtitle: isBn ? 'তথ্য নিরাপত্তা ও ডেটা প্রটেকশন নীতি' : 'Data protection and visitor privacy standards',
+                category: 'Pages',
+                icon: Shield,
+                path: '/privacy',
+                keywords: ['privacy', 'policy', 'terms', 'legal', 'data'],
+            },
+            {
+                id: 'vis-terms',
+                title: isBn ? 'ব্যবহারের শর্তাবলী' : 'Terms of Service',
+                subtitle: isBn ? 'সার্ভিস ব্যবহার ও চুক্তিনামা সম্পর্কিত নিয়ম' : 'Usage guidelines and commercial agreements',
+                category: 'Pages',
+                icon: FileText,
+                path: '/terms',
+                keywords: ['terms', 'service', 'legal', 'contract', 'agreement'],
+            },
+        ];
 
-            // Specialized Services
+        const defaultServices: SearchItem[] = [
             {
                 id: 'srv-web',
                 title: 'Full-Stack Web Development',
@@ -332,21 +508,22 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
                 path: '/services',
                 keywords: ['cloud', 'devops', 'aws', 'cloudflare', 'hosting', 'server'],
             },
+        ];
 
-            // Quick Visitor Actions
+        const visitorActions: SearchItem[] = [
             {
                 id: 'act-quote',
-                title: lang === 'bn' ? 'ফ্রি কোটেশন রিকোয়েস্ট করুন' : 'Request a Project Proposal',
-                subtitle: 'Get a clear estimate and delivery timeline within 24 hours',
+                title: isBn ? 'ফ্রি কোটেশন রিকোয়েস্ট করুন' : 'Request a Project Proposal',
+                subtitle: isBn ? '২৪ ঘণ্টার মধ্যে সঠিক বাজেট ও টাইমলাইন প্রপোজাল পান' : 'Get a clear estimate and delivery timeline within 24 hours',
                 category: 'Actions',
                 icon: CornerDownLeft,
                 path: '/contact',
-                keywords: ['quote', 'price', 'cost', 'estimate', 'proposal'],
+                keywords: ['quote', 'price', 'cost', 'estimate', 'proposal', 'hire'],
             },
             {
                 id: 'act-lang',
                 title: lang === 'en' ? 'বাংলা ভাষায় দেখুন (Switch to Bangla)' : 'View in English (Switch to English)',
-                subtitle: 'Change interface language',
+                subtitle: isBn ? 'ওয়েবসাইটের ভাষা পরিবর্তন করুন' : 'Change interface language to Bangla or English',
                 category: 'Actions',
                 icon: Globe,
                 badge: lang === 'en' ? 'BN' : 'EN',
@@ -366,23 +543,80 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
                 keywords: ['chat', 'help', 'ai', 'support', 'question'],
             },
         ];
-    }, [mode, isLight, lang, toggleTheme, toggleLang]);
 
-    // Fuzzy filtering
+        const servicesToInclude = liveServiceItems.length > 0 ? liveServiceItems : defaultServices;
+
+        // Combine all items: Projects prioritised, followed by Services, Pages, Achievements, and Actions
+        return [
+            ...projectItems,
+            ...servicesToInclude,
+            ...visitorPages,
+            ...liveAchievementItems,
+            ...liveLeadershipItems,
+            ...visitorActions,
+        ];
+    }, [mode, isLight, lang, toggleTheme, toggleLang, content, liveProjects]);
+
+    // Intelligent Search & Scoring
     const filteredItems = useMemo(() => {
         const q = query.trim().toLowerCase();
-        if (!q) return searchItems.slice(0, 8);
+        if (!q) {
+            // When query is empty, show a balanced selection of top items
+            return searchItems.slice(0, 10);
+        }
 
-        return searchItems.filter((item) => {
-            const matchTitle = item.title.toLowerCase().includes(q);
-            const matchSubtitle = item.subtitle?.toLowerCase().includes(q);
-            const matchCategory = item.category.toLowerCase().includes(q);
-            const matchKeywords = item.keywords?.some((k) => k.toLowerCase().includes(q));
-            return matchTitle || matchSubtitle || matchCategory || matchKeywords;
+        const scored = searchItems.map((item) => {
+            const titleLower = item.title.toLowerCase();
+            const idLower = item.id.toLowerCase();
+            const subLower = (item.subtitle || '').toLowerCase();
+            const catLower = item.category.toLowerCase();
+            const keywords = item.keywords || [];
+
+            let score = 0;
+
+            // Direct ID match (e.g., 'lifesolver' or 'proj-lifesolver')
+            if (idLower === q || idLower === `proj-${q}`) {
+                score += 120;
+            } else if (idLower.includes(q)) {
+                score += 60;
+            }
+
+            // Title match
+            if (titleLower === q) {
+                score += 100;
+            } else if (titleLower.startsWith(q)) {
+                score += 80;
+            } else if (titleLower.includes(q)) {
+                score += 50;
+            }
+
+            // Keywords match
+            if (keywords.some(k => k.toLowerCase() === q)) {
+                score += 70;
+            } else if (keywords.some(k => k.toLowerCase().includes(q))) {
+                score += 35;
+            }
+
+            // Subtitle match
+            if (subLower.includes(q)) {
+                score += 25;
+            }
+
+            // Category match
+            if (catLower.includes(q)) {
+                score += 15;
+            }
+
+            return { item, score };
         });
+
+        return scored
+            .filter(s => s.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .map(s => s.item);
     }, [searchItems, query]);
 
-    // Handle Keyboard Navigation (Arrows + Enter)
+    // Handle Keyboard Navigation (Arrows + Enter + Esc)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (!open) return;
@@ -419,28 +653,32 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-[500] flex items-start justify-center pt-16 sm:pt-24 px-4 bg-black/75 backdrop-blur-md overflow-y-auto">
+                <div className="fixed inset-0 z-[500] flex items-start justify-center pt-12 sm:pt-20 px-3 sm:px-4 bg-black/40 backdrop-blur-md overflow-y-auto">
                     {/* Backdrop dismiss */}
                     <div className="fixed inset-0 -z-10" onClick={onClose} />
 
+                    {/* White Glassmorphic Command Palette */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.96, y: -10 }}
+                        initial={{ opacity: 0, scale: 0.96, y: -12 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.96, y: -10 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className={`w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border transition-colors ${
-                            mode === 'admin' && isLight
-                                ? 'bg-white border-zinc-200 text-zinc-900 shadow-zinc-300/60'
-                                : 'bg-[#0f0f16]/95 border-white/10 text-white shadow-black/90'
-                        } backdrop-blur-2xl`}
+                        exit={{ opacity: 0, scale: 0.96, y: -12 }}
+                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                        className="relative w-full max-w-2xl rounded-3xl overflow-hidden transition-all bg-white/90 backdrop-blur-3xl border border-white/80 shadow-[0_30px_90px_rgba(0,0,0,0.22),0_10px_30px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,1)] text-zinc-900"
                     >
+                        {/* Top specular hairline edge for frosted glass effect */}
+                        <div className="absolute inset-x-8 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white to-transparent pointer-events-none" />
+
                         {/* Search Input Bar */}
-                        <div className={`flex items-center gap-3 px-4 py-3.5 border-b ${
-                            mode === 'admin' && isLight ? 'border-zinc-200 bg-zinc-50/80' : 'border-white/10 bg-white/[0.02]'
-                        }`}>
-                            <Search className={`w-5 h-5 shrink-0 ${
-                                mode === 'admin' && isLight ? 'text-zinc-500' : 'text-primary'
-                            }`} />
+                        <div className="relative flex items-center gap-3.5 px-5 py-4 border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
+                            <div className="relative flex items-center justify-center">
+                                <Search className="w-5 h-5 shrink-0 text-emerald-600 drop-shadow-xs" />
+                                {isFetchingRealtime && (
+                                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                    </span>
+                                )}
+                            </div>
                             <input
                                 ref={inputRef}
                                 type="text"
@@ -451,37 +689,36 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
                                 }}
                                 placeholder={
                                     mode === 'admin'
-                                        ? 'Search invoices, leads, modules, or actions... (e.g. "invoice", "finance")'
-                                        : (lang === 'bn' ? 'সার্ভিস, প্রোজেক্ট বা পেইজ সার্চ করুন...' : 'Search services, projects, team, or actions...')
+                                        ? 'Search invoices, leads, projects, modules... (e.g. "lifesolver", "invoice")'
+                                        : (lang === 'bn' ? 'সার্ভিস, লাইভ প্রোজেক্ট বা পেইজ সার্চ করুন... (যেমন "lifesolver")' : 'Search projects, services, team, or actions... (e.g. "lifesolver")')
                                 }
-                                className={`flex-1 bg-transparent border-0 outline-none text-sm sm:text-base font-medium placeholder:text-muted-foreground/60 ${
-                                    mode === 'admin' && isLight ? 'text-zinc-900' : 'text-white'
-                                }`}
+                                className="flex-1 bg-transparent border-0 outline-none text-base sm:text-lg font-medium placeholder:text-zinc-400 text-zinc-900"
                             />
                             {query && (
                                 <button
                                     onClick={() => setQuery('')}
-                                    className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                    className="p-1.5 rounded-full hover:bg-zinc-200/70 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer"
+                                    title="Clear search"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
                             )}
-                            <kbd className={`hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${
-                                mode === 'admin' && isLight
-                                    ? 'bg-zinc-100 text-zinc-600 border-zinc-300'
-                                    : 'bg-white/10 text-white/70 border-white/15'
-                            }`}>
+                            <kbd className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-zinc-100/90 text-zinc-600 border border-zinc-300/80 shadow-2xs select-none">
                                 ESC
                             </kbd>
                         </div>
 
                         {/* Search Results List */}
-                        <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1">
+                        <div className="max-h-[62vh] overflow-y-auto p-3 sm:p-3.5 space-y-1.5 scrollbar-thin">
                             {filteredItems.length === 0 ? (
-                                <div className="py-12 text-center text-muted-foreground">
-                                    <Search className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                    <p className="text-sm font-semibold">No results found for "{query}"</p>
-                                    <p className="text-xs opacity-75 mt-0.5">Try searching for keywords like "invoices", "services", "team", or "quote"</p>
+                                <div className="py-14 text-center text-zinc-500">
+                                    <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 border border-zinc-200/60 shadow-inner">
+                                        <Search className="w-6 h-6 opacity-60" />
+                                    </div>
+                                    <p className="text-base font-bold text-zinc-800">No results found for "{query}"</p>
+                                    <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                                        Try searching for projects like "lifesolver", services like "web development", or keywords like "invoices", "team", or "quote"
+                                    </p>
                                 </div>
                             ) : (
                                 filteredItems.map((item, idx) => {
@@ -492,51 +729,72 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
                                             key={item.id}
                                             onClick={() => handleSelect(item)}
                                             onMouseEnter={() => setSelectedIndex(idx)}
-                                            className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                                            className={`group w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl text-left transition-all duration-150 cursor-pointer ${
                                                 isSelected
-                                                    ? (mode === 'admin' && isLight
-                                                        ? 'bg-indigo-50 border border-indigo-200/80 text-zinc-900'
-                                                        : 'bg-primary/15 border border-primary/30 text-white')
-                                                    : 'border border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+                                                    ? 'bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-transparent border border-emerald-500/40 text-zinc-950 shadow-xs'
+                                                    : 'border border-transparent hover:bg-zinc-100/80 hover:border-zinc-200/60 text-zinc-800'
                                             }`}
                                         >
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                <div className={`p-2 rounded-lg shrink-0 ${
+                                            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                                {/* Thumbnail or Category Icon */}
+                                                <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden transition-all duration-200 ${
                                                     isSelected
-                                                        ? (mode === 'admin' && isLight ? 'bg-indigo-600 text-white' : 'bg-primary text-primary-foreground')
-                                                        : (mode === 'admin' && isLight ? 'bg-zinc-100 text-zinc-600' : 'bg-white/5 text-muted-foreground')
+                                                        ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                                                        : 'bg-zinc-100 text-zinc-600 border border-zinc-200/70'
                                                 }`}>
-                                                    <Icon className="w-4 h-4" />
+                                                    {item.image ? (
+                                                        <img
+                                                            src={getImageUrl(item.image)}
+                                                            alt={item.title}
+                                                            className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = 'none';
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <Icon className="w-5 h-5 shrink-0" />
+                                                    )}
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-semibold text-sm truncate">{item.title}</span>
+
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className={`font-bold text-sm sm:text-[14.5px] truncate ${
+                                                            isSelected ? 'text-emerald-950' : 'text-zinc-900'
+                                                        }`}>
+                                                            {item.title}
+                                                        </span>
                                                         {item.badge && (
-                                                            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-semibold ${
-                                                                mode === 'admin' && isLight
-                                                                    ? 'bg-zinc-200/80 text-zinc-700'
-                                                                    : 'bg-white/10 text-white/80'
+                                                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 border ${
+                                                                item.category === 'Projects'
+                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                                                                    : item.category === 'Services'
+                                                                    ? 'bg-blue-50 text-blue-700 border-blue-200/80'
+                                                                    : item.category === 'Finance'
+                                                                    ? 'bg-amber-50 text-amber-700 border-amber-200/80'
+                                                                    : 'bg-zinc-100 text-zinc-700 border-zinc-200/80'
                                                             }`}>
                                                                 {item.badge}
                                                             </span>
                                                         )}
                                                     </div>
                                                     {item.subtitle && (
-                                                        <p className="text-xs text-muted-foreground truncate">{item.subtitle}</p>
+                                                        <p className="text-xs text-zinc-500 truncate mt-0.5 font-normal">
+                                                            {item.subtitle}
+                                                        </p>
                                                     )}
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center gap-2 shrink-0">
-                                                <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
-                                                    mode === 'admin' && isLight
-                                                        ? 'bg-zinc-100 text-zinc-600'
-                                                        : 'bg-white/5 text-white/60'
+                                                <span className={`text-[9.5px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${
+                                                    isSelected
+                                                        ? 'bg-emerald-100/80 text-emerald-800 border-emerald-200/80'
+                                                        : 'bg-zinc-100 text-zinc-500 border-zinc-200/60'
                                                 }`}>
                                                     {item.category}
                                                 </span>
                                                 {isSelected && (
-                                                    <CornerDownLeft className="w-3.5 h-3.5 text-muted-foreground hidden sm:block" />
+                                                    <CornerDownLeft className="w-4 h-4 text-emerald-700 hidden sm:block animate-pulse" />
                                                 )}
                                             </div>
                                         </button>
@@ -545,24 +803,28 @@ export function UniversalSearchModal({ open, onClose, mode }: UniversalSearchMod
                             )}
                         </div>
 
-                        {/* Footer Tips */}
-                        <div className={`px-4 py-2.5 border-t flex items-center justify-between text-xs text-muted-foreground ${
-                            mode === 'admin' && isLight ? 'border-zinc-200 bg-zinc-50/90' : 'border-white/10 bg-white/[0.02]'
-                        }`}>
+                        {/* White Glassmorphic Footer Tips */}
+                        <div className="px-5 py-3 border-t border-zinc-200/70 bg-white/70 backdrop-blur-md flex items-center justify-between text-xs text-zinc-500 font-medium">
                             <div className="flex items-center gap-3">
                                 <span className="flex items-center gap-1">
-                                    <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">↑</kbd>
-                                    <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">↓</kbd>
+                                    <kbd className="px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200 text-zinc-700 font-mono text-[10px] shadow-3xs">↑</kbd>
+                                    <kbd className="px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200 text-zinc-700 font-mono text-[10px] shadow-3xs">↓</kbd>
                                     <span>Navigate</span>
                                 </span>
                                 <span className="flex items-center gap-1">
-                                    <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">↵</kbd>
+                                    <kbd className="px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200 text-zinc-700 font-mono text-[10px] shadow-3xs">↵</kbd>
                                     <span>Select</span>
                                 </span>
                             </div>
-                            <span className="text-[11px] font-medium hidden sm:inline">
-                                {mode === 'admin' ? 'Orbit SaaS Admin Command Palette' : 'ORBIT SaaS Global Search'}
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                </span>
+                                <span className="text-[11px] font-semibold text-zinc-600 hidden sm:inline">
+                                    {mode === 'admin' ? 'Orbit SaaS Admin Live Command Palette' : 'ORBIT SaaS Real-Time Global Search'}
+                                </span>
+                            </div>
                         </div>
                     </motion.div>
                 </div>
